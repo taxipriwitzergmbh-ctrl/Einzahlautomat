@@ -24,6 +24,14 @@ namespace Geldautomat
         private FlowLayoutPanel _subFoldersPanel;    // Unterordner des aktuellen Pfads
         private FlowLayoutPanel _docsPanel;          // Dokument-Kacheln
 
+        // Preview overlay
+        private Panel _previewOverlay;
+        private Panel _previewHeader;
+        private Button _btnClosePreview;
+        private WebBrowser _pdfViewer;
+        private Panel _imgScrollPanel;
+        private PictureBox _imgViewer;
+
         private string _root;
         private string _currentPath;
 
@@ -92,6 +100,31 @@ namespace Geldautomat
             _docsPanel = new FlowLayoutPanel { AutoScroll = true, WrapContents = true };
             Controls.Add(_docsPanel);
 
+            // Preview overlay (initial hidden)
+            _previewOverlay = new Panel { Visible = false, BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle, Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right };
+            Controls.Add(_previewOverlay);
+            _previewOverlay.BringToFront();
+
+            _previewHeader = new Panel { Height = 48, Dock = DockStyle.Top };
+            _previewHeader.Paint += (s, e) =>
+            {
+                using (var brush = new LinearGradientBrush(_previewHeader.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                { e.Graphics.FillRectangle(brush, _previewHeader.ClientRectangle); }
+            };
+            _previewOverlay.Controls.Add(_previewHeader);
+            _btnClosePreview = new Button { Text = "Schließen", Dock = DockStyle.Right, Width = 120, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(229,57,53), ForeColor = Color.White };
+            _btnClosePreview.FlatAppearance.BorderSize = 0;
+            _btnClosePreview.Click += (s, e) => HidePreview();
+            _previewHeader.Controls.Add(_btnClosePreview);
+
+            _pdfViewer = new WebBrowser { Dock = DockStyle.Fill, AllowWebBrowserDrop = false, IsWebBrowserContextMenuEnabled = false, ScriptErrorsSuppressed = true, Visible = false };
+            _previewOverlay.Controls.Add(_pdfViewer);
+
+            _imgScrollPanel = new Panel { Dock = DockStyle.Fill, AutoScroll = true, Visible = false, BackColor = Color.Black };
+            _previewOverlay.Controls.Add(_imgScrollPanel);
+            _imgViewer = new PictureBox { SizeMode = PictureBoxSizeMode.Zoom, Location = new Point(0, 0) };
+            _imgScrollPanel.Controls.Add(_imgViewer);
+
             // initial layout
             Relayout();
             this.Resize += (s, e) => Relayout();
@@ -129,6 +162,10 @@ namespace Geldautomat
                 _rootFoldersPanel.BringToFront();
                 _subFoldersPanel.BringToFront();
                 _docsPanel.BringToFront();
+
+                _previewOverlay.Location = new Point(margin, _header.Bottom + 6);
+                _previewOverlay.Size = new Size(width, ClientSize.Height - _header.Bottom - 12);
+                if (_previewOverlay.Visible) _previewOverlay.BringToFront();
             }
             catch { }
         }
@@ -339,27 +376,22 @@ namespace Geldautomat
             var pnl = new Panel { Width = 240, Height = 160, Margin = new Padding(10), BackColor = Color.White, Tag = filePath };
             pnl.Paint += (s, e) => { try { e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; using (var pen = new Pen(Color.FromArgb(210, 210, 210))) e.Graphics.DrawRectangle(pen, new Rectangle(0, 0, pnl.Width - 1, pnl.Height - 1)); } catch { } };
 
-            // Dokument-Icon (einfaches Rechteck mit „PDF/TIF“)
             string ext = Path.GetExtension(filePath).ToLowerInvariant();
-            var lblIcon = new Label { Text = ext == ".pdf" ? "PDF" : "TIF", AutoSize = false, TextAlign = ContentAlignment.MiddleCenter, Location = new Point(12, 12), Size = new Size(56, 56), BackColor = Color.FromArgb(240, 240, 240), ForeColor = Color.FromArgb(66, 66, 66), Font = new Font("Segoe UI", 14F, FontStyle.Bold) };
+            var lblIcon = new Label { Text = (ext == ".pdf" ? "PDF" : (ext == ".png" || ext == ".jpg" || ext == ".jpeg" ? "IMG" : "TIF")), AutoSize = false, TextAlign = ContentAlignment.MiddleCenter, Location = new Point(12, 12), Size = new Size(56, 56), BackColor = Color.FromArgb(240, 240, 240), ForeColor = Color.FromArgb(66, 66, 66), Font = new Font("Segoe UI", 14F, FontStyle.Bold) };
             pnl.Controls.Add(lblIcon);
 
-            // Titel (Jahr/Monat)
             var title = ExtractYearMonthTitle(filePath);
             var lblTitle = new Label { Text = title, AutoSize = false, Location = new Point(80, 12), Size = new Size(148, 32), Font = new Font("Segoe UI", 14.5F, FontStyle.Bold) };
             pnl.Controls.Add(lblTitle);
 
-            // Untertitel (Dateiname verkürzt)
             var fileName = Path.GetFileName(filePath);
             var lblName = new Label { Text = Truncate(fileName, 28), AutoSize = false, Location = new Point(80, 46), Size = new Size(148, 22), Font = new Font("Segoe UI", 10.5F), ForeColor = Color.DimGray };
             pnl.Controls.Add(lblName);
 
-            // Zeitstempel
             var dt = SafeGetWriteTime(filePath);
             var lblDate = new Label { Text = dt.ToString("dd.MM.yyyy HH:mm"), AutoSize = false, Location = new Point(12, 80), Size = new Size(216, 22), Font = new Font("Segoe UI", 10F), ForeColor = Color.Gray };
             pnl.Controls.Add(lblDate);
 
-            // Buttons: Öffnen (links) | Drucken (rechts)
             var btnOpen = new Button { Text = "Öffnen", Location = new Point(12, 110), Size = new Size(104, 36), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Tag = filePath, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
             btnOpen.FlatAppearance.BorderSize = 0; btnOpen.Click += (s, e) => OpenPath((string)((Button)s).Tag);
             pnl.Controls.Add(btnOpen);
@@ -367,10 +399,9 @@ namespace Geldautomat
             btnPrint.FlatAppearance.BorderSize = 0; btnPrint.Click += (s, e) => PrintPath((string)((Button)s).Tag);
             pnl.Controls.Add(btnPrint);
 
-            // Kachelklick öffnet ebenfalls
             pnl.Cursor = Cursors.Hand;
             pnl.Click += (s, e) => OpenPath((string)pnl.Tag);
-            foreach (Control c in pnl.Controls) c.Click += (s, e) => { /* absorb child clicks if needed */ };
+            foreach (Control c in pnl.Controls) c.Click += (s, e) => { };
 
             return pnl;
         }
@@ -380,7 +411,6 @@ namespace Geldautomat
             try
             {
                 var name = Path.GetFileNameWithoutExtension(filePath);
-                // DATEV: lobn_YYYYMM_...
                 var parts = name.Split('_');
                 if (parts.Length >= 2 && parts[0].Equals("lobn", StringComparison.OrdinalIgnoreCase) && parts[1].Length == 6)
                 {
@@ -432,6 +462,7 @@ namespace Geldautomat
                 if (!full.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase)) return; // nicht über Root
                 if (!Directory.Exists(full)) return;
                 _currentPath = full;
+                HidePreview();
                 RefreshAllUi();
             }
             catch { }
@@ -465,7 +496,7 @@ namespace Geldautomat
             try
             {
                 var files = Directory.EnumerateFiles(basePath, "*.*", SearchOption.TopDirectoryOnly)
-                    .Where(p => p.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".tif", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase))
+                    .Where(p => p.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".tif", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase))
                     .ToArray();
 
                 int pid = _personal != null ? _personal.PID : 0;
@@ -485,7 +516,6 @@ namespace Geldautomat
                 string last = parts[parts.Length - 1];
                 if (last == null) return false;
                 last = last.Trim();
-                // führende Nullen entfernen
                 last = last.TrimStart('0');
                 if (last.Length == 0) last = "0";
                 int filePid;
@@ -507,45 +537,90 @@ namespace Geldautomat
             catch { return false; }
         }
 
-        private static bool IsDatevPayslipForEmployee(string filePath, string pidStr)
-        {
-            try
-            {
-                var name = Path.GetFileNameWithoutExtension(filePath);
-                var parts = name.Split('_');
-                if (parts.Length >= 5)
-                {
-                    var personalNr = parts[parts.Length - 1];
-                    if (!string.IsNullOrEmpty(pidStr) && string.Equals(personalNr, pidStr, StringComparison.OrdinalIgnoreCase)) return true;
-                }
-                var nn = NormalizeText(name);
-                if (!string.IsNullOrEmpty(pidStr) && nn.Contains(pidStr)) return true;
-            }
-            catch { }
-            return false;
-        }
-
-        private static string NormalizeText(string s)
-        {
-            s = s ?? string.Empty;
-            s = s.Trim().ToLowerInvariant();
-            s = s.Replace(" ", "");
-            s = s.Replace("-", "");
-            s = s.Replace("_", "");
-            s = s.Replace(".", "");
-            return s;
-        }
-
         private static DateTime SafeGetWriteTime(string f)
         {
             try { return File.GetLastWriteTime(f); } catch { return DateTime.MinValue; }
         }
 
-        private void OpenPath(string path)
+        private bool IsImage(string path)
+        {
+            var ext = Path.GetExtension(path)?.ToLowerInvariant();
+            return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".tif" || ext == ".tiff";
+        }
+
+        private bool IsPdf(string path)
+        {
+            var ext = Path.GetExtension(path)?.ToLowerInvariant();
+            return ext == ".pdf";
+        }
+
+        private void ShowPreview(string path)
         {
             try
             {
-                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
+                if (!File.Exists(path)) return;
+                _pdfViewer.Visible = false;
+                _imgScrollPanel.Visible = false;
+
+                if (IsPdf(path))
+                {
+                    _pdfViewer.Visible = true;
+                    try { _pdfViewer.Navigate(path); }
+                    catch { _pdfViewer.Visible = false; }
+                }
+                else if (IsImage(path))
+                {
+                    _imgScrollPanel.Visible = true;
+                    try
+                    {
+                        // Dispose previous image to avoid file locks
+                        if (_imgViewer.Image != null)
+                        {
+                            var old = _imgViewer.Image; _imgViewer.Image = null; try { old.Dispose(); } catch { }
+                        }
+                        using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        {
+                            _imgViewer.Image = Image.FromStream(fs);
+                        }
+                        // Fit image within scroll panel by setting size to panel size; Zoom handles aspect
+                        _imgViewer.Dock = DockStyle.Fill;
+                    }
+                    catch { _imgScrollPanel.Visible = false; }
+                }
+                else
+                {
+                    // unsupported -> fallback external
+                    OpenExternal(path);
+                    return;
+                }
+
+                _previewOverlay.Visible = true;
+                _previewOverlay.BringToFront();
+            }
+            catch { }
+        }
+
+        private void HidePreview()
+        {
+            try
+            {
+                _previewOverlay.Visible = false;
+                try
+                {
+                    if (_imgViewer.Image != null)
+                    {
+                        var old = _imgViewer.Image; _imgViewer.Image = null; old.Dispose();
+                    }
+                }
+                catch { }
+            }
+            catch { }
+        }
+
+        private void OpenExternal(string path)
+        {
+            try
+            {
                 var psi = new ProcessStartInfo(path) { UseShellExecute = true };
                 var proc = Process.Start(psi);
                 try
@@ -563,6 +638,24 @@ namespace Geldautomat
                     }
                 }
                 catch { }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Öffnen fehlgeschlagen: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void OpenPath(string path)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
+                if (IsPdf(path) || IsImage(path))
+                {
+                    ShowPreview(path);
+                    return;
+                }
+                OpenExternal(path);
             }
             catch (Exception ex)
             {
