@@ -717,7 +717,7 @@ namespace Geldautomat
                 try { if (nv1 != null) { nv1Idle = nv1.IsIdleState; nv1NonOkLong = nv1.LastResponseNotOkUtc != DateTime.MinValue && (DateTime.UtcNow - nv1.LastResponseNotOkUtc).TotalSeconds >= 5; } } catch { }
                 try { if (nv2 != null) { nv2Idle = nv2.IsIdleState; nv2NonOkLong = nv2.LastResponseNotOkUtc != DateTime.MinValue && (DateTime.UtcNow - nv2.LastResponseNotOkUtc).TotalSeconds >= 5; } } catch { }
                 bool coinsIdle = false;
-                try { coinsIdle = !_coinsPayoutInProgress && !AnyCoinEinwurf(); } catch { coinsIdle = true; }
+                try { coinsIdle = (!_coinsPayoutInProgress && !AnyCoinEinwurf()); } catch { coinsIdle = true; }
                 // at least one NV stuck and all other devices idle
                 if (nv1NonOkLong && (nv2 == null || nv2Idle) && coinsIdle) return true;
                 if (nv2NonOkLong && (nv1 == null || nv1Idle) && coinsIdle) return true;
@@ -944,8 +944,8 @@ namespace Geldautomat
                 {
                     decimal summe = -raw19 - raw7 - raw0;
                     lblB19.Text = $"19%: {-raw19:C2}"; lblB7.Text = $"7%: {-raw7:C2}"; lblB0.Text = $"0%: {-raw0:C2}"; lblSumme.Text = $"Summe: {summe:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; lblNoch.Text = "Noch zu zahlen: 0,00 €"; try { lblNoch.ForeColor = Color.Green; } catch { }
+                    UpdateBuchenEnabled(); return;
                 }
-                UpdateBuchenEnabled(); return;
             }
             if (_details == null)
             {
@@ -1031,28 +1031,17 @@ namespace Geldautomat
                     FormBorderStyle = FormBorderStyle.None,
                     StartPosition = FormStartPosition.CenterParent,
                     Width = 560,
-                    Height = 240,
+                    Height = 260,
                     BackColor = Color.White
                 };
 
-                // Rounded corners
                 try { dlg.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, dlg.Width, dlg.Height, 16, 16)); } catch { }
 
-                // Header (gradient like main header)
-                var header = new Panel
-                {
-                    Dock = DockStyle.Top,
-                    Height = 64
-                };
+                var header = new Panel { Dock = DockStyle.Top, Height = 64 };
                 header.Paint += (s, e) =>
                 {
-                    using (var brush = new LinearGradientBrush(header.ClientRectangle,
-                        Color.FromArgb(33, 150, 243),
-                        Color.FromArgb(33, 203, 243),
-                        0f))
-                    {
-                        e.Graphics.FillRectangle(brush, header.ClientRectangle);
-                    }
+                    using (var brush = new LinearGradientBrush(header.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                    { e.Graphics.FillRectangle(brush, header.ClientRectangle); }
                 };
                 dlg.Controls.Add(header);
 
@@ -1069,13 +1058,12 @@ namespace Geldautomat
                 };
                 header.Controls.Add(lblTitle);
 
-                // Body
                 var body = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
                 dlg.Controls.Add(body);
 
                 var lbl = new Label
                 {
-                    Text = "Möchten Sie eine Quittung?",
+                    Text = "Möchten Sie eine Quittung, wenn ja wie?",
                     AutoSize = false,
                     TextAlign = ContentAlignment.MiddleCenter,
                     Dock = DockStyle.Top,
@@ -1084,10 +1072,17 @@ namespace Geldautomat
                 };
                 body.Controls.Add(lbl);
 
-                var panelButtons = new Panel { Dock = DockStyle.Bottom, Height = 84, BackColor = Color.White };
+                // push the label two line-heights down
+                try
+                {
+                    int lineH = TextRenderer.MeasureText("A", lbl.Font).Height;
+                    body.Padding = new Padding(0, lineH * 2, 0, 0);
+                }
+                catch { }
+
+                var panelButtons = new Panel { Dock = DockStyle.Bottom, Height = 92, BackColor = Color.White };
                 body.Controls.Add(panelButtons);
 
-                // Helper to style buttons consistently
                 Func<string, Button> makeBtn = (text) =>
                 {
                     var b = new Button
@@ -1119,15 +1114,12 @@ namespace Geldautomat
                 int spacing = 16;
                 int totalWidth = btnMail.Width + btnPrint.Width + btnQr.Width + btnNo.Width + spacing * 3;
                 int startX = (dlg.ClientSize.Width - totalWidth) / 2;
-                int y = 18;
+                int y = 20;
                 btnMail.Location = new Point(startX, y);
                 btnPrint.Location = new Point(btnMail.Right + spacing, y);
                 btnQr.Location = new Point(btnPrint.Right + spacing, y);
                 btnNo.Location = new Point(btnQr.Right + spacing, y);
-                panelButtons.Controls.Add(btnMail);
-                panelButtons.Controls.Add(btnPrint);
-                panelButtons.Controls.Add(btnQr);
-                panelButtons.Controls.Add(btnNo);
+                panelButtons.Controls.AddRange(new Control[] { btnMail, btnPrint, btnQr, btnNo });
 
                 // Shadow (optional, no-op if not supported)
                 try
@@ -1993,7 +1985,7 @@ namespace Geldautomat
         }
 
                 private void UpdateMaxVerfuegbar() { if (lblMaxVerfuegbar != null) lblMaxVerfuegbar.Text = $"Maximal verfügbar: {(_personalGuthaben + _eingezahltSession):C2}"; }
-                private void UpdateCoinAvailabilityLabels() { for (int i = 0; i < 8; i++) { if (lblVerfuegbarMuenzen[i] == null) continue; int a = _coinAvail[i]; int b = _coin2Avail[i]; bool known = false; int total = 0; if (a >= 0) { total += a; known = true; } if (b >= 0) { total += b; known = true; } lblVerfuegbarMuenzen[i].Text = known ? $"vorrätig: {total}" : "vorrätig: ?"; } }
+                private void UpdateCoinAvailabilityLabels() { for (int i = 0; i < 8; i++) { if (lblVerfuegbarMuenzen[i] == null) continue; int a = _coinAvail[i] >= 0 ? _coinAvail[i] : 0; int b = _coin2Avail[i] >= 0 ? _coin2Avail[i] : 0; int total = 0; if (a > 0) { total += a; lblVerfuegbarMuenzen[i].ForeColor = Color.Black; } else { lblVerfuegbarMuenzen[i].ForeColor = Color.Red; } if (b > 0) { total += b; lblVerfuegbarMuenzen[i].ForeColor = Color.Black; } lblVerfuegbarMuenzen[i].Text = $"vorrätig: {total}"; } }
                 private int GetCombinedCoinAvail(int idx) { try { int a = (idx >= 0 && idx < _coinAvail.Length) ? _coinAvail[idx] : -1; int b = (idx >= 0 && idx < _coin2Avail.Length) ? _coin2Avail[idx] : -1; if (a < 0 && b < 0) return -1; int sum = 0; if (a > 0) sum += a; if (b > 0) sum += b; return sum; } catch { return -1; } }
                 private void OnCoinDispensedDelta(int cent)
                 {
@@ -2042,4 +2034,4 @@ namespace Geldautomat
                     catch { try { lblBelegInfo.Text = string.Empty; } catch { } }
                 }
             }
-        }1234
+        }
