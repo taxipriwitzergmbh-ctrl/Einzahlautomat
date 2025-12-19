@@ -30,6 +30,9 @@ namespace Geldautomat
 
         private CheckBox _chkReceiptPromptEnabled; // NEW: steuert die Quittungsabfrage global
 
+        // NEU: QR-Code global aktivieren/deaktivieren
+        private CheckBox _chkQrCodeEnabled;
+
         public GeneralSettingsForm()
         {
             BuildUi();
@@ -118,6 +121,14 @@ namespace Geldautomat
             _chkReceiptPromptEnabled = new CheckBox { Location = new Point(left, y - 2), AutoSize = true };
             Controls.Add(lblPrompt);
             Controls.Add(_chkReceiptPromptEnabled);
+
+            y += 28;
+
+            // NEU: QR-Code aktiviert (global)
+            var lblQr = new Label { Text = "QR-Code aktiviert", AutoSize = true, Location = new Point(left + 26, y), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.Transparent };
+            _chkQrCodeEnabled = new CheckBox { Location = new Point(left, y - 2), AutoSize = true };
+            Controls.Add(lblQr);
+            Controls.Add(_chkQrCodeEnabled);
 
             y += 28;
 
@@ -232,6 +243,13 @@ namespace Geldautomat
                     (prompt.Equals("true", StringComparison.OrdinalIgnoreCase) || prompt.Equals("1") || prompt.Equals("yes", StringComparison.OrdinalIgnoreCase) || prompt.Equals("on", StringComparison.OrdinalIgnoreCase));
             }
             catch { _chkReceiptPromptEnabled.Checked = true; }
+            try
+            {
+                var qr = IniHelper.ReadValue("UI", "QrCodeEnabled", AppSettings.IniPath);
+                _chkQrCodeEnabled.Checked = string.IsNullOrWhiteSpace(qr) ? true :
+                    (qr.Equals("true", StringComparison.OrdinalIgnoreCase) || qr.Equals("1") || qr.Equals("yes", StringComparison.OrdinalIgnoreCase) || qr.Equals("on", StringComparison.OrdinalIgnoreCase));
+            }
+            catch { _chkQrCodeEnabled.Checked = true; }
         }
 
         private void SaveValues()
@@ -324,8 +342,13 @@ namespace Geldautomat
                 IniHelper.WriteValue("ReceiptPrinter", "AskUser", _chkReceiptPromptEnabled.Checked ? "True" : "False", AppSettings.IniPath);
             }
             catch { }
+            try
+            {
+                IniHelper.WriteValue("UI", "QrCodeEnabled", _chkQrCodeEnabled.Checked ? "True" : "False", AppSettings.IniPath);
+            }
+            catch { }
 
-            try { AppLogger.Log($"Allgemeine Einstellungen gespeichert. Prompt={( _chkReceiptPromptEnabled.Checked ? "on" : "off")}"); } catch { }
+            try { AppLogger.Log($"Allgemeine Einstellungen gespeichert. Prompt={( _chkReceiptPromptEnabled.Checked ? "on" : "off")}, QR={( _chkQrCodeEnabled.Checked ? "on" : "off")}"); } catch { }
             try { MessageBox.Show(this, "Einstellungen gespeichert.\nHinweis: Änderungen an NFC/Device-ID wirken erst nach Neustart.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
         }
     }

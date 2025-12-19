@@ -1150,6 +1150,24 @@ namespace Geldautomat
                 }
                 catch { }
 
+                // NEU: QR-Code nach UI-Setting deaktivieren
+                try
+                {
+                    var qr = IniHelper.ReadValue("UI", "QrCodeEnabled", AppSettings.IniPath);
+                    bool qrEnabled = string.IsNullOrWhiteSpace(qr) ? true :
+                        (qr.Equals("true", StringComparison.OrdinalIgnoreCase) || qr.Equals("1") || qr.Equals("yes", StringComparison.OrdinalIgnoreCase) || qr.Equals("on", StringComparison.OrdinalIgnoreCase));
+                    btnQr.Enabled = qrEnabled;
+                    if (!qrEnabled)
+                    {
+                        btnQr.BackColor = Color.LightGray;
+                        btnQr.ForeColor = Color.WhiteSmoke;
+                        btnQr.FlatAppearance.MouseOverBackColor = Color.LightGray;
+                        btnQr.Cursor = Cursors.No;
+                        try { new ToolTip().SetToolTip(btnQr, "QR-Code ist deaktiviert."); } catch { }
+                    }
+                }
+                catch { }
+
                 btnNo.BackColor = Color.FromArgb(229, 57, 53);
                 btnNo.FlatAppearance.MouseOverBackColor = Color.FromArgb(211, 47, 47);
 
@@ -1768,7 +1786,8 @@ namespace Geldautomat
 
         private void SspOnNoteAccepted(int wert)
         {
-            if (wert <= 0) return; BeginInvoke((Action)(() => { if (!AdminMode.IsOpen) { AddEingezahlt(wert); } SafeRefreshAvailability(); }));
+            if (wert <= 0) return;
+            BeginInvoke((Action)(() => { if (!AdminMode.IsOpen) { AddEingezahlt(wert); } SafeRefreshAvailability(); }));
         }
         private void SspOnEreignis(string text) { try { BeginInvoke((Action)(() => Text = $"Schicht abrechnen – NV200: {text}")); } catch { } }
         private void SspOnWertDispensing(int cent)
