@@ -74,6 +74,7 @@
     <Compile Include="Allgemeine_Klassen\DeviceLogger.cs" />
     <Compile Include="Allgemeine_Klassen\EmailReceiptService.cs" />
     <Compile Include="Allgemeine_Klassen\PaymentSettingsStore.cs" />
+    <Compile Include="Allgemeine_Klassen\ReceiptPublisher.cs" />
     <Compile Include="Allgemeine_Klassen\SmartCoinCommLog.cs" />
     <Compile Include="Coins\Rm5CctalkValidator.cs" />
     <Compile Include="Devices\CoinFeederCoordinator.cs" />
@@ -151,6 +152,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Form\ProcessingAnimation.cs" />
+    <Compile Include="Form\QrCodeForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Geldautomat\DbAccountingRuleProvider.cs" />
     <Compile Include="Allgemeine_Klassen\KassenSummary.cs" />
     <Compile Include="NV200\CCommands.cs" />

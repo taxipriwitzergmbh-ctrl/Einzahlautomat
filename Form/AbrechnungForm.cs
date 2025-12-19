@@ -965,7 +965,7 @@ namespace Geldautomat
                 DialogResult choice = DialogResult.None;
                 if (cfg.AskUser)
                 {
-                    // Benutzerwahl: Mail, Drucken, Nein
+                    // Benutzerwahl: Mail, Drucken, QR, Nein
                     choice = ShowReceiptChoiceDialog();
                 }
                 else
@@ -992,6 +992,21 @@ namespace Geldautomat
                     }
                     return;
                 }
+                if (choice == DialogResult.Ignore)
+                {
+                    // QR-Code anzeigen (20s Auto-Close)
+                    try
+                    {
+                        string titleQ = string.IsNullOrWhiteSpace(vorgang) ? "QUITTUNG" : vorgang.ToUpperInvariant();
+                        string mitarbeiterQ = _personal.Vorname + " " + _personal.Name;
+                        var bodyLinesQ = ReceiptLayouts.Current.BuildBody(titleQ, mitarbeiterQ, buchungstext, b19, b7, b0, true);
+                        string qrText = string.Join("\n", bodyLinesQ ?? new string[0]);
+                        var frm = new QrCodeForm(qrText);
+                        try { frm.Show(this); frm.BringToFront(); frm.Activate(); } catch { frm.Show(); }
+                    }
+                    catch { }
+                    return;
+                }
                 if (choice == DialogResult.Yes)
                 {
                     // Drucken
@@ -1005,8 +1020,8 @@ namespace Geldautomat
             catch { }
         }
 
-        // Zeigt eine einfache Auswahl: Mail, Drucken, Nein.
-        // Rückgabewerte: DialogResult.Cancel => Mail, DialogResult.Yes => Drucken, DialogResult.No => Nein
+        // Zeigt eine einfache Auswahl: Mail, Drucken, QR, Nein.
+        // Rückgabewerte: DialogResult.Cancel => Mail, DialogResult.Yes => Drucken, DialogResult.Ignore => QR, DialogResult.No => Nein
         private DialogResult ShowReceiptChoiceDialog()
         {
             try
@@ -1015,8 +1030,8 @@ namespace Geldautomat
                 {
                     FormBorderStyle = FormBorderStyle.FixedDialog,
                     StartPosition = FormStartPosition.CenterParent,
-                    Width = 420,
-                    Height = 180,
+                    Width = 540,
+                    Height = 200,
                     Text = "Quittung"
                 };
                 var lbl = new Label { Text = "Möchten Sie eine Quittung?", AutoSize = false, TextAlign = System.Drawing.ContentAlignment.MiddleCenter, Dock = DockStyle.Top, Height = 60 };
@@ -1025,11 +1040,13 @@ namespace Geldautomat
                 dlg.Controls.Add(panel);
                 var btnMail = new Button { Text = "per Mail", Width = 110, Height = 36, Left = 30, Top = 12 };
                 var btnPrint = new Button { Text = "Drucken", Width = 110, Height = 36, Left = 150, Top = 12 };
-                var btnNo = new Button { Text = "Nein", Width = 110, Height = 36, Left = 270, Top = 12 };
-                panel.Controls.Add(btnMail); panel.Controls.Add(btnPrint); panel.Controls.Add(btnNo);
+                var btnQr = new Button { Text = "QR-Code", Width = 110, Height = 36, Left = 270, Top = 12 };
+                var btnNo = new Button { Text = "Nein", Width = 110, Height = 36, Left = 390, Top = 12 };
+                panel.Controls.Add(btnMail); panel.Controls.Add(btnPrint); panel.Controls.Add(btnQr); panel.Controls.Add(btnNo);
                 DialogResult result = DialogResult.None;
                 btnMail.Click += (s, e) => { result = DialogResult.Cancel; dlg.Close(); };
                 btnPrint.Click += (s, e) => { result = DialogResult.Yes; dlg.Close(); };
+                btnQr.Click += (s, e) => { result = DialogResult.Ignore; dlg.Close(); };
                 btnNo.Click += (s, e) => { result = DialogResult.No; dlg.Close(); };
                 try { dlg.ShowDialog(this); } catch { dlg.ShowDialog(); }
                 try { dlg.Dispose(); } catch { }
@@ -1607,8 +1624,7 @@ namespace Geldautomat
             }
             for (int i = 0; i < btnPlusMuenzen.Length; i++)
             {
-                int availCoinsCombined = GetCombinedCoinAvail(i); bool canIncrease = availCoinsCombined < 0 || auswahlAnzahlMuenzen[i] < availCoinsCombined;
-                if (btnPlusMuenzen[i] != null) btnPlusMuenzen[i].Enabled = !_payoutInProgress && !AdminMode.IsOpen && canIncrease;
+                int availCoinsCombined = GetCombinedCoinAvail(i); bool canIncrease = availCoinsCombined < 0 || auswahlAnzahlMuenzen[i] < availCoinsCombined; if (btnPlusMuenzen[i] != null) btnPlusMuenzen[i].Enabled = !_payoutInProgress && !AdminMode.IsOpen && canIncrease;
                 if (btnMinusMuenzen[i] != null) btnMinusMuenzen[i].Enabled = !_payoutInProgress && !AdminMode.IsOpen && auswahlAnzahlMuenzen[i] > 0;
             }
         }
