@@ -33,6 +33,13 @@ namespace Geldautomat
         // NEU: QR-Code global aktivieren/deaktivieren
         private CheckBox _chkQrCodeEnabled;
 
+        // NEU: Dokumente/Lohnabrechnungen aktiviert
+        private CheckBox _chkDocumentsEnabled;
+        // NEU: DocStore Pfad konfigurieren
+        private Label _lblDocStore;
+        private TextBox _txtDocStore;
+        private Button _btnDocStoreBrowse;
+
         public GeneralSettingsForm()
         {
             BuildUi();
@@ -48,7 +55,7 @@ namespace Geldautomat
             StartPosition = FormStartPosition.CenterParent;
             BackColor = Color.White;
             DoubleBuffered = true;
-            Size = new Size(600, 560); // vergrößert
+            Size = new Size(600, 640); // leicht vergrößert
 
             // Header
             _headerPanel = new Panel
@@ -132,6 +139,26 @@ namespace Geldautomat
 
             y += 28;
 
+            // NEU: Dokumente/Lohnabrechnungen aktiviert (global)
+            var lblDocs = new Label { Text = "Dokumente/Lohnabrechnungen aktiviert", AutoSize = true, Location = new Point(left + 26, y), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.Transparent };
+            _chkDocumentsEnabled = new CheckBox { Location = new Point(left, y - 2), AutoSize = true };
+            _chkDocumentsEnabled.CheckedChanged += (s, e) => { ToggleDocStoreUi(_chkDocumentsEnabled.Checked); };
+            Controls.Add(lblDocs);
+            Controls.Add(_chkDocumentsEnabled);
+
+            // DocStore Pfad UI (standardmäßig ausgeblendet)
+            y += 8;
+            _lblDocStore = new Label { Text = "Dokumente-Pfad (DocStore)", AutoSize = true, Location = new Point(left + 26, y + 26), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold), BackColor = Color.Transparent, Visible = false };
+            _txtDocStore = new TextBox { Location = new Point(left + 26, y + 48), Width = 360, Font = new Font("Segoe UI", 11F), Visible = false };
+            _btnDocStoreBrowse = new Button { Text = "Pfad wählen...", Location = new Point(_txtDocStore.Right + 12, y + 45), Size = new Size(140, 34), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 10.5F, FontStyle.Bold), Visible = false };
+            _btnDocStoreBrowse.FlatAppearance.BorderSize = 0;
+            _btnDocStoreBrowse.Click += (s, e) => BrowseDocStore();
+            Controls.Add(_lblDocStore);
+            Controls.Add(_txtDocStore);
+            Controls.Add(_btnDocStoreBrowse);
+
+            y += 90;
+
             // Device ID (nur von SuE anzupassen)
             var lblDev = new Label { Text = "Device-ID", AutoSize = true, Location = new Point(left, y), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold), BackColor = Color.Transparent };
             _txtDeviceId = new TextBox { Location = new Point(left, y + 22), Width = 120, Font = new Font("Segoe UI", 11F) };
@@ -195,6 +222,36 @@ namespace Geldautomat
         private void HeaderPanel_MouseDown(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) _mouseDownLocation = e.Location; }
         private void HeaderPanel_MouseMove(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) { Left += e.X - _mouseDownLocation.X; Top += e.Y - _mouseDownLocation.Y; } }
 
+        private void ToggleDocStoreUi(bool show)
+        {
+            try
+            {
+                _lblDocStore.Visible = show;
+                _txtDocStore.Visible = show;
+                _btnDocStoreBrowse.Visible = show;
+            }
+            catch { }
+        }
+
+        private void BrowseDocStore()
+        {
+            try
+            {
+                using (var dlg = new FolderBrowserDialog())
+                {
+                    dlg.Description = "Wählen Sie den Stammordner (DocStore) für Dokumente";
+                    dlg.ShowNewFolderButton = true;
+                    if (!string.IsNullOrWhiteSpace(_txtDocStore.Text) && System.IO.Directory.Exists(_txtDocStore.Text))
+                        dlg.SelectedPath = _txtDocStore.Text;
+                    if (dlg.ShowDialog(this) == DialogResult.OK)
+                    {
+                        _txtDocStore.Text = dlg.SelectedPath;
+                    }
+                }
+            }
+            catch { }
+        }
+
         private void LoadValues()
         {
             try
@@ -250,6 +307,22 @@ namespace Geldautomat
                     (qr.Equals("true", StringComparison.OrdinalIgnoreCase) || qr.Equals("1") || qr.Equals("yes", StringComparison.OrdinalIgnoreCase) || qr.Equals("on", StringComparison.OrdinalIgnoreCase));
             }
             catch { _chkQrCodeEnabled.Checked = true; }
+            bool docsOn = false;
+            try
+            {
+                var docs = IniHelper.ReadValue("UI", "DocumentsEnabled", AppSettings.IniPath);
+                docsOn = string.IsNullOrWhiteSpace(docs) ? false :
+                    (docs.Equals("true", StringComparison.OrdinalIgnoreCase) || docs.Equals("1") || docs.Equals("yes", StringComparison.OrdinalIgnoreCase) || docs.Equals("on", StringComparison.OrdinalIgnoreCase));
+                _chkDocumentsEnabled.Checked = docsOn;
+            }
+            catch { _chkDocumentsEnabled.Checked = false; }
+            try
+            {
+                var ds = IniHelper.ReadValue("UI", "DocStore", AppSettings.IniPath);
+                if (!string.IsNullOrWhiteSpace(ds)) _txtDocStore.Text = ds.Trim(); else _txtDocStore.Text = string.Empty;
+            }
+            catch { _txtDocStore.Text = string.Empty; }
+            ToggleDocStoreUi(docsOn);
         }
 
         private void SaveValues()
@@ -297,21 +370,9 @@ namespace Geldautomat
             }
             catch { }
 
-            try
-            {
-                IniHelper.WriteValue("Device", "OnlyNFC", _chkOnlyNfc.Checked ? "True" : "False", AppSettings.IniPath);
-            }
-            catch { }
-            try
-            {
-                IniHelper.WriteValue("UI", "HideRemoteButton", _chkHideRemote.Checked ? "True" : "False", AppSettings.IniPath);
-            }
-            catch { }
-            try
-            {
-                IniHelper.WriteValue("Device", "ID", newDevId.ToString(), AppSettings.IniPath);
-            }
-            catch { }
+            try { IniHelper.WriteValue("Device", "OnlyNFC", _chkOnlyNfc.Checked ? "True" : "False", AppSettings.IniPath); } catch { }
+            try { IniHelper.WriteValue("UI", "HideRemoteButton", _chkHideRemote.Checked ? "True" : "False", AppSettings.IniPath); } catch { }
+            try { IniHelper.WriteValue("Device", "ID", newDevId.ToString(), AppSettings.IniPath); } catch { }
             try
             {
                 var raw = (_txtBusyUnlock.Text ?? string.Empty).Trim();
@@ -322,33 +383,21 @@ namespace Geldautomat
             try
             {
                 var maint = (_txtMaintPwd.Text ?? string.Empty).Trim();
-                if (!string.IsNullOrEmpty(maint))
-                    IniHelper.WriteValue("Security", "MaintenancePassword", maint, AppSettings.IniPath);
-                else
-                    IniHelper.WriteValue("Security", "MaintenancePassword", string.Empty, AppSettings.IniPath);
+                IniHelper.WriteValue("Security", "MaintenancePassword", maint, AppSettings.IniPath);
             }
             catch { }
             try
             {
                 var adm = (_txtAdminBackdoor.Text ?? string.Empty).Trim();
-                if (!string.IsNullOrEmpty(adm))
-                    IniHelper.WriteValue("Security", "AdminNumericBackdoor", adm, AppSettings.IniPath);
-                else
-                    IniHelper.WriteValue("Security", "AdminNumericBackdoor", string.Empty, AppSettings.IniPath);
+                IniHelper.WriteValue("Security", "AdminNumericBackdoor", adm, AppSettings.IniPath);
             }
             catch { }
-            try
-            {
-                IniHelper.WriteValue("ReceiptPrinter", "AskUser", _chkReceiptPromptEnabled.Checked ? "True" : "False", AppSettings.IniPath);
-            }
-            catch { }
-            try
-            {
-                IniHelper.WriteValue("UI", "QrCodeEnabled", _chkQrCodeEnabled.Checked ? "True" : "False", AppSettings.IniPath);
-            }
-            catch { }
+            try { IniHelper.WriteValue("ReceiptPrinter", "AskUser", _chkReceiptPromptEnabled.Checked ? "True" : "False", AppSettings.IniPath); } catch { }
+            try { IniHelper.WriteValue("UI", "QrCodeEnabled", _chkQrCodeEnabled.Checked ? "True" : "False", AppSettings.IniPath); } catch { }
+            try { IniHelper.WriteValue("UI", "DocumentsEnabled", _chkDocumentsEnabled.Checked ? "True" : "False", AppSettings.IniPath); } catch { }
+            try { IniHelper.WriteValue("UI", "DocStore", (_txtDocStore.Text ?? string.Empty).Trim(), AppSettings.IniPath); } catch { }
 
-            try { AppLogger.Log($"Allgemeine Einstellungen gespeichert. Prompt={( _chkReceiptPromptEnabled.Checked ? "on" : "off")}, QR={( _chkQrCodeEnabled.Checked ? "on" : "off")}"); } catch { }
+            try { AppLogger.Log($"Allgemeine Einstellungen gespeichert. Prompt={( _chkReceiptPromptEnabled.Checked ? "on" : "off")}, QR={( _chkQrCodeEnabled.Checked ? "on" : "off")}, Docs={( _chkDocumentsEnabled.Checked ? "on" : "off")}, DocStore='{_txtDocStore.Text}'"); } catch { }
             try { MessageBox.Show(this, "Einstellungen gespeichert.\nHinweis: Änderungen an NFC/Device-ID wirken erst nach Neustart.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
         }
     }

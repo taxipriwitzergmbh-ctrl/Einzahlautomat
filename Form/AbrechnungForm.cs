@@ -135,6 +135,7 @@ namespace Geldautomat
 
         private bool _eventsAttached = false;
         private Button btnAdmin;
+        private Button btnDocuments; // NEU: Dokumente
         private int[] scheinWerte = { 5, 10, 20, 50, 100, 200, 500 };
         private int[] auswahlAnzahl = new int[7];
         private string[] scheinBilder = { "5euro.jpg", "10euro.jpg", "20euro.jpg", "50euro.jpg", "100euro.jpg", "200euro.jpg", "500euro.jpg" };
@@ -491,6 +492,50 @@ namespace Geldautomat
                 try { frmAdmin.BringToFront(); frmAdmin.Activate(); } catch { }
             };
             headerPanel.Controls.Add(btnAdmin);
+
+            // NEU: Dokumente-Button links neben Admin
+            bool docsEnabled = false;
+            try
+            {
+                var docs = IniHelper.ReadValue("UI", "DocumentsEnabled", AppSettings.IniPath);
+                docsEnabled = !string.IsNullOrWhiteSpace(docs) &&
+                    (docs.Equals("true", StringComparison.OrdinalIgnoreCase) || docs.Equals("1") || docs.Equals("yes", StringComparison.OrdinalIgnoreCase) || docs.Equals("on", StringComparison.OrdinalIgnoreCase));
+            }
+            catch { }
+
+            btnDocuments = new Button
+            {
+                Text = "??",
+                Font = new Font("Segoe UI Symbol", 20F, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = Color.FromArgb(76, 175, 80),
+                FlatStyle = FlatStyle.Flat,
+                Size = new Size(56, 56),
+                Location = new Point(ClientSize.Width - 280, 2),
+                TabStop = false,
+                Visible = docsEnabled
+            };
+            btnDocuments.FlatAppearance.BorderSize = 0;
+            btnDocuments.FlatAppearance.MouseOverBackColor = Color.FromArgb(96, 195, 100);
+            btnDocuments.Click += (s, e) =>
+            {
+                try
+                {
+                    var frmDocs = new DocumentsForm(_personal);
+                    frmDocs.StartPosition = FormStartPosition.CenterScreen;
+                    if (Program.KioskModeEnabled)
+                    {
+                        bool prevTopMost = TopMost;
+                        try { TopMost = false; } catch { }
+                        frmDocs.TopMost = true;
+                        frmDocs.FormClosed += (s3, e3) => { try { TopMost = prevTopMost; Activate(); BringToFront(); } catch { } };
+                    }
+                    frmDocs.Show();
+                    try { frmDocs.BringToFront(); frmDocs.Activate(); } catch { }
+                }
+                catch { }
+            };
+            headerPanel.Controls.Add(btnDocuments);
 
             try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24)); } catch { }
 
@@ -1974,7 +2019,7 @@ namespace Geldautomat
             catch { }
         }
 
-
+        // Wieder hinzugefügt: Auszahlung laden
         private void LadeAuszahlung(DataRow row)
         {
             string typ = row.Table.Columns.Contains("Typ") ? (row["Typ"]?.ToString() ?? "Auszahlung") : "Auszahlung"; _currentAuszahlungRow = row; _currentZahlungIstEinzahlung = typ.Equals("Einzahlung", StringComparison.OrdinalIgnoreCase); _details = null;
