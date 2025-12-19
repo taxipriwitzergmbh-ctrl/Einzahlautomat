@@ -1,0 +1,728 @@
+﻿using System;
+using System.Drawing;
+using System.Threading;
+using System.Windows.Forms;
+using Geldautomat.Devices;
+using System.Collections.Generic;
+using System.IO.Ports;
+using System.Runtime.InteropServices;
+using System.Linq; // sicherstellen
+
+namespace Geldautomat
+{
+    public class AdminCoinFeederForm : Form
+    {
+        private readonly string _iniPath;
+        private CoinFeederController _feeder;
+
+        // UI
+        private Panel headerPanel;
+        private Label lblTitle;
+        private Button btnClose;
+        private ComboBox cmbPorts;
+       
+        private Button btnDetect; // NEU Erkennung
+        private bool _detectingPort; // NEU
+        private string[] _detectBasePorts; // NEU
+        private Form _detectDialog; // NEU
+        private System.Windows.Forms.Timer _detectTimer; // NEU
+        private string[] _lastPorts; // NEU
+        private Button btnApply;
+        private Button btnReconnect;
+        private TextBox txtLog;
+        private Button btnGreen;   // NV200/1 (default channel) Grün
+        private Button btnGreenA;  // NV200/2 (channel 'a') Grün
+        private Button btnRed;     // NV200/1 (default channel) Rot
+        private Button btnRedA;    // NV200/2 (channel 'a') Rot
+        private Label lblStatus;
+
+        private Action<string> _logHandler;
+        private System.Windows.Forms.Timer _stateTimer;
+        private bool _nv1WasIdle = false;
+        private bool _nv2WasIdle = false;
+
+        private readonly Dictionary<string, DateTime> _lastSendTimes = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+        private readonly TimeSpan _sendDebounce = TimeSpan.FromSeconds(2);
+        private Point _mouseDown;
+
+        public AdminCoinFeederForm(string iniPath)
+        {
+            _iniPath = iniPath;
+            _feeder = Program.CoinFeeder; // globale Instanz
+            BuildUi();
+            LoadPortFromIni();
+            LoadPorts();
+            // Sicherstellen, dass der aktuell konfigurierte/open Port selektiert ist
+            EnsureSelectedPort(_feeder?.PortName);
+            StartStateTimer();
+            UpdateUiState();
+        }
+
+        // Hilfsmethode: aktuell verwendeten Port im Dropdown selektieren (falls nötig hinzufügen)
+        private void EnsureSelectedPort(string port)
+        {
+            if (string.IsNullOrWhiteSpace(port) || cmbPorts == null) return;
+            try
+            {
+                // Falls Liste leer -> Ports laden
+                if (cmbPorts.Items.Count == 0)
+                {
+                    cmbPorts.Items.Add(port);
+                    cmbPorts.SelectedItem = port;
+                    return;
+                }
+                // Port vorhanden?
+                var exists = cmbPorts.Items.Cast<object>().Any(o => string.Equals(Convert.ToString(o), port, StringComparison.OrdinalIgnoreCase));
+                if (!exists)
+                {
+                    cmbPorts.Items.Add(port);
+                }
+                // Nur neu setzen wenn noch nicht selektiert
+                if (!string.Equals(Convert.ToString(cmbPorts.SelectedItem), port, StringComparison.OrdinalIgnoreCase))
+                {
+                    cmbPorts.SelectedItem = port;
+                }
+            }
+            catch { }
+        }
+
+        #region Modern UI
+
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                var cp = base.CreateParams;
+                cp.ExStyle |= 0x02000000; // WS_EX_COMPOSITED für flackerfrei
+                return cp;
+            }
+        }
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int rx, int ry);
+
+        private void BuildUi()
+        {
+            SuspendLayout();
+
+            FormBorderStyle = FormBorderStyle.None;
+            StartPosition = FormStartPosition.CenterScreen;
+            BackColor = Color.White;
+            DoubleBuffered = true;
+            ClientSize = new Size(880, 620);
+
+            try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 22, 22)); } catch { }
+
+            headerPanel = new Panel
+            {
+                Location = new Point(0, 0),
+                Size = new Size(ClientSize.Width, 64),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            headerPanel.Paint += (s, e) =>
+            {
+                using (var br = new System.Drawing.Drawing2D.LinearGradientBrush(headerPanel.ClientRectangle,
+                           Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                {
+                    e.Graphics.FillRectangle(br, headerPanel.ClientRectangle);
+                }
+            };
+            headerPanel.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) _mouseDown = e.Location; };
+            headerPanel.MouseMove += (s, e) =>
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    Left += e.X - _mouseDown.X;
+                    Top += e.Y - _mouseDown.Y;
+                }
+            };
+            Controls.Add(headerPanel);
+
+            lblTitle = new Label
+            {
+                Text = "CoinFeeder – Verwaltung",
+                AutoSize = false,
+                Location = new Point(24, 0),
+                Size = new Size(520, 64),
+                Font = new Font("Segoe UI Variable", 20f, FontStyle.Bold),
+                ForeColor = Color.White,
+                TextAlign = ContentAlignment.MiddleLeft,
+                BackColor = Color.Transparent
+            };
+            headerPanel.Controls.Add(lblTitle);
+
+            btnClose = new Button
+            {
+                Text = "✕",
+                Font = new Font("Segoe UI", 16f, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = Color.Transparent,
+                FlatStyle = FlatStyle.Flat,
+                Size = new Size(56, 56),
+                Location = new Point(ClientSize.Width - 64, 4),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                TabStop = false
+            };
+            btnClose.FlatAppearance.BorderSize = 0;
+            btnClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(229, 57, 53);
+            btnClose.Click += (s, e) => Close();
+            headerPanel.Controls.Add(btnClose);
+
+            // Port-Auswahl
+            var lblPort = new Label
+            {
+                Text = "Port:",
+                Location = new Point(24, 80),
+                AutoSize = true,
+                Font = new Font("Segoe UI Variable", 12f, FontStyle.Bold)
+            };
+            Controls.Add(lblPort);
+
+            cmbPorts = new ComboBox
+            {
+                Location = new Point(80, 76),
+                Size = new Size(160, 36),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI Variable", 12f)
+            };
+            cmbPorts.DropDown += (s,e)=> LoadPorts(true);
+            Controls.Add(cmbPorts);
+
+            btnDetect = MakeSmallButton("Erkennung", new Point(250, 76), Color.FromArgb(33, 150, 243));
+            btnDetect.Size = new Size(120,36);
+            btnDetect.Click += (s,e)=> StartDetectPortMode();
+            Controls.Add(btnDetect);
+
+            btnApply = MakeSmallButton("Übernehmen", new Point(380, 76), Color.FromArgb(46, 125, 50));
+            btnApply.Size = new Size(140, 36);
+            btnApply.Click += (s, e) => ApplyPortChange();
+            Controls.Add(btnApply);
+
+            btnReconnect = MakeSmallButton("Reopen", new Point(530, 76), Color.FromArgb(33, 150, 243));
+            btnReconnect.Size = new Size(110, 36);
+            btnReconnect.Click += (s, e) => ReopenCurrentPort();
+            Controls.Add(btnReconnect);
+
+            lblStatus = new Label
+            {
+                Text = "Status: -",
+                Location = new Point(660, 80),
+                Size = new Size(270, 30),
+                Font = new Font("Segoe UI Variable", 11f, FontStyle.Italic),
+                ForeColor = Color.DimGray
+            };
+            Controls.Add(lblStatus);
+
+            // Log
+            txtLog = new TextBox
+            {
+                Multiline = true,
+                ReadOnly = true,
+                ScrollBars = ScrollBars.Vertical,
+                Location = new Point(24, 130),
+                Size = new Size(560, 460),
+                Font = new Font("Consolas", 10f),
+                BackColor = Color.White
+            };
+            Controls.Add(txtLog);
+
+            _logHandler = (line) =>
+            {
+                try
+                {
+                    if (txtLog.InvokeRequired)
+                        txtLog.BeginInvoke((Action)(() => AppendLog(line)));
+                    else
+                        AppendLog(line);
+                }
+                catch { }
+            };
+            if (_feeder != null)
+                _feeder.EventLog += _logHandler;
+
+            // LED Buttons – Mapping angepasst:
+            // NV200/1 -> default channel commands (ohne 'a')
+            // NV200/2 -> channel 'a'
+            int bx = 610;
+            int by = 170;
+            int bw = 220;
+            int bh = 58;
+            int pad = 16;
+
+            btnGreen = MakeActionButton("NV200/1 Grün (2005$)", new Point(bx, by), bw, bh, Color.FromArgb(46, 125, 50));
+            btnGreen.Click += (s, e) => SafeSend("2005$");
+            Controls.Add(btnGreen);
+
+            btnGreenA = MakeActionButton("NV200/2 Grün (2005a$)", new Point(bx, by + (bh + pad)), bw, bh, Color.FromArgb(56, 142, 60));
+            btnGreenA.Click += (s, e) => SafeSend("2005a$");
+            Controls.Add(btnGreenA);
+
+            btnRed = MakeActionButton("NV200/1 Rot (2004$)", new Point(bx, by + 2 * (bh + pad)), bw, bh, Color.FromArgb(211, 47, 47));
+            btnRed.Click += (s, e) => SafeSend("2004$");
+            Controls.Add(btnRed);
+
+            btnRedA = MakeActionButton("NV200/2 Rot (2004a$)", new Point(bx, by + 3 * (bh + pad)), bw, bh, Color.FromArgb(198, 40, 40));
+            btnRedA.Click += (s, e) => SafeSend("2004a$");
+            Controls.Add(btnRedA);
+
+            var lblHint = new Label
+            {
+                Text = "Hinweis: Port-Änderung speichert INI (Section [CoinFeeder]/ComPort). Terminator einheitlich: LF (\\n).",
+                Location = new Point(24, 600 - 26),
+                AutoSize = true,
+                Font = new Font("Segoe UI Variable", 9.5f),
+                ForeColor = Color.DimGray
+            };
+            Controls.Add(lblHint);
+
+            FormClosed += OnFormClosed;
+
+            ResumeLayout(false);
+        }
+
+        private Button MakeSmallButton(string text, Point loc, Color color)
+        {
+            var b = new Button
+            {
+                Text = text,
+                Location = loc,
+                Size = new Size(40, 36),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = color,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI Variable", 13f, FontStyle.Bold),
+                TabStop = false
+            };
+            b.FlatAppearance.BorderSize = 0;
+            return b;
+        }
+
+        private Button MakeActionButton(string text, Point loc, int w, int h, Color c)
+        {
+            var b = new Button
+            {
+                Text = text,
+                Location = loc,
+                Size = new Size(w, h),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = c,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI Variable", 14f, FontStyle.Bold),
+                TabStop = false
+            };
+            b.FlatAppearance.BorderSize = 0;
+            b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, w, h, 14, 14));
+            b.MouseEnter += (s, e) => b.BackColor = ControlPaint.Light(c);
+            b.MouseLeave += (s, e) => b.BackColor = c;
+            return b;
+        }
+
+        private void AppendLog(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line)) return;
+            txtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] {line}{Environment.NewLine}");
+        }
+
+        #endregion
+
+        #region Port Handling
+
+        private void LoadPorts(bool passive = false)
+        {
+            try
+            {
+                var previous = _lastPorts ?? Array.Empty<string>();
+                var current = cmbPorts.SelectedItem as string;
+                var ports = SerialPort.GetPortNames();
+                Array.Sort(ports, StringComparer.OrdinalIgnoreCase);
+                _lastPorts = (string[])ports.Clone();
+
+                var newPorts = ports.Where(p => !previous.Contains(p, StringComparer.OrdinalIgnoreCase)).ToList();
+
+                cmbPorts.Items.Clear();
+                cmbPorts.Items.AddRange(ports);
+
+                if (_detectingPort && _detectBasePorts != null)
+                {
+                    var added = ports.Where(p => !_detectBasePorts.Contains(p, StringComparer.OrdinalIgnoreCase)).ToList();
+                    if (added.Count > 0)
+                    {
+                        SelectDetectedPort(added[0]);
+                        return;
+                    }
+                }
+                else if (!passive)
+                {
+                    if (string.IsNullOrWhiteSpace(current) && newPorts.Count > 0)
+                        cmbPorts.SelectedItem = newPorts[0];
+                    else if (!string.IsNullOrWhiteSpace(current))
+                    {
+                        int idx = Array.IndexOf(ports, current);
+                        if (idx >= 0) cmbPorts.SelectedIndex = idx; else cmbPorts.SelectedIndex = -1;
+                    }
+                }
+                else if (!string.IsNullOrWhiteSpace(current))
+                {
+                    int idx = Array.IndexOf(ports, current);
+                    if (idx >= 0) cmbPorts.SelectedIndex = idx; else cmbPorts.SelectedIndex = -1;
+                }
+                if (cmbPorts.Items.Count == 0) cmbPorts.SelectedIndex = -1;
+
+                // Nach Aktualisierung sicherstellen, dass der tatsächliche Port (konfiguriert/feeder.PortName) sichtbar ist.
+                EnsureSelectedPort(_feeder?.PortName);
+            }
+            catch (Exception ex)
+            {
+                AppendLog("LoadPorts Fehler: " + ex.Message);
+            }
+        }
+
+        private void LoadPortFromIni()
+        {
+            try
+            {
+                var configured = IniHelper.ReadValue("CoinFeeder", "ComPort", _iniPath);
+                if (!string.IsNullOrWhiteSpace(configured) && _feeder != null && !_feeder.IsOpen)
+                {
+                    // Statt _feeder.PortName = configured; (nicht erlaubt, da private set) -> Configure aufrufen
+                    try
+                    {
+                        _feeder.Configure(configured);
+                        AppendLog($"Konfiguration vorbereitet (Port={configured})");
+                    }
+                    catch (Exception ex)
+                    {
+                        AppendLog("Configure fehlgeschlagen: " + ex.Message);
+                    }
+                }
+                // Direkt sicherstellen, dass Dropdown den konfigurierten Port anzeigt
+                EnsureSelectedPort(_feeder?.PortName ?? configured);
+            }
+            catch { }
+        }
+
+        private void ApplyPortChange()
+        {
+            try
+            {
+                var sel = cmbPorts.SelectedItem as string;
+                if (string.IsNullOrWhiteSpace(sel))
+                {
+                    MessageBox.Show(this, "Bitte zuerst einen Port auswählen.", "Hinweis",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                IniHelper.WriteValue("CoinFeeder", "ComPort", sel, _iniPath);
+                AppendLog($"INI gespeichert: [CoinFeeder] ComPort={sel}");
+
+                if (_feeder != null)
+                {
+                    bool reopen = !_feeder.IsOpen || !string.Equals(_feeder.PortName, sel, StringComparison.OrdinalIgnoreCase);
+                    if (reopen)
+                    {
+                        try { if (_feeder.IsOpen) _feeder.Close(); } catch { }
+                        _feeder.Configure(sel);
+                        _feeder.Open();
+                        AppendLog($"Port gewechselt und geöffnet: {sel} (IsOpen={_feeder.IsOpen})");
+                    }
+                }
+                UpdateUiState();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Portwechsel fehlgeschlagen:\r\n" + ex.Message, "Fehler",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppendLog("ApplyPortChange Fehler: " + ex.Message);
+            }
+        }
+
+        private void ReopenCurrentPort()
+        {
+            try
+            {
+                var sel = cmbPorts.SelectedItem as string;
+                if (string.IsNullOrWhiteSpace(sel))
+                {
+                    MessageBox.Show(this, "Kein Port ausgewählt.", "Hinweis",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                if (_feeder == null)
+                {
+                    MessageBox.Show(this, "Feeder-Instanz fehlt.", "Fehler",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                try { if (_feeder.IsOpen) _feeder.Close(); } catch { }
+                _feeder.Configure(sel);
+                _feeder.Open();
+                AppendLog($"Reopen auf {sel} (IsOpen={_feeder.IsOpen})");
+                UpdateUiState();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Reopen fehlgeschlagen:\r\n" + ex.Message, "Fehler",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppendLog("Reopen Fehler: " + ex.Message);
+            }
+        }
+
+        private void UpdateUiState()
+        {
+            try
+            {
+                bool open = _feeder != null && _feeder.IsOpen;
+                btnGreen.Enabled = open;
+                btnGreenA.Enabled = open;
+                btnRed.Enabled = open;
+                btnRedA.Enabled = open;
+                btnReconnect.Enabled = (cmbPorts.SelectedItem != null);
+                lblStatus.Text = $"Status: Port={_feeder?.PortName ?? "-"} | Open={(open ? "Ja" : "Nein")}";
+                lblStatus.ForeColor = open ? Color.FromArgb(0, 128, 0) : Color.FromArgb(183, 28, 28);
+            }
+            catch { }
+        }
+
+        #endregion
+
+        #region State / Auto-Logic
+
+        private void StartStateTimer()
+        {
+            _stateTimer = new System.Windows.Forms.Timer { Interval = 1500 }; // etwas langsamer
+            _stateTimer.Tick += (s, e) => StateTimerTick();
+            _stateTimer.Start();
+            AppendLog("State-Timer gestartet");
+        }
+
+        private void StateTimerTick()
+        {
+            try
+            {
+                var nv1 = Program.NV200Instance; // default channel
+                var nv2 = Program.NV2002Instance; // channel 'a'
+                string s1 = nv1?.states ?? string.Empty;
+                string s2 = nv2?.states ?? string.Empty;
+
+                bool idle1 = !string.IsNullOrWhiteSpace(s1) && s1.IndexOf("idle", StringComparison.OrdinalIgnoreCase) >= 0;
+                bool idle2 = !string.IsNullOrWhiteSpace(s2) && s2.IndexOf("idle", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                // NV200/1 (default channel)
+                if (idle1 && !_nv1WasIdle)
+                {
+                    try
+                    {
+                        EnsureFeederOpen();
+                        if (nv1 != null && nv1.MitarbeiterEingeloggt)
+                        {
+                            AppendLog("Auto: NV200/1 idle -> 2005$");
+                            SendSimple("2005$");
+                        }
+                        else
+                        {
+                            AppendLog("Auto: NV200/1 idle ohne Login -> 2004$");
+                            SendSimple("2004$");
+                        }
+                    }
+                    catch (Exception ex) { AppendLog("Auto NV200/1 Fehler: " + ex.Message); }
+                    _nv1WasIdle = true;
+                }
+                else if (!idle1 && _nv1WasIdle)
+                    _nv1WasIdle = false;
+
+                // NV200/2 (channel 'a')
+                if (idle2 && !_nv2WasIdle)
+                {
+                    try
+                    {
+                        EnsureFeederOpen();
+                        if (nv2 != null && nv2.MitarbeiterEingeloggt)
+                        {
+                            AppendLog("Auto: NV200/2 idle -> 2005a$");
+                            SendSimple("2005a$");
+                        }
+                        else
+                        {
+                            AppendLog("Auto: NV200/2 idle ohne Login -> 2004a$");
+                            SendSimple("2004a$");
+                        }
+                    }
+                    catch (Exception ex) { AppendLog("Auto NV200/2 Fehler: " + ex.Message); }
+                    _nv2WasIdle = true;
+                }
+                else if (!idle2 && _nv2WasIdle)
+                    _nv2WasIdle = false;
+
+                UpdateUiState();
+            }
+            catch (Exception ex) { AppendLog("StateTimerTick Fehler: " + ex.Message); }
+        }
+
+        private void EnsureFeederOpen()
+        {
+            if (_feeder == null)
+                throw new InvalidOperationException("CoinFeederController fehlt.");
+
+            var sel = !string.IsNullOrWhiteSpace(_feeder.PortName)
+                            ? _feeder.PortName
+                            : (IniHelper.ReadValue("CoinFeeder", "ComPort", _iniPath) ?? string.Empty);
+
+            if (string.IsNullOrWhiteSpace(sel))
+                throw new InvalidOperationException("Kein COM-Port konfiguriert (INI [CoinFeeder] ComPort).");
+
+            if (!_feeder.IsOpen)
+            {
+                if (!string.Equals(_feeder.PortName, sel, StringComparison.OrdinalIgnoreCase))
+                {
+                    try { if (_feeder.IsOpen) _feeder.Close(); } catch { }
+                    _feeder.Configure(sel);
+                }
+
+                AppendLog($"Opening CoinFeeder auf {sel}...");
+                _feeder.Open();
+                AppendLog($"IsOpen={_feeder.IsOpen}");
+            }
+        }
+
+        #endregion
+
+        #region Sending
+
+        private void SafeSend(string tpl)
+        {
+            try { SendSimple(tpl); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppendLog("Send Fehler: " + ex.Message);
+            }
+        }
+
+        private void SendSimple(string template)
+        {
+            if (_feeder == null)
+                throw new InvalidOperationException("CoinFeeder nicht initialisiert.");
+
+            try
+            {
+                DateTime now = DateTime.UtcNow;
+                if (_lastSendTimes.TryGetValue(template, out DateTime last) && (now - last) < _sendDebounce)
+                {
+                    AppendLog($"Debounce: {template} verworfen");
+                    return;
+                }
+                _lastSendTimes[template] = now;
+            }
+            catch { }
+
+            EnsureFeederOpen();
+
+            _feeder.Mode = CoinFeederProtocolMode.ASCII;
+            _feeder.Terminator = "\n"; // unified LF only
+            _feeder.AppendTerminatorAfterDollar = true;
+
+            AppendLog($"Sende: {template} (Port {_feeder.PortName}, Open={_feeder.IsOpen})");
+            SendMulti(template);
+        }
+
+        private void SendMulti(string template)
+        {
+            var parts = (template ?? string.Empty)
+                .Replace("\r", "\n")
+                .Split(new[] { '\n', ';' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var p in parts)
+            {
+                var cmd = p.Trim();
+                if (cmd.Length == 0) continue;
+                try { _feeder.SendTemplate(cmd); }
+                catch (Exception ex) { AppendLog("Teilkommando Fehler: " + ex.Message); }
+                Thread.Sleep(60);
+            }
+        }
+
+        #endregion
+
+        #region Cleanup
+
+        private void OnFormClosed(object sender, FormClosedEventArgs e)
+        {
+            try
+            {
+                if (_stateTimer != null)
+                {
+                    _stateTimer.Stop();
+                    _stateTimer.Dispose();
+                    _stateTimer = null;
+                }
+            }
+            catch { }
+
+            try { if (_feeder != null && _logHandler != null) _feeder.EventLog -= _logHandler; } catch { }
+        }
+
+        #endregion
+
+        private void StartDetectPortMode()
+        {
+            if (_detectingPort) { StopDetectPortMode(true); return; }
+            try
+            {
+                _detectBasePorts = SerialPort.GetPortNames();
+                Array.Sort(_detectBasePorts, StringComparer.OrdinalIgnoreCase);
+                _detectingPort = true;
+                btnDetect.Text = "Stop";
+                _detectDialog = new Form
+                {
+                    Text = "COM-Port Erkennung",
+                    Size = new Size(420,140),
+                    FormBorderStyle = FormBorderStyle.FixedDialog,
+                    StartPosition = FormStartPosition.CenterParent,
+                    ControlBox = false,
+                    TopMost = true
+                };
+                var lbl = new Label { Text = "Bitte jetzt den gewünschten USB / COM Adapter einstecken...\r\nFenster schließt automatisch bei Erkennung.", AutoSize = false, Location = new Point(12,12), Size = new Size(380,56) };
+                _detectDialog.Controls.Add(lbl);
+                var btnCancel = new Button { Text = "Abbrechen", Location = new Point(300,80), Size = new Size(90,28) };
+                btnCancel.Click += (s,e)=> StopDetectPortMode(true);
+                _detectDialog.Controls.Add(btnCancel);
+                _detectDialog.Show(this);
+                _detectTimer = new System.Windows.Forms.Timer { Interval = 700 };
+                _detectTimer.Tick += (s,e)=> LoadPorts();
+                _detectTimer.Start();
+            }
+            catch { StopDetectPortMode(true); }
+        }
+
+        private void SelectDetectedPort(string port)
+        {
+            try
+            {
+                if (!cmbPorts.Items.Cast<object>().Any(o => string.Equals(Convert.ToString(o), port, StringComparison.OrdinalIgnoreCase)))
+                {
+                    cmbPorts.Items.Add(port);
+                }
+                cmbPorts.SelectedItem = port;
+            }
+            catch { }
+            StopDetectPortMode(false);
+        }
+
+        private void StopDetectPortMode(bool cancelled)
+        {
+            try { _detectTimer?.Stop(); } catch { }
+            _detectTimer = null;
+            if (_detectDialog != null)
+            {
+                try { _detectDialog.Close(); } catch { }
+                try { _detectDialog.Dispose(); } catch { }
+                _detectDialog = null;
+            }
+            _detectingPort = false;
+            btnDetect.Text = "Erkennung";
+            AppendLog(cancelled ? "COM-Port Erkennung abgebrochen." : "Neuer COM-Port erkannt: " + (cmbPorts.SelectedItem ?? "?"));
+        }
+    }
+}

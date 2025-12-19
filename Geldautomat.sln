@@ -1,0 +1,52 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.11222.15 d18.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Geldautomat", "Geldautomat.csproj", "{E7F871FB-C2EE-457F-8AAE-8501614398F5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Projektmappenelemente", "Projektmappenelemente", "{84D27F74-D2BA-6C25-2661-968F101900D9}"
+	ProjectSection(SolutionItems) = preProject
+		..\KassesystemPRO\KassesystemPRO.vbproj.user = ..\KassesystemPRO\KassesystemPRO.vbproj.user
+	EndProjectSection
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Geldautomat_install", "..\Geldautomat_install\Geldautomat_install.vdproj", "{B3069E88-C038-0969-059B-2E0D7EDBA343}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaMi-Kassenclient", "..\Kassenclient Version 1.0\Version 1.0\TaMi-Kassenclient.csproj", "{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E7F871FB-C2EE-457F-8AAE-8501614398F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E7F871FB-C2EE-457F-8AAE-8501614398F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E7F871FB-C2EE-457F-8AAE-8501614398F5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E7F871FB-C2EE-457F-8AAE-8501614398F5}.Debug|x86.Build.0 = Debug|Any CPU
+		{E7F871FB-C2EE-457F-8AAE-8501614398F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E7F871FB-C2EE-457F-8AAE-8501614398F5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E7F871FB-C2EE-457F-8AAE-8501614398F5}.Release|x86.ActiveCfg = Release|Any CPU
+		{E7F871FB-C2EE-457F-8AAE-8501614398F5}.Release|x86.Build.0 = Release|Any CPU
+		{B3069E88-C038-0969-059B-2E0D7EDBA343}.Debug|Any CPU.ActiveCfg = Debug
+		{B3069E88-C038-0969-059B-2E0D7EDBA343}.Debug|x86.ActiveCfg = Debug
+		{B3069E88-C038-0969-059B-2E0D7EDBA343}.Release|Any CPU.ActiveCfg = Release
+		{B3069E88-C038-0969-059B-2E0D7EDBA343}.Release|x86.ActiveCfg = Release
+		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Debug|x86.Build.0 = Debug|Any CPU
+		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Release|x86.ActiveCfg = Release|Any CPU
+		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FBF0CCB5-9C2A-44A5-9916-AAE6C07EE3C1}
+	EndGlobalSection
+EndGlobal

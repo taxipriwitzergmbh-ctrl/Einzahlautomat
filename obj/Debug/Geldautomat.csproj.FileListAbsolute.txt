@@ -1,0 +1,16 @@
+Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\bin\Debug\Geldautomat.exe.config
+Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\bin\Debug\Geldautomat.exe
+Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\bin\Debug\Geldautomat.pdb
+Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\bin\Debug\ITLlib.dll
+Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\bin\Debug\TaMi-Kassenclient.exe
+Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\bin\Debug\TaMi-Kassenclient.pdb
+Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\bin\Debug\TaMi-Kassenclient.exe.config
+Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\bin\Debug\ITLlib.pdb
+Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\obj\Debug\Geldautomat.csproj.AssemblyReference.cache
+Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\obj\Debug\Geldautomat.Properties.Resources.resources
+Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\obj\Debug\Geldautomat.csproj.GenerateResource.cache
+Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\obj\Debug\Geldautomat.csproj.CoreCompileInputs.cache
+Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\obj\Debug\Geldauto.CA6B8DE8.Up2Date
+Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\obj\Debug\Geldautomat.exe
+Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\obj\Debug\Geldautomat.pdb
+Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\obj\Debug\Geldautomat.exe.config

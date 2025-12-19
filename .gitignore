@@ -1,0 +1,13 @@
+﻿################################################################################
+# Diese .gitignore-Datei wurde von Microsoft(R) Visual Studio automatisch erstellt.
+################################################################################
+
+/AccountingRules.cs
+/.vs/Geldautomat/copilot-chat/55b7bd6e/sessions
+/.vs/Geldautomat/CopilotIndices
+/.vs/Geldautomat/FileContentIndex
+/.vs/Geldautomat/v17
+/.vs/CopilotSnapshots
+/.vs
+/bin/Release
+/obj/Release

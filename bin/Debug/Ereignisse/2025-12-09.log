@@ -1,0 +1,561 @@
+﻿2025-12-09 11:00:02.293 | [Coin2] [SmartCoin/2] Typ leer oder 'None' – zweite Instanz deaktiviert
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-09 11:00:02.363 | Programmstart
+2025-12-09 11:00:02.473 | NV200/2 verbunden auf COM10
+2025-12-09 11:00:03.561 | Login-Form angezeigt
+2025-12-09 11:00:06.554 | NFC-Login erkannt: Token='1234', PID=1
+2025-12-09 11:00:06.595 | Login OK: Manuel Priwitzer (PID=1), Schicht 0, Admin=False, Personalguthaben: 4,97 €
+2025-12-09 11:00:06.595 | __________________________________________________________________________
+2025-12-09 11:00:06.600 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 11:00:06.601 | Baseline gesetzt: 25,40 € (Anmeldung Manuel Priwitzer)
+2025-12-09 11:00:47.761 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 11:00:47.820 | Kassenbestand: 41271,39 €
+2025-12-09 11:00:47.820 | Kassendifferenz bei Abmeldung: -41245,99 €
+
+--------------------------------------------------------------------------------
+
+2025-12-09 11:00:52.766 | Admin-Backdoor erkannt (ohne Enter)
+2025-12-09 11:00:52.766 | Admin-Backdoor Login erkannt – öffne Abrechnung als Admin.
+2025-12-09 11:00:55.951 | Verzögerter Shutdown gestartet – Geräte werden geschlossen...
+2025-12-09 11:00:55.964 | CoinManager heruntergefahren
+2025-12-09 11:00:55.965 | Coin2Manager heruntergefahren
+2025-12-09 11:00:56.604 | [INFO] Port geschlossen
+2025-12-09 11:00:56.604 | Geräte getrennt – Warte 5 Sekunden vor Prozessende...
+2025-12-09 11:01:01.620 | Beenden jetzt.
+
+
+
+
+
+------------------------------------- END --------------------------------------
+2025-12-09 11:01:01.621 | Logger Shutdown gestartet: DelayedShutdown
+2025-12-09 11:02:58.968 | [Coin2] [SmartCoin/2] Typ leer oder 'None' – zweite Instanz deaktiviert
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-09 11:02:59.013 | Programmstart
+2025-12-09 11:02:59.132 | NV200/2 verbunden auf COM10
+2025-12-09 11:03:00.172 | Login-Form angezeigt
+2025-12-09 11:03:05.205 | NFC-Login erkannt: Token='1234', PID=1
+2025-12-09 11:03:05.246 | Login OK: Manuel Priwitzer (PID=1), Schicht 0, Admin=False, Personalguthaben: 4,97 €
+2025-12-09 11:03:05.246 | __________________________________________________________________________
+2025-12-09 11:03:05.254 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 11:03:05.254 | Baseline gesetzt: 25,40 € (Anmeldung Manuel Priwitzer)
+2025-12-09 11:15:53.060 | [Coin2] [SmartCoin/2] Typ leer oder 'None' – zweite Instanz deaktiviert
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-09 11:15:53.103 | Programmstart
+2025-12-09 11:15:53.209 | NV200/2 verbunden auf COM10
+2025-12-09 11:15:54.167 | Login-Form angezeigt
+2025-12-09 11:16:14.333 | NFC-Login Fehler: AppRechte
+2025-12-09 11:16:17.077 | NFC-Login Fehler: AppRechte
+2025-12-09 11:18:19.809 | Admin-Backdoor erkannt (ohne Enter)
+2025-12-09 11:18:19.810 | Admin-Backdoor Login erkannt – öffne Abrechnung als Admin.
+2025-12-09 11:18:30.713 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 11:18:30.766 | Kassenbestand: 41271,39 €
+2025-12-09 11:18:30.766 | Kassendifferenz bei Abmeldung: -41245,99 €
+
+--------------------------------------------------------------------------------
+
+2025-12-09 11:18:35.387 | Verzögerter Shutdown gestartet – Geräte werden geschlossen...
+2025-12-09 11:18:35.401 | CoinManager heruntergefahren
+2025-12-09 11:18:35.402 | Coin2Manager heruntergefahren
+2025-12-09 11:18:36.060 | [INFO] Port geschlossen
+2025-12-09 11:18:36.060 | Geräte getrennt – Warte 5 Sekunden vor Prozessende...
+2025-12-09 11:18:39.981 | Logger Shutdown gestartet: ApplicationExit
+2025-12-09 11:19:02.370 | [Coin2] [SmartCoin/2] Typ leer oder 'None' – zweite Instanz deaktiviert
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-09 11:19:02.384 | Programmstart
+2025-12-09 11:19:02.549 | NV200/2 verbunden auf COM10
+2025-12-09 11:19:03.700 | Login-Form angezeigt
+2025-12-09 11:20:13.837 | [Coin2] [SmartCoin/2] Typ leer oder 'None' – zweite Instanz deaktiviert
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-09 11:20:13.850 | Programmstart
+2025-12-09 11:20:13.957 | NV200/2 verbunden auf COM10
+2025-12-09 11:20:15.086 | Login-Form angezeigt
+2025-12-09 11:20:56.595 | Login OK: Manuel Priwitzer (PID=1), Schicht 0, Admin=False, Personalguthaben: 4,97 €
+2025-12-09 11:20:56.595 | __________________________________________________________________________
+2025-12-09 11:20:56.601 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 11:20:56.601 | Baseline gesetzt: 25,40 € (Anmeldung Manuel Priwitzer)
+2025-12-09 11:21:11.065 | Verzögerter Shutdown gestartet – Geräte werden geschlossen...
+2025-12-09 11:21:11.080 | CoinManager heruntergefahren
+2025-12-09 11:21:11.080 | Coin2Manager heruntergefahren
+2025-12-09 11:21:11.735 | [INFO] Port geschlossen
+2025-12-09 11:21:11.735 | Geräte getrennt – Warte 5 Sekunden vor Prozessende...
+2025-12-09 11:21:16.745 | Beenden jetzt.
+
+
+
+
+
+------------------------------------- END --------------------------------------
+2025-12-09 11:21:16.746 | Logger Shutdown gestartet: DelayedShutdown
+2025-12-09 11:34:26.959 | [Coin2] [SmartCoin/2] Typ leer oder 'None' – zweite Instanz deaktiviert
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-09 11:34:26.982 | Programmstart
+2025-12-09 11:34:27.083 | NV200/2 verbunden auf COM10
+2025-12-09 11:34:27.973 | Login-Form angezeigt
+2025-12-09 12:50:46.094 | [Coin2] [SmartCoin/2] Typ leer oder 'None' – zweite Instanz deaktiviert
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-09 12:50:46.140 | Programmstart
+2025-12-09 12:50:46.296 | NV200/2 verbunden auf COM10
+2025-12-09 12:50:47.719 | Login-Form angezeigt
+2025-12-09 12:51:29.916 | [Coin2] [SmartCoin/2] Typ leer oder 'None' – zweite Instanz deaktiviert
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-09 12:51:29.940 | Programmstart
+2025-12-09 12:51:30.167 | NV200/2 verbunden auf COM10
+2025-12-09 12:51:31.318 | Login-Form angezeigt
+2025-12-09 12:51:49.138 | [Coin2] [SmartCoin/2] Typ leer oder 'None' – zweite Instanz deaktiviert
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-09 12:51:49.159 | Programmstart
+2025-12-09 12:51:49.379 | NV200/2 verbunden auf COM10
+2025-12-09 12:51:50.493 | Login-Form angezeigt
+2025-12-09 12:52:10.422 | [Coin2] [SmartCoin/2] Typ leer oder 'None' – zweite Instanz deaktiviert
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-09 12:52:10.454 | Programmstart
+2025-12-09 12:52:10.598 | NV200/2 verbunden auf COM10
+2025-12-09 12:52:12.060 | Login-Form angezeigt
+2025-12-09 12:52:17.314 | Login OK: Manuel Priwitzer (PID=1), Schicht 0, Admin=False, Personalguthaben: 4,97 €
+2025-12-09 12:52:17.314 | __________________________________________________________________________
+2025-12-09 12:52:25.286 | [Coin2] [SmartCoin/2] Typ leer oder 'None' – zweite Instanz deaktiviert
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-09 12:52:25.334 | Programmstart
+2025-12-09 12:52:25.495 | NV200/2 verbunden auf COM10
+2025-12-09 12:52:26.654 | Login-Form angezeigt
+2025-12-09 12:52:31.846 | Login OK: Manuel Priwitzer (PID=1), Schicht 0, Admin=False, Personalguthaben: 4,97 €
+2025-12-09 12:52:31.846 | __________________________________________________________________________
+2025-12-09 12:52:31.849 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 12:52:31.850 | Baseline gesetzt: 25,40 € (Anmeldung Manuel Priwitzer)
+2025-12-09 12:52:36.530 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 12:52:36.580 | Kassenbestand: 41271,39 €
+2025-12-09 12:52:36.580 | Kassendifferenz bei Abmeldung: -41245,99 €
+
+--------------------------------------------------------------------------------
+
+2025-12-09 12:52:58.884 | Login OK: Manuel Priwitzer (PID=1), Schicht 0, Admin=False, Personalguthaben: 4,97 €
+2025-12-09 12:52:58.884 | __________________________________________________________________________
+2025-12-09 12:52:58.884 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 12:53:07.331 | Verzögerter Shutdown gestartet – Geräte werden geschlossen...
+2025-12-09 12:53:07.344 | CoinManager heruntergefahren
+2025-12-09 12:53:07.344 | Coin2Manager heruntergefahren
+2025-12-09 12:53:08.001 | [INFO] Port geschlossen
+2025-12-09 12:53:08.001 | Geräte getrennt – Warte 5 Sekunden vor Prozessende...
+2025-12-09 12:53:13.014 | Beenden jetzt.
+
+
+
+
+
+------------------------------------- END --------------------------------------
+2025-12-09 12:53:13.014 | Logger Shutdown gestartet: DelayedShutdown
+2025-12-09 12:53:18.820 | [Coin2] [SmartCoin/2] Typ leer oder 'None' – zweite Instanz deaktiviert
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-09 12:53:18.834 | Programmstart
+2025-12-09 12:53:18.992 | NV200/2 verbunden auf COM10
+2025-12-09 12:53:20.213 | Login-Form angezeigt
+2025-12-09 12:53:26.021 | NFC-Login erkannt: Token='1234', PID=1
+2025-12-09 12:53:26.044 | Login OK: Manuel Priwitzer (PID=1), Schicht 0, Admin=False, Personalguthaben: 4,97 €
+2025-12-09 12:53:26.044 | __________________________________________________________________________
+2025-12-09 12:53:26.046 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 12:53:26.046 | Baseline gesetzt: 25,40 € (Anmeldung Manuel Priwitzer)
+2025-12-09 12:53:30.609 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 12:53:30.655 | Kassenbestand: 41271,39 €
+2025-12-09 12:53:30.655 | Kassendifferenz bei Abmeldung: -41245,99 €
+
+--------------------------------------------------------------------------------
+
+2025-12-09 12:54:09.417 | Login fehlgeschlagen: PID=1234
+2025-12-09 12:54:15.571 | Verzögerter Shutdown gestartet – Geräte werden geschlossen...
+2025-12-09 12:54:15.587 | CoinManager heruntergefahren
+2025-12-09 12:54:15.587 | Coin2Manager heruntergefahren
+2025-12-09 12:54:16.237 | [INFO] Port geschlossen
+2025-12-09 12:54:16.237 | Geräte getrennt – Warte 5 Sekunden vor Prozessende...
+2025-12-09 12:54:17.452 | Logger Shutdown gestartet: ApplicationExit
+2025-12-09 12:54:23.116 | [Coin2] [SmartCoin/2] Typ leer oder 'None' – zweite Instanz deaktiviert
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-09 12:54:23.136 | Programmstart
+2025-12-09 12:54:23.290 | NV200/2 verbunden auf COM10
+2025-12-09 12:54:24.426 | Login-Form angezeigt
+2025-12-09 12:54:31.496 | Login OK: Manuel Priwitzer (PID=1), Schicht 0, Admin=False, Personalguthaben: 4,97 €
+2025-12-09 12:54:31.496 | __________________________________________________________________________
+2025-12-09 12:54:31.499 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 12:54:31.499 | Baseline gesetzt: 25,40 € (Anmeldung Manuel Priwitzer)
+2025-12-09 12:54:35.346 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 12:54:35.395 | Kassenbestand: 41271,39 €
+2025-12-09 12:54:35.395 | Kassendifferenz bei Abmeldung: -41245,99 €
+
+--------------------------------------------------------------------------------
+
+2025-12-09 12:54:41.806 | Login OK: Nino Keller (PID=2), Schicht 121931, Admin=False, Personalguthaben: 0,00 €
+2025-12-09 12:54:41.806 | __________________________________________________________________________
+2025-12-09 12:54:41.806 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 12:54:48.402 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 12:54:48.414 | Kassenbestand: 41271,39 €
+2025-12-09 12:54:48.414 | Kassendifferenz bei Abmeldung: -41245,99 €
+
+--------------------------------------------------------------------------------
+
+2025-12-09 12:54:56.924 | Verzögerter Shutdown gestartet – Geräte werden geschlossen...
+2025-12-09 12:54:56.937 | CoinManager heruntergefahren
+2025-12-09 12:54:56.938 | Coin2Manager heruntergefahren
+2025-12-09 12:54:57.600 | [INFO] Port geschlossen
+2025-12-09 12:54:57.600 | Geräte getrennt – Warte 5 Sekunden vor Prozessende...
+2025-12-09 12:55:02.616 | Beenden jetzt.
+
+
+
+
+
+------------------------------------- END --------------------------------------
+2025-12-09 12:55:02.622 | Logger Shutdown gestartet: DelayedShutdown
+2025-12-09 12:55:23.941 | [Coin2] [SmartCoin/2] Typ leer oder 'None' – zweite Instanz deaktiviert
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-09 12:55:23.968 | Programmstart
+2025-12-09 12:55:24.119 | NV200/2 verbunden auf COM10
+2025-12-09 12:55:24.996 | Login-Form angezeigt
+2025-12-09 12:55:28.069 | NFC-Login erkannt: Token='1234', PID=1
+2025-12-09 12:55:28.123 | Login OK: Manuel Priwitzer (PID=1), Schicht 0, Admin=False, Personalguthaben: 4,97 €
+2025-12-09 12:55:28.123 | __________________________________________________________________________
+2025-12-09 12:55:28.132 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 12:55:28.132 | Baseline gesetzt: 25,40 € (Anmeldung Manuel Priwitzer)
+2025-12-09 12:55:36.379 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 12:55:36.428 | Kassenbestand: 41271,39 €
+2025-12-09 12:55:36.428 | Kassendifferenz bei Abmeldung: -41245,99 €
+
+--------------------------------------------------------------------------------
+
+2025-12-09 12:57:44.032 | NFC-Login erkannt: Token='1234', PID=1
+2025-12-09 12:57:44.046 | Login OK: Manuel Priwitzer (PID=1), Schicht 0, Admin=False, Personalguthaben: 4,97 €
+2025-12-09 12:57:44.046 | __________________________________________________________________________
+2025-12-09 12:57:44.046 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 12:57:47.485 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 12:57:47.497 | Kassenbestand: 41271,39 €
+2025-12-09 12:57:47.497 | Kassendifferenz bei Abmeldung: -41245,99 €
+
+--------------------------------------------------------------------------------
+
+2025-12-09 12:57:49.806 | NFC-Login erkannt: Token='4321', PID=2
+2025-12-09 12:57:49.822 | Login OK: Nino Keller (PID=2), Schicht 121931, Admin=False, Personalguthaben: 0,00 €
+2025-12-09 12:57:49.822 | __________________________________________________________________________
+2025-12-09 12:57:49.822 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 12:57:57.456 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 12:57:57.468 | Kassenbestand: 41271,39 €
+2025-12-09 12:57:57.468 | Kassendifferenz bei Abmeldung: -41245,99 €
+
+--------------------------------------------------------------------------------
+
+2025-12-09 12:58:24.795 | NFC-Login erkannt: Token='1234', PID=1
+2025-12-09 12:58:24.814 | Login OK: Manuel Priwitzer (PID=1), Schicht 0, Admin=False, Personalguthaben: 4,97 €
+2025-12-09 12:58:24.814 | __________________________________________________________________________
+2025-12-09 12:58:24.815 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=0,2c=0,5c=0,10c=16,20c=19,50c=6,1€=7,2€=5
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 25,40 €
+-- NV200/2 --
+Coins: (keine Daten)
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 0,00 €
+Summe Gesamt: 25,40 €
+2025-12-09 12:58:27.554 | Verzögerter Shutdown gestartet – Geräte werden geschlossen...
+2025-12-09 12:58:27.569 | CoinManager heruntergefahren
+2025-12-09 12:58:27.570 | Coin2Manager heruntergefahren
+2025-12-09 12:58:28.228 | [INFO] Port geschlossen
+2025-12-09 12:58:28.228 | Geräte getrennt – Warte 5 Sekunden vor Prozessende...
+2025-12-09 12:58:33.239 | Beenden jetzt.
+
+
+
+
+
+------------------------------------- END --------------------------------------
+2025-12-09 12:58:33.242 | Logger Shutdown gestartet: DelayedShutdown

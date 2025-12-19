@@ -1,0 +1,169 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Text.RegularExpressions;
+
+namespace Geldautomat.Printing
+{
+    public interface IReceiptLayout
+    {
+        IEnumerable<string> BuildBody(string title, string mitarbeiter, string buchungstext,
+                                      decimal betrag19, decimal betrag7, decimal betrag0, bool withVatLines);
+    }
+
+    public class StandardReceiptLayout : IReceiptLayout
+    {
+        private static readonly CultureInfo De = new CultureInfo("de-DE");
+
+        public IEnumerable<string> BuildBody(string title, string mitarbeiter, string buchungstext,
+                                             decimal betrag19, decimal betrag7, decimal betrag0, bool withVatLines)
+        {
+            var list = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(mitarbeiter))
+                list.Add("Mitarbeiter: " + mitarbeiter);
+
+            bool isSchicht = IsSchichtTitle(title);
+
+            if (isSchicht)
+            {
+                // Versuche strukturierten Meta-Header (::SCHMETA|ID=...|DAT=...|KEN=...::)
+                if (!TryAddFromMetaHeader(buchungstext, list))
+                {
+                    // Regex-Fallback aus freiem Text
+                    if (!TryAddFromFreeText(buchungstext, list))
+                    {
+                        // Letzter Fallback: falls nichts erkannt – zeige den Text roh
+                        if (!string.IsNullOrWhiteSpace(buchungstext))
+                            list.Add(buchungstext.Trim());
+                    }
+                }
+            }
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(buchungstext))
+                    list.Add("Text: " + buchungstext.Trim());
+            }
+
+            if (withVatLines)
+            {
+                list.Add(FormatVatLine("19", betrag19));
+                list.Add(FormatVatLine("7", betrag7));
+                list.Add(FormatVatLine("0", betrag0));
+            }
+
+            list.Add(FormatSumLine("Summe:", betrag19 + betrag7 + betrag0));
+            return list;
+        }
+
+        private string FormatVatLine(string mwst, decimal betrag)
+        {
+            // Ziel gemäß Beispiel:
+            // 19%:            0,00€
+            //   7%:          50,00€
+            //   0%:            0,00€
+            // - Betrag ohne Leerzeichen vor €
+            // - Betrag an fixer Spalte (Spalte 16, 1-basiert)
+            const int amountColumn = 16; // Startposition (1-basiert) des Betrags (erste Ziffer oder 0)
+            string label = (mwst.Length == 1 ? "  " : "") + mwst + "%:"; // für 7% / 0% zwei führende Spaces
+            string value = betrag.ToString("0.00", De) + "€";
+            int spaces = Math.Max(1, amountColumn - label.Length);
+            return label + new string(' ', spaces) + value;
+        }
+
+        private string FormatSumLine(string label, decimal betrag)
+        {
+            // Beispielvorgabe:
+            // Summe:     50,00€
+            // Hier wirkt die Einrückung kürzer (in Beispiel 5 Spaces). Wir lassen sie konfigurierbar.
+            const int spaces = 5;
+            string value = betrag.ToString("0.00", De) + "€";
+            return label + new string(' ', spaces) + value;
+        }
+
+        private bool TryAddFromMetaHeader(string text, List<string> list)
+        {
+            if (string.IsNullOrWhiteSpace(text) || !text.StartsWith("::SCHMETA|", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            try
+            {
+                int end = text.IndexOf("::", 2);
+                if (end <= 0) return false;
+                var header = text.Substring(2, end - 2); // ohne führende ::
+
+                string id = null;
+                string dat = null;
+                string ken = null;
+
+                foreach (var part in header.Split('|'))
+                {
+                    if (part.StartsWith("ID=", StringComparison.OrdinalIgnoreCase))
+                        id = part.Substring(3).Trim();
+                    else if (part.StartsWith("DAT=", StringComparison.OrdinalIgnoreCase))
+                        dat = part.Substring(4).Trim();
+                    else if (part.StartsWith("KEN=", StringComparison.OrdinalIgnoreCase))
+                        ken = part.Substring(4).Trim();
+                }
+
+                if (string.IsNullOrWhiteSpace(dat))
+                    return false;
+
+                // Gewünschtes Format:
+                // Schicht: 118089, WIL CM 5656
+                // vom 22.08.2025 12:13 eingezahlt
+                var line1 = "Schicht: " + (string.IsNullOrWhiteSpace(id) ? "unbekannt" : id) +
+                            (string.IsNullOrWhiteSpace(ken) ? "" : ", " + ken);
+                var line2 = "vom " + dat + " eingezahlt";
+                list.Add(line1);
+                list.Add(line2);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private bool TryAddFromFreeText(string text, List<string> list)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return false;
+
+            // Erwartete freie Muster (flexibel):
+            // ... Schicht 118089, WIL CM 5656 von 22.08.2025 12:13 eingezahlt
+            // oder
+            // ... Schicht 118089, WIL CM 5656 vom 22.08.2025 12:13 eingezahlt
+            // Kennzeichen kann Leerzeichen enthalten, endet vor 'von' / 'vom'
+            try
+            {
+                var rx = new Regex(@"Schicht\s+(\d+),\s+(.+?)\s+vo[mn]\s+(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2})\s+eingezahlt",
+                    RegexOptions.IgnoreCase);
+                var m = rx.Match(text);
+                if (m.Success)
+                {
+                    string id = m.Groups[1].Value.Trim();
+                    string ken = m.Groups[2].Value.Trim();
+                    string dat = m.Groups[3].Value.Trim();
+
+                    list.Add("Schicht: " + id + ", " + ken);
+                    list.Add("vom " + dat + " eingezahlt");
+                    return true;
+                }
+            }
+            catch { }
+            return false;
+        }
+
+        private bool IsSchichtTitle(string title)
+        {
+            if (string.IsNullOrWhiteSpace(title)) return false;
+            title = title.Trim().ToUpperInvariant();
+            return title.Contains("SCHICHT") || title.Contains("NACHZAHLUNG") || title.Contains("RÜCKZAHLUNG") || title.Contains("RUECKZAHLUNG");
+        }
+    }
+
+    public static class ReceiptLayouts
+    {
+        public static IReceiptLayout Current { get; set; } = new StandardReceiptLayout();
+    }
+}
