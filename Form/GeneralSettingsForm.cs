@@ -28,6 +28,8 @@ namespace Geldautomat
         private Label _lblBusyUnlock; // NEU
         private TextBox _txtBusyUnlock; // NEU
 
+        private CheckBox _chkReceiptPromptEnabled; // NEW: steuert die Quittungsabfrage global
+
         public GeneralSettingsForm()
         {
             BuildUi();
@@ -94,61 +96,71 @@ namespace Geldautomat
             int y = _headerPanel.Bottom + 20;
 
             var lblOnly = new Label { Text = "Nur NFC Anmeldung erlauben", AutoSize = true, Location = new Point(left + 26, y), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.Transparent };
-            _chkOnlyNfc = new CheckBox { Location = new Point(left, y + 2), AutoSize = true };
-            _lblRestartInfo = new Label { Text = "Neustart erforderlich", AutoSize = true, Location = new Point(left + 26, y + 22), Font = new Font("Segoe UI", 9.5f, FontStyle.Regular), ForeColor = Color.FromArgb(80,80,80), BackColor = Color.Transparent };
+            _chkOnlyNfc = new CheckBox { Location = new Point(left, y - 2), AutoSize = true };
+            _lblRestartInfo = new Label { Text = "Neustart erforderlich", AutoSize = true, Location = new Point(left + 26, y + 18), Font = new Font("Segoe UI", 9.5f, FontStyle.Regular), ForeColor = Color.FromArgb(80,80,80), BackColor = Color.Transparent };
 
             Controls.Add(_chkOnlyNfc);
             Controls.Add(lblOnly);
             Controls.Add(_lblRestartInfo);
 
-            y += 58; // etwas mehr Abstand nach NFC Block
+            y += 44; // kleinerer Abstand nach NFC Block
 
             // Fernwartungsbutton ausblenden (Login)
-            _chkHideRemote = new CheckBox { Location = new Point(left, y), AutoSize = true };
+            _chkHideRemote = new CheckBox { Location = new Point(left, y - 2), AutoSize = true };
             var lblHideRemote = new Label { Text = "Fernwartungsbutton im Login ausblenden", AutoSize = true, Location = new Point(left + 26, y - 2), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.Transparent };
             Controls.Add(_chkHideRemote);
             Controls.Add(lblHideRemote);
 
-            y += 40;
+            y += 28;
+
+            // NEW: Quittungsabfrage aktiviert (global) – dritter Checkbox-Block direkt nach den ersten beiden
+            var lblPrompt = new Label { Text = "Quittungsabfrage aktiviert", AutoSize = true, Location = new Point(left + 26, y), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.Transparent };
+            _chkReceiptPromptEnabled = new CheckBox { Location = new Point(left, y - 2), AutoSize = true };
+            Controls.Add(lblPrompt);
+            Controls.Add(_chkReceiptPromptEnabled);
+
+            y += 28;
 
             // Device ID (nur von SuE anzupassen)
             var lblDev = new Label { Text = "Device-ID", AutoSize = true, Location = new Point(left, y), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold), BackColor = Color.Transparent };
-            _txtDeviceId = new TextBox { Location = new Point(left, y + 26), Width = 120, Font = new Font("Segoe UI", 11F) };
-            _lblDeviceHint = new Label { Text = "(nur von SuE anzupassen)", AutoSize = true, Location = new Point(_txtDeviceId.Right + 12, y + 30), Font = new Font("Segoe UI", 9F, FontStyle.Italic), ForeColor = Color.FromArgb(140,140,140) };
+            _txtDeviceId = new TextBox { Location = new Point(left, y + 22), Width = 120, Font = new Font("Segoe UI", 11F) };
+            _lblDeviceHint = new Label { Text = "(nur von SuE anzupassen)", AutoSize = true, Location = new Point(_txtDeviceId.Right + 12, y + 24), Font = new Font("Segoe UI", 9F, FontStyle.Italic), ForeColor = Color.FromArgb(140,140,140) };
             Controls.Add(lblDev);
             Controls.Add(_txtDeviceId);
             Controls.Add(_lblDeviceHint);
 
-            y += 80;
+            y += 56;
 
             // NEU: Timeout für Freigabe bei Gerätefehler (Sekunden)
             _lblBusyUnlock = new Label { Text = "Timeout Freigabe (Sek.) bei Gerätefehler", AutoSize = true, Location = new Point(left, y), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold), BackColor = Color.Transparent };
-            _txtBusyUnlock = new TextBox { Location = new Point(left, y + 26), Width = 120, Font = new Font("Segoe UI", 11F) };
+            _txtBusyUnlock = new TextBox { Location = new Point(left, y + 22), Width = 120, Font = new Font("Segoe UI", 11F) };
             Controls.Add(_lblBusyUnlock);
             Controls.Add(_txtBusyUnlock);
 
-            y += 80;
+            y += 56;
 
             var lblMaint = new Label { Text = "Wartungscode (Maintenance)", AutoSize = true, Location = new Point(left, y), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold), BackColor = Color.Transparent };
             Controls.Add(lblMaint);
-            y += 26;
+            y += 22;
             _txtMaintPwd = new TextBox { Location = new Point(left, y), Width = 240, UseSystemPasswordChar = true, Font = new Font("Segoe UI", 11F) };
-            var lblMaint2 = new Label { Text = "Wiederholen", AutoSize = true, Location = new Point(left + 260, y - 22), Font = new Font("Segoe UI", 9.5f, FontStyle.Regular), ForeColor = Color.DimGray };
+            var lblMaint2 = new Label { Text = "Wiederholen", AutoSize = true, Location = new Point(left + 260, y - 18), Font = new Font("Segoe UI", 9.5f, FontStyle.Regular), ForeColor = Color.DimGray };
             _txtMaintPwd2 = new TextBox { Location = new Point(left + 260, y), Width = 240, UseSystemPasswordChar = true, Font = new Font("Segoe UI", 11F) };
             Controls.Add(_txtMaintPwd);
             Controls.Add(lblMaint2);
             Controls.Add(_txtMaintPwd2);
 
-            y += 50;
+            y += 40;
             var lblAdmin = new Label { Text = "Admin-Backdoor (numerisch)", AutoSize = true, Location = new Point(left, y), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold), BackColor = Color.Transparent };
             Controls.Add(lblAdmin);
-            y += 26;
+            y += 22;
             _txtAdminBackdoor = new TextBox { Location = new Point(left, y), Width = 240, UseSystemPasswordChar = true, Font = new Font("Segoe UI", 11F) };
-            var lblAdmin2 = new Label { Text = "Wiederholen", AutoSize = true, Location = new Point(left + 260, y - 22), Font = new Font("Segoe UI", 9.5f, FontStyle.Regular), ForeColor = Color.DimGray };
+            var lblAdmin2 = new Label { Text = "Wiederholen", AutoSize = true, Location = new Point(left + 260, y - 18), Font = new Font("Segoe UI", 9.5f, FontStyle.Regular), ForeColor = Color.DimGray };
             _txtAdminBackdoor2 = new TextBox { Location = new Point(left + 260, y), Width = 240, UseSystemPasswordChar = true, Font = new Font("Segoe UI", 11F) };
             Controls.Add(_txtAdminBackdoor);
             Controls.Add(lblAdmin2);
             Controls.Add(_txtAdminBackdoor2);
+
+            y += 40;
 
             // Buttons unten rechts
             _btnSave = new Button { Text = "Speichern", Size = new Size(160, 48), Location = new Point(ClientSize.Width - 180 - 180, ClientSize.Height - 80), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), Anchor = AnchorStyles.Right | AnchorStyles.Bottom };
@@ -213,6 +225,13 @@ namespace Geldautomat
                 if (!string.IsNullOrEmpty(adm)) { _txtAdminBackdoor.Text = adm; _txtAdminBackdoor2.Text = adm; }
             }
             catch { }
+            try
+            {
+                var prompt = IniHelper.ReadValue("ReceiptPrinter", "AskUser", AppSettings.IniPath);
+                _chkReceiptPromptEnabled.Checked = string.IsNullOrWhiteSpace(prompt) ? true :
+                    (prompt.Equals("true", StringComparison.OrdinalIgnoreCase) || prompt.Equals("1") || prompt.Equals("yes", StringComparison.OrdinalIgnoreCase) || prompt.Equals("on", StringComparison.OrdinalIgnoreCase));
+            }
+            catch { _chkReceiptPromptEnabled.Checked = true; }
         }
 
         private void SaveValues()
@@ -300,8 +319,13 @@ namespace Geldautomat
                     IniHelper.WriteValue("Security", "AdminNumericBackdoor", string.Empty, AppSettings.IniPath);
             }
             catch { }
+            try
+            {
+                IniHelper.WriteValue("ReceiptPrinter", "AskUser", _chkReceiptPromptEnabled.Checked ? "True" : "False", AppSettings.IniPath);
+            }
+            catch { }
 
-            try { AppLogger.Log($"Allgemeine Einstellungen gespeichert. DeviceID={newDevId}"); } catch { }
+            try { AppLogger.Log($"Allgemeine Einstellungen gespeichert. Prompt={( _chkReceiptPromptEnabled.Checked ? "on" : "off")}"); } catch { }
             try { MessageBox.Show(this, "Einstellungen gespeichert.\nHinweis: Änderungen an NFC/Device-ID wirken erst nach Neustart.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
         }
     }

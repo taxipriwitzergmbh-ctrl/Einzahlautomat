@@ -815,6 +815,10 @@ namespace Geldautomat
                     decimal sum = 0m; decimal noch = 0m;
                     if (_currentAuszahlungRow != null)
                     {
+#if DEBUG
+                        // im Debugger: immer aktivieren
+                        enabled = true;
+#else
                         decimal raw19 = Math.Abs(Convert.ToDecimal(_currentAuszahlungRow["Betrag19"]));
                         decimal raw7 = Math.Abs(Convert.ToDecimal(_currentAuszahlungRow["Betrag7"]));
                         decimal raw0 = Math.Abs(Convert.ToDecimal(_currentAuszahlungRow["Betrag0"]));
@@ -829,6 +833,7 @@ namespace Geldautomat
                             sum = -(raw19 + raw7 + raw0);
                             noch = 0m;
                         }
+#endif
                     }
                     else if (_details != null)
                     {
@@ -960,18 +965,17 @@ namespace Geldautomat
             try
             {
                 var cfg = ReceiptPrinterSettings.Load();
-                if (!cfg.Enabled) return;
+                // Entferne das frühe Return: auch bei deaktiviertem Drucker sollen Mail/QR angeboten werden.
 
                 DialogResult choice = DialogResult.None;
                 if (cfg.AskUser)
                 {
-                    // Benutzerwahl: Mail, Drucken, QR, Nein
                     choice = ShowReceiptChoiceDialog();
                 }
                 else
                 {
-                    // Kein Prompt: je nach Einstellung automatisch drucken oder nichts tun
-                    choice = cfg.AutoPrintIfNoPrompt ? DialogResult.Yes : DialogResult.No;
+                    // Wenn keine Nachfrage: nur automatisch drucken, wenn Druck aktiviert ist und Auto-Print gesetzt ist
+                    choice = (cfg.Enabled && cfg.AutoPrintIfNoPrompt) ? DialogResult.Yes : DialogResult.No;
                 }
 
                 if (choice == DialogResult.Cancel)
@@ -1009,7 +1013,12 @@ namespace Geldautomat
                 }
                 if (choice == DialogResult.Yes)
                 {
-                    // Drucken
+                    // Drucken nur ausführen, wenn Druck aktiviert ist
+                    if (!cfg.Enabled)
+                    {
+                        MessageBox.Show(this, "Drucken ist deaktiviert.", "Quittung", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
                     string title = string.IsNullOrWhiteSpace(vorgang) ? "QUITTUNG" : vorgang.ToUpperInvariant();
                     string mitarbeiter = _personal.Vorname + " " + _personal.Name;
                     var body = ReceiptLayouts.Current.BuildBody(title, mitarbeiter, buchungstext, b19, b7, b0, cfg.PrintVatLines);
@@ -1020,8 +1029,6 @@ namespace Geldautomat
             catch { }
         }
 
-        // Zeigt eine einfache Auswahl: Mail, Drucken, QR, Nein.
-        // Rückgabewerte: DialogResult.Cancel => Mail, DialogResult.Yes => Drucken, DialogResult.Ignore => QR, DialogResult.No => Nein
         private DialogResult ShowReceiptChoiceDialog()
         {
             try
@@ -1106,7 +1113,43 @@ namespace Geldautomat
                 var btnQr = makeBtn("QR-Code");
                 var btnNo = makeBtn("Nein");
 
-                // Secondary style for negative button
+                // Disable mail when no employee mail or no mail settings configured
+                try
+                {
+                    bool hasEmployeeMail = _personal != null && !string.IsNullOrWhiteSpace(_personal.EMail);
+                    var mailCfg = MailSettings.Load();
+                    bool mailConfigured = mailCfg != null && mailCfg.IsConfigured;
+                    bool mailAvailable = hasEmployeeMail && mailConfigured;
+                    btnMail.Enabled = mailAvailable;
+                    if (!mailAvailable)
+                    {
+                        btnMail.BackColor = Color.LightGray;
+                        btnMail.ForeColor = Color.WhiteSmoke;
+                        btnMail.FlatAppearance.MouseOverBackColor = Color.LightGray;
+                        btnMail.Cursor = Cursors.No;
+                        string reason = !hasEmployeeMail ? "Keine Mitarbeiter-E-Mail hinterlegt." : "Maileinstellungen unvollständig.";
+                        try { new ToolTip().SetToolTip(btnMail, reason); } catch { }
+                    }
+                }
+                catch { }
+
+                // Disable print when printer disabled in settings
+                try
+                {
+                    var prnCfg = ReceiptPrinterSettings.Load();
+                    bool printEnabled = prnCfg != null && prnCfg.Enabled;
+                    btnPrint.Enabled = printEnabled;
+                    if (!printEnabled)
+                    {
+                        btnPrint.BackColor = Color.LightGray;
+                        btnPrint.ForeColor = Color.WhiteSmoke;
+                        btnPrint.FlatAppearance.MouseOverBackColor = Color.LightGray;
+                        btnPrint.Cursor = Cursors.No;
+                        try { new ToolTip().SetToolTip(btnPrint, "Drucken ist deaktiviert."); } catch { }
+                    }
+                }
+                catch { }
+
                 btnNo.BackColor = Color.FromArgb(229, 57, 53);
                 btnNo.FlatAppearance.MouseOverBackColor = Color.FromArgb(211, 47, 47);
 
@@ -1389,7 +1432,7 @@ namespace Geldautomat
                                 decimal totalVerfuegbar = Math.Round(_eingezahltSession + _personalGuthaben, 2);
                                 if (sumPos > totalVerfuegbar) { MessageBox.Show(this, "Nicht genügend eingezahlt/Personalguthaben.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                             }
-                            var entry = new KassenbuchEntry { PersId = _personal.PID, SchichtId = 0, Typ = typ, Buchungstext = buchungstext, Kost1 = kost1, Kost2 = kost2, Konto = konto, Betrag19 = betrag19, Betrag7 = betrag7, Betrag0 = betrag0, FirmenId = firmenId, AutomatenName = AppSettings.AutomatenName, Kassenbestand = GetCurrentKassenbestandEuro() };
+                            var entry = new KassenbuchEntry { PersId = _personal.PID, SchichtId = 0, Typ = typ, Buchungstext = buchungstext, Kost1 = kost1, Kost2 = kost2, Konto = konto, Betrag19 = betrag19, Betrag7 = betrag7, Betrag0 = betrag0, FirmenId = _currentAuszahlungRow["FirmenID"] != DBNull.Value ? Convert.ToInt32(_currentAuszahlungRow["FirmenID"]) : 0, AutomatenName = AppSettings.AutomatenName, Kassenbestand = GetCurrentKassenbestandEuro() };
                             await db.InsertKassenbuchAsync(entry);
                             if (einzahlung)
                             {
@@ -1985,7 +2028,7 @@ namespace Geldautomat
         }
 
                 private void UpdateMaxVerfuegbar() { if (lblMaxVerfuegbar != null) lblMaxVerfuegbar.Text = $"Maximal verfügbar: {(_personalGuthaben + _eingezahltSession):C2}"; }
-                private void UpdateCoinAvailabilityLabels() { for (int i = 0; i < 8; i++) { if (lblVerfuegbarMuenzen[i] == null) continue; int a = _coinAvail[i] >= 0 ? _coinAvail[i] : 0; int b = _coin2Avail[i] >= 0 ? _coin2Avail[i] : 0; int total = 0; if (a > 0) { total += a; lblVerfuegbarMuenzen[i].ForeColor = Color.Black; } else { lblVerfuegbarMuenzen[i].ForeColor = Color.Red; } if (b > 0) { total += b; lblVerfuegbarMuenzen[i].ForeColor = Color.Black; } lblVerfuegbarMuenzen[i].Text = $"vorrätig: {total}"; } }
+                private void UpdateCoinAvailabilityLabels() { for (int i = 0; i < 8; i++) { if (lblVerfuegbarMuenzen[i] == null) continue; int a = _coinAvail[i] >= 0 ? _coinAvail[i] : 0; int b = _coin2Avail[i] >= 0 ? _coin2Avail[i] : 0; bool known = false; int total = 0; if (a > 0) { total += a; known = true; } if (b > 0) { total += b; known = true; } lblVerfuegbarMuenzen[i].Text = known ? $"vorrätig: {total}" : "vorrätig: ?"; } }
                 private int GetCombinedCoinAvail(int idx) { try { int a = (idx >= 0 && idx < _coinAvail.Length) ? _coinAvail[idx] : -1; int b = (idx >= 0 && idx < _coin2Avail.Length) ? _coin2Avail[idx] : -1; if (a < 0 && b < 0) return -1; int sum = 0; if (a > 0) sum += a; if (b > 0) sum += b; return sum; } catch { return -1; } }
                 private void OnCoinDispensedDelta(int cent)
                 {
