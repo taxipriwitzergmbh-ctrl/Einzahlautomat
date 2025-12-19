@@ -987,7 +987,9 @@ namespace Geldautomat
                         string mitarbeiterM = _personal.Vorname + " " + _personal.Name;
                         var bodyLinesM = ReceiptLayouts.Current.BuildBody(titleM, mitarbeiterM, buchungstext, b19, b7, b0, true);
                         string bodyM = string.Join("\r\n", bodyLinesM ?? new string[0]);
-                        EmailReceiptService.SendReceiptToEmployee(_personal, vorgang, bodyM);
+                        // NEU: HTML-Anhang wie QR-Quittung
+                        string attachmentText = string.Join("\n", bodyLinesM ?? new string[0]);
+                        EmailReceiptService.SendReceiptToEmployeeWithAttachment(_personal, vorgang, bodyM, attachmentText);
                         MessageBox.Show(this, "Quittung per E-Mail gesendet.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     catch (Exception ex)
@@ -1164,7 +1166,7 @@ namespace Geldautomat
                         btnQr.FlatAppearance.MouseOverBackColor = Color.LightGray;
                         btnQr.Cursor = Cursors.No;
                         try { new ToolTip().SetToolTip(btnQr, "QR-Code ist deaktiviert."); } catch { }
-                    }
+                      }
                 }
                 catch { }
 
@@ -1403,7 +1405,7 @@ namespace Geldautomat
                             decimal betrag0 = (einzahlung ? 1 : -1) * Convert.ToDecimal(_currentAuszahlungRow["Betrag0"]);
                             try { AppLogger.Log($"[Buchen] {(einzahlung ? "Einzahlung" : "Auszahlung")} Gesamt={(betrag19 + betrag7 + betrag0):0.00} €"); } catch { }
                             decimal aktuellerBestand = GetCurrentKassenbestandEuro();
-                            if (aktuellerBestand + (betrag19 + betrag7 + betrag0) < 0m) { MessageBox.Show(this, "Aktuell ist nicht genug Geld in der Kasse.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+                            if (aktuellerBestand + (betrag19 + betrag7 + betrag0) < 0m) { MessageBox.Show(this, "Abrechnen nicht möglich: Zu wenig Geld in der Kasse.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                             string typ = einzahlung ? "Einzahlung" : "Auszahlung";
                             try
                             {

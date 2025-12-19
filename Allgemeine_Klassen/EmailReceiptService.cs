@@ -1,7 +1,8 @@
 using System;
 using System.Net;
 using System.Net.Mail;
-using System.Reflection;
+using System.Text;
+using System.IO;
 
 namespace Geldautomat
 {
@@ -36,6 +37,70 @@ namespace Geldautomat
                 }
                 client.Send(mail);
             }
+        }
+
+        // NEU: E-Mail mit HTML-Anhang (ähnlich wie die QR-Quittung)
+        public static void SendReceiptToEmployeeWithAttachment(PersonalInfo personal, string subjectPrefix, string body, string attachmentPlainText, string attachmentFileName = "Quittung.html")
+        {
+            if (personal == null) throw new ArgumentNullException(nameof(personal));
+            var email = personal.EMail;
+            if (string.IsNullOrWhiteSpace(email)) throw new InvalidOperationException("Keine E-Mail-Adresse hinterlegt.");
+
+            var cfg = MailSettings.Load();
+            if (!cfg.IsConfigured) throw new InvalidOperationException("Maileinstellungen unvollständig.");
+
+            var mail = new MailMessage();
+            mail.From = new MailAddress(cfg.FromAddress, cfg.FromDisplayName);
+            mail.To.Add(email);
+            mail.Subject = $"{subjectPrefix} Quittung";
+            mail.Body = body;
+            mail.IsBodyHtml = false;
+
+            // HTML aus dem Plaintext bauen (wie beim QR)
+            var html = BuildSimpleReceiptHtml(attachmentPlainText ?? string.Empty);
+            var bytes = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(html);
+            var ms = new MemoryStream(bytes);
+            var attachment = new Attachment(ms, attachmentFileName, "text/html");
+            mail.Attachments.Add(attachment);
+
+            using (var client = new SmtpClient(cfg.SmtpHost, cfg.SmtpPort))
+            {
+                client.EnableSsl = cfg.EnableSsl;
+                if (!string.IsNullOrWhiteSpace(cfg.Username))
+                {
+                    client.Credentials = new NetworkCredential(cfg.Username, cfg.Password);
+                }
+                else
+                {
+                    client.UseDefaultCredentials = true;
+                }
+                client.Send(mail);
+            }
+        }
+
+        private static string BuildSimpleReceiptHtml(string content)
+        {
+            string safe = HtmlEscape(content ?? string.Empty);
+            string now = DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
+            return "<!DOCTYPE html><html lang=\"de\"><head><meta charset=\"utf-8\"/>" +
+                   "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/>" +
+                   "<title>Quittung</title>" +
+                   "<style>body{font-family:Segoe UI,Arial,sans-serif;margin:20px;}pre{white-space:pre-wrap;word-wrap:break-word;background:#f8f9fa;padding:12px;border:1px solid #dee2e6;border-radius:4px;}small{color:#666}</style>" +
+                   "</head><body>" +
+                   "<h1>Quittung</h1>" +
+                   "<small>Erstellt am " + now + "</small>" +
+                   "<pre>" + safe + "</pre>" +
+                   "</body></html>";
+        }
+
+        private static string HtmlEscape(string s)
+        {
+            return (s ?? string.Empty)
+                .Replace("&", "&amp;")
+                .Replace("<", "&lt;")
+                .Replace(">", "&gt;")
+                .Replace("\"", "&quot;")
+                .Replace("'", "&#39;");
         }
     }
 
@@ -72,19 +137,16 @@ namespace Geldautomat
             return s;
         }
 
+        // NEU: Speichern in INI
         public void Save()
         {
-            try
-            {
-                IniHelper.WriteValue(IniSection, "FromAddress", FromAddress ?? string.Empty, AppSettings.IniPath);
-                IniHelper.WriteValue(IniSection, "FromDisplayName", FromDisplayName ?? string.Empty, AppSettings.IniPath);
-                IniHelper.WriteValue(IniSection, "SmtpHost", SmtpHost ?? string.Empty, AppSettings.IniPath);
-                IniHelper.WriteValue(IniSection, "SmtpPort", SmtpPort.ToString(), AppSettings.IniPath);
-                IniHelper.WriteValue(IniSection, "EnableSsl", EnableSsl ? "true" : "false", AppSettings.IniPath);
-                IniHelper.WriteValue(IniSection, "Username", Username ?? string.Empty, AppSettings.IniPath);
-                IniHelper.WriteValue(IniSection, "Password", Password ?? string.Empty, AppSettings.IniPath);
-            }
-            catch { }
+            try { IniHelper.WriteValue(IniSection, "FromAddress", FromAddress ?? string.Empty, AppSettings.IniPath); } catch { }
+            try { IniHelper.WriteValue(IniSection, "FromDisplayName", FromDisplayName ?? string.Empty, AppSettings.IniPath); } catch { }
+            try { IniHelper.WriteValue(IniSection, "SmtpHost", SmtpHost ?? string.Empty, AppSettings.IniPath); } catch { }
+            try { IniHelper.WriteValue(IniSection, "SmtpPort", SmtpPort.ToString(), AppSettings.IniPath); } catch { }
+            try { IniHelper.WriteValue(IniSection, "EnableSsl", EnableSsl ? "True" : "False", AppSettings.IniPath); } catch { }
+            try { IniHelper.WriteValue(IniSection, "Username", Username ?? string.Empty, AppSettings.IniPath); } catch { }
+            try { IniHelper.WriteValue(IniSection, "Password", Password ?? string.Empty, AppSettings.IniPath); } catch { }
         }
     }
 }
