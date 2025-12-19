@@ -1028,26 +1028,128 @@ namespace Geldautomat
             {
                 var dlg = new Form
                 {
-                    FormBorderStyle = FormBorderStyle.FixedDialog,
+                    FormBorderStyle = FormBorderStyle.None,
                     StartPosition = FormStartPosition.CenterParent,
-                    Width = 540,
-                    Height = 200,
-                    Text = "Quittung"
+                    Width = 560,
+                    Height = 240,
+                    BackColor = Color.White
                 };
-                var lbl = new Label { Text = "Möchten Sie eine Quittung?", AutoSize = false, TextAlign = System.Drawing.ContentAlignment.MiddleCenter, Dock = DockStyle.Top, Height = 60 };
-                dlg.Controls.Add(lbl);
-                var panel = new Panel { Dock = DockStyle.Bottom, Height = 64 };
-                dlg.Controls.Add(panel);
-                var btnMail = new Button { Text = "per Mail", Width = 110, Height = 36, Left = 30, Top = 12 };
-                var btnPrint = new Button { Text = "Drucken", Width = 110, Height = 36, Left = 150, Top = 12 };
-                var btnQr = new Button { Text = "QR-Code", Width = 110, Height = 36, Left = 270, Top = 12 };
-                var btnNo = new Button { Text = "Nein", Width = 110, Height = 36, Left = 390, Top = 12 };
-                panel.Controls.Add(btnMail); panel.Controls.Add(btnPrint); panel.Controls.Add(btnQr); panel.Controls.Add(btnNo);
+
+                // Rounded corners
+                try { dlg.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, dlg.Width, dlg.Height, 16, 16)); } catch { }
+
+                // Header (gradient like main header)
+                var header = new Panel
+                {
+                    Dock = DockStyle.Top,
+                    Height = 64
+                };
+                header.Paint += (s, e) =>
+                {
+                    using (var brush = new LinearGradientBrush(header.ClientRectangle,
+                        Color.FromArgb(33, 150, 243),
+                        Color.FromArgb(33, 203, 243),
+                        0f))
+                    {
+                        e.Graphics.FillRectangle(brush, header.ClientRectangle);
+                    }
+                };
+                dlg.Controls.Add(header);
+
+                var lblTitle = new Label
+                {
+                    Text = "Quittung",
+                    AutoSize = false,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    Location = new Point(20, 0),
+                    Size = new Size(400, 64),
+                    BackColor = Color.Transparent
+                };
+                header.Controls.Add(lblTitle);
+
+                // Body
+                var body = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
+                dlg.Controls.Add(body);
+
+                var lbl = new Label
+                {
+                    Text = "Möchten Sie eine Quittung?",
+                    AutoSize = false,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Dock = DockStyle.Top,
+                    Height = 64,
+                    Font = new Font("Segoe UI Variable", 16F)
+                };
+                body.Controls.Add(lbl);
+
+                var panelButtons = new Panel { Dock = DockStyle.Bottom, Height = 84, BackColor = Color.White };
+                body.Controls.Add(panelButtons);
+
+                // Helper to style buttons consistently
+                Func<string, Button> makeBtn = (text) =>
+                {
+                    var b = new Button
+                    {
+                        Text = text,
+                        Width = 120,
+                        Height = 48,
+                        FlatStyle = FlatStyle.Flat,
+                        BackColor = Color.FromArgb(33, 150, 243),
+                        ForeColor = Color.White,
+                        Font = new Font("Segoe UI Variable", 14F, FontStyle.Bold),
+                        TabStop = false
+                    };
+                    b.FlatAppearance.BorderSize = 0;
+                    try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 12, 12)); } catch { }
+                    return b;
+                };
+
+                var btnMail = makeBtn("per Mail");
+                var btnPrint = makeBtn("Drucken");
+                var btnQr = makeBtn("QR-Code");
+                var btnNo = makeBtn("Nein");
+
+                // Secondary style for negative button
+                btnNo.BackColor = Color.FromArgb(229, 57, 53);
+                btnNo.FlatAppearance.MouseOverBackColor = Color.FromArgb(211, 47, 47);
+
+                // Layout
+                int spacing = 16;
+                int totalWidth = btnMail.Width + btnPrint.Width + btnQr.Width + btnNo.Width + spacing * 3;
+                int startX = (dlg.ClientSize.Width - totalWidth) / 2;
+                int y = 18;
+                btnMail.Location = new Point(startX, y);
+                btnPrint.Location = new Point(btnMail.Right + spacing, y);
+                btnQr.Location = new Point(btnPrint.Right + spacing, y);
+                btnNo.Location = new Point(btnQr.Right + spacing, y);
+                panelButtons.Controls.Add(btnMail);
+                panelButtons.Controls.Add(btnPrint);
+                panelButtons.Controls.Add(btnQr);
+                panelButtons.Controls.Add(btnNo);
+
+                // Shadow (optional, no-op if not supported)
+                try
+                {
+                    dlg.Padding = new Padding(1);
+                    dlg.Paint += (s, e) =>
+                    {
+                        var rect = dlg.ClientRectangle;
+                        using (var pen = new Pen(Color.FromArgb(220, 220, 220)))
+                        {
+                            e.Graphics.DrawRectangle(pen, new Rectangle(0, 0, rect.Width - 1, rect.Height - 1));
+                        }
+                    };
+                }
+                catch { }
+
                 DialogResult result = DialogResult.None;
                 btnMail.Click += (s, e) => { result = DialogResult.Cancel; dlg.Close(); };
                 btnPrint.Click += (s, e) => { result = DialogResult.Yes; dlg.Close(); };
                 btnQr.Click += (s, e) => { result = DialogResult.Ignore; dlg.Close(); };
                 btnNo.Click += (s, e) => { result = DialogResult.No; dlg.Close(); };
+
                 try { dlg.ShowDialog(this); } catch { dlg.ShowDialog(); }
                 try { dlg.Dispose(); } catch { }
                 return result;
@@ -1940,4 +2042,4 @@ namespace Geldautomat
                     catch { try { lblBelegInfo.Text = string.Empty; } catch { } }
                 }
             }
-        }
+        }1234
