@@ -403,7 +403,7 @@ namespace Geldautomat
 
         private Control MakeDocTile(string filePath)
         {
-            var pnl = new Panel { Width = 240, Height = 160, Margin = new Padding(10), BackColor = Color.White, Tag = filePath };
+            var pnl = new Panel { Width = 240, Height = 200, Margin = new Padding(10), BackColor = Color.White, Tag = filePath };
             pnl.Paint += (s, e) => { try { e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; using (var pen = new Pen(Color.FromArgb(210, 210, 210))) e.Graphics.DrawRectangle(pen, new Rectangle(0, 0, pnl.Width - 1, pnl.Height - 1)); } catch { } };
 
             string ext = Path.GetExtension(filePath).ToLowerInvariant();
@@ -429,11 +429,202 @@ namespace Geldautomat
             btnPrint.FlatAppearance.BorderSize = 0; btnPrint.Click += (s, e) => PrintPath((string)((Button)s).Tag);
             pnl.Controls.Add(btnPrint);
 
+            var btnMail = new Button { Text = "per Mail", Location = new Point(12, 152), Size = new Size(216, 36), BackColor = Color.FromArgb(255, 167, 38), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Tag = filePath, Font = new Font("Segue UI Variable", 11F, FontStyle.Bold) };
+            btnMail.FlatAppearance.BorderSize = 0; btnMail.Click += (s, e) => SendDocumentByEmail((string)((Button)s).Tag);
+            pnl.Controls.Add(btnMail);
+
             pnl.Cursor = Cursors.Hand;
             pnl.Click += (s, e) => OpenPath((string)pnl.Tag);
             foreach (Control c in pnl.Controls) c.Click += (s, e) => { };
 
             return pnl;
+        }
+
+        private void SendDocumentByEmail(string path)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+                // Preconditions: user email and mail settings
+                string employeeMail = null;
+                try { employeeMail = _personal?.EMail; } catch { employeeMail = null; }
+                var mailCfg = MailSettings.Load();
+                if (string.IsNullOrWhiteSpace(employeeMail))
+                {
+                    MessageBox.Show(this, "Keine Mitarbeiter-E-Mail hinterlegt.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                if (mailCfg == null || !mailCfg.IsConfigured)
+                {
+                    MessageBox.Show(this, "Maileinstellungen sind nicht konfiguriert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                if (!ShowMailConsentDialog(employeeMail)) return;
+
+                Cursor prev = Cursor.Current; Cursor.Current = Cursors.WaitCursor;
+                try
+                {
+                    using (var msg = new System.Net.Mail.MailMessage())
+                    {
+                        var from = new System.Net.Mail.MailAddress(mailCfg.FromAddress, mailCfg.FromDisplayName);
+                        msg.From = from;
+                        msg.To.Add(new System.Net.Mail.MailAddress(employeeMail));
+                        msg.Subject = "Dokument vom Geldautomat";
+                        msg.Body = "Sie erhalten das angeforderte Dokument als Anhang. Bitte gehen Sie sorgsam mit personenbezogenen Daten um.";
+                        msg.IsBodyHtml = false;
+                        // Attach file
+                        var att = new System.Net.Mail.Attachment(path);
+                        msg.Attachments.Add(att);
+
+                        using (var client = new System.Net.Mail.SmtpClient(mailCfg.SmtpHost, mailCfg.SmtpPort))
+                        {
+                            client.EnableSsl = mailCfg.EnableSsl;
+                            if (!string.IsNullOrWhiteSpace(mailCfg.Username)) client.Credentials = new System.Net.NetworkCredential(mailCfg.Username, mailCfg.Password);
+                            else client.UseDefaultCredentials = true;
+                            client.Send(msg);
+                        }
+                    }
+                    MessageBox.Show(this, "E-Mail wurde gesendet.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, "E-Mail Versand fehlgeschlagen:\r\n" + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                finally { Cursor.Current = prev; }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Unerwarteter Fehler:\r\n" + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private bool ShowMailConsentDialog(string email)
+        {
+            try
+            {
+                var dlg = new Form
+                {
+                    FormBorderStyle = FormBorderStyle.None,
+                    StartPosition = FormStartPosition.CenterParent,
+                    Width = 720,
+                    Height = 380,
+                    BackColor = Color.White
+                };
+                try { dlg.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, dlg.Width, dlg.Height, 16, 16)); } catch { }
+
+                // Header
+                var header = new Panel { Dock = DockStyle.Top, Height = 60 };
+                header.Paint += (s, e) =>
+                {
+                    using (var brush = new LinearGradientBrush(header.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                    {
+                        e.Graphics.FillRectangle(brush, header.ClientRectangle);
+                    }
+                };
+                dlg.Controls.Add(header);
+                var title = new Label
+                {
+                    Text = "Dokument per E-Mail",
+                    AutoSize = false,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    Dock = DockStyle.Fill,
+                    Padding = new Padding(16, 0, 0, 0),
+                    BackColor = Color.Transparent
+                };
+                header.Controls.Add(title);
+
+                // Read optional top offset from INI for easier tweaking (pixels)
+                int topOffset = 40;
+                try
+                {
+                    var raw = IniHelper.ReadValue("UI", "MailConsentBodyTopOffset", AppSettings.IniPath);
+                    int v; if (!string.IsNullOrWhiteSpace(raw) && int.TryParse(raw, out v)) topOffset = Math.Max(0, Math.Min(400, v));
+                }
+                catch { }
+
+                // Body under header, ensures content starts below header
+                var body = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(20, 20 + topOffset, 20, 20), AutoScroll = true };
+                dlg.Controls.Add(body);
+
+                var lblMail = new Label { Text = "Empfänger: " + email, AutoSize = true, Font = new Font("Segoe UI", 12.5F), Dock = DockStyle.Top, Padding = new Padding(0, 0, 0, 10) };
+                body.Controls.Add(lblMail);
+
+                int calcWidth() { return Math.Max(320, body.ClientSize.Width - body.Padding.Horizontal); }
+                var info = new Label
+                {
+                    Text = "Hinweis: Der Versand per E-Mail kann Datenschutzrisiken bergen (Weiterleitung, ungesicherte Postfächer). Ich bin einverstanden, dass mir das Dokument an die oben angezeigte Adresse zugesendet wird.",
+                    AutoSize = true,
+                    MaximumSize = new Size(640, 0),
+                    Font = new Font("Segoe UI", 11.5F),
+                    Dock = DockStyle.Top,
+                    Padding = new Padding(0, 0, 0, 10)
+                };
+                body.Controls.Add(info);
+
+                body.Resize += (s, e) =>
+                {
+                    try { info.MaximumSize = new Size(calcWidth(), 0); } catch { }
+                };
+                try { info.MaximumSize = new Size(calcWidth(), 0); } catch { }
+
+                var spacer = new Panel { Dock = DockStyle.Top, Height = 6 }; body.Controls.Add(spacer);
+
+                // Buttons bottom, large like previous design
+                var panelButtons = new Panel { Dock = DockStyle.Bottom, Height = 96, BackColor = Color.White };
+                dlg.Controls.Add(panelButtons);
+
+                var btnOk = new Button
+                {
+                    Text = "Senden",
+                    Width = 180,
+                    Height = 56,
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = Color.FromArgb(76, 175, 80),
+                    ForeColor = Color.White,
+                    Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
+                    TabStop = false
+                };
+                btnOk.FlatAppearance.BorderSize = 0;
+                try { btnOk.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnOk.Width, btnOk.Height, 12, 12)); } catch { }
+
+                var btnCancel = new Button
+                {
+                    Text = "Abbrechen",
+                    Width = 180,
+                    Height = 56,
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = Color.FromArgb(229, 57, 53),
+                    ForeColor = Color.White,
+                    Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
+                    TabStop = false
+                };
+                btnCancel.FlatAppearance.BorderSize = 0;
+                try { btnCancel.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnCancel.Width, btnCancel.Height, 12, 12)); } catch { }
+
+                btnOk.Click += (s, e) => { dlg.Tag = true; dlg.Close(); };
+                btnCancel.Click += (s, e) => { dlg.Tag = false; dlg.Close(); };
+
+                panelButtons.Resize += (s, e) =>
+                {
+                    int spacing = 20;
+                    int total = btnOk.Width + btnCancel.Width + spacing;
+                    int startX = (panelButtons.ClientSize.Width - total) / 2;
+                    int y = (panelButtons.ClientSize.Height - btnOk.Height) / 2;
+                    btnOk.Location = new Point(Math.Max(10, startX), y);
+                    btnCancel.Location = new Point(btnOk.Right + spacing, y);
+                };
+                panelButtons.Controls.Add(btnOk);
+                panelButtons.Controls.Add(btnCancel);
+
+                bool result = false; try { dlg.ShowDialog(this); } catch { dlg.ShowDialog(); }
+                try { result = (dlg.Tag is bool b) ? b : false; } catch { result = false; }
+                try { dlg.Dispose(); } catch { }
+                return result;
+            }
+            catch { return false; }
         }
 
         private string ExtractYearMonthTitle(string filePath)
