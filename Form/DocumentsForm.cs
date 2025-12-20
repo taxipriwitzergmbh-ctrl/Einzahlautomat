@@ -513,6 +513,22 @@ namespace Geldautomat
                 };
                 try { dlg.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, dlg.Width, dlg.Height, 16, 16)); } catch { }
 
+                // Subtle border around the dialog
+                try
+                {
+                    dlg.Padding = new Padding(1);
+                    dlg.Paint += (s, e) =>
+                    {
+                        var rect = dlg.ClientRectangle;
+                        using (var pen = new Pen(Color.FromArgb(210, 210, 210)))
+                        {
+                            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                            e.Graphics.DrawRectangle(pen, new Rectangle(0, 0, rect.Width - 1, rect.Height - 1));
+                        }
+                    };
+                }
+                catch { }
+
                 // Header
                 var header = new Panel { Dock = DockStyle.Top, Height = 60 };
                 header.Paint += (s, e) =>
@@ -893,8 +909,8 @@ namespace Geldautomat
             }
         }
 
-        private void PrintPath(string path)
-        {
+        private void PrintPath(string path
+        ){
             try
             {
                 if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
