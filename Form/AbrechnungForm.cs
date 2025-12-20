@@ -505,7 +505,7 @@ namespace Geldautomat
 
             btnDocuments = new Button
             {
-                Text = "??",
+                Text = string.Empty,
                 Font = new Font("Segoe UI Symbol", 20F, FontStyle.Bold),
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(76, 175, 80),
@@ -517,6 +517,37 @@ namespace Geldautomat
             };
             btnDocuments.FlatAppearance.BorderSize = 0;
             btnDocuments.FlatAppearance.MouseOverBackColor = Color.FromArgb(96, 195, 100);
+            btnDocuments.Paint += (s, pe) =>
+            {
+                try
+                {
+                    var g = pe.Graphics;
+                    g.SmoothingMode = SmoothingMode.AntiAlias;
+                    var btn = (Button)s;
+                    var r = btn.ClientRectangle;
+                    int margin = 12;
+                    int fold = 8;
+                    var page = new Rectangle(r.Left + margin, r.Top + 8, r.Width - margin * 2, r.Height - 16);
+                    using (var pen = new Pen(Color.White, 2f))
+                    {
+                        // page outline
+                        g.DrawRectangle(pen, page);
+                        // folded corner (top-right)
+                        g.DrawLine(pen, page.Right - fold, page.Top, page.Right, page.Top + fold);
+                        g.DrawLine(pen, page.Right - fold, page.Top, page.Right - fold, page.Top + fold);
+                        // text lines
+                        int tx = page.Left + 4;
+                        int rx = page.Right - 4;
+                        int y1 = page.Top + 8;
+                        int y2 = y1 + 6;
+                        int y3 = y2 + 6;
+                        g.DrawLine(pen, tx, y1, rx - fold, y1);
+                        g.DrawLine(pen, tx, y2, rx - 6, y2);
+                        g.DrawLine(pen, tx, y3, rx - 10, y3);
+                    }
+                }
+                catch { }
+            };
             btnDocuments.Click += (s, e) =>
             {
                 try
@@ -2019,7 +2050,7 @@ namespace Geldautomat
             catch { }
         }
 
-        // Wieder hinzugefügt: Auszahlung laden
+
         private void LadeAuszahlung(DataRow row)
         {
             string typ = row.Table.Columns.Contains("Typ") ? (row["Typ"]?.ToString() ?? "Auszahlung") : "Auszahlung"; _currentAuszahlungRow = row; _currentZahlungIstEinzahlung = typ.Equals("Einzahlung", StringComparison.OrdinalIgnoreCase); _details = null;

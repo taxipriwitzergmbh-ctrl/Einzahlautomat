@@ -6,6 +6,8 @@ using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Drawing.Drawing2D;
+using System.Drawing.Printing;
+using System.Drawing.Imaging;
 
 namespace Geldautomat
 {
@@ -707,29 +709,27 @@ namespace Geldautomat
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
                 var printer = string.Empty;
                 try { printer = IniHelper.ReadValue("UI", "DocumentPrinter", AppSettings.IniPath) ?? string.Empty; } catch { }
-                ProcessStartInfo psi;
-                if (!string.IsNullOrWhiteSpace(printer))
+
+                if (IsImage(path))
                 {
-                    psi = new ProcessStartInfo
-                    {
-                        FileName = path,
-                        Verb = "printto",
-                        Arguments = '"' + printer + '"',
-                        CreateNoWindow = true,
-                        WindowStyle = ProcessWindowStyle.Hidden,
-                        UseShellExecute = true
-                    };
+                    if (!PrintImageFile(path, printer)) throw new InvalidOperationException("Bild konnte nicht gedruckt werden.");
+                    try { MessageBox.Show(this, "Druckauftrag gesendet.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
+                    return;
                 }
-                else
+
+                if (IsPdf(path))
                 {
-                    psi = new ProcessStartInfo(path)
-                    {
-                        Verb = "print",
-                        CreateNoWindow = true,
-                        WindowStyle = ProcessWindowStyle.Hidden,
-                        UseShellExecute = true
-                    };
+                    // Use Windows shell verbs only (no Acrobat), matching Explorer's context menu behavior
+                    var psiPdf = string.IsNullOrWhiteSpace(printer)
+                        ? new ProcessStartInfo(path) { Verb = "print", CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden, UseShellExecute = true }
+                        : new ProcessStartInfo { FileName = path, Verb = "printto", Arguments = '"' + printer + '"', CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden, UseShellExecute = true };
+                    Process.Start(psiPdf);
+                    try { MessageBox.Show(this, "Druckauftrag gesendet.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
+                    return;
                 }
+
+                // Unknown type -> try shell print
+                var psi = new ProcessStartInfo(path) { Verb = "print", CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden, UseShellExecute = true };
                 Process.Start(psi);
                 try { MessageBox.Show(this, "Druckauftrag gesendet.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
             }
@@ -737,6 +737,55 @@ namespace Geldautomat
             {
                 MessageBox.Show(this, "Drucken fehlgeschlagen: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private bool PrintImageFile(string path, string printer)
+        {
+            try
+            {
+                byte[] data = File.ReadAllBytes(path);
+                var ms = new MemoryStream(data);
+                var img = Image.FromStream(ms);
+                int frameCount = 1;
+                try { var dim = new FrameDimension(img.FrameDimensionsList[0]); frameCount = img.GetFrameCount(dim); } catch { frameCount = 1; }
+
+                var pd = new PrintDocument();
+                // Use chosen printer or fall back to system default
+                if (!string.IsNullOrWhiteSpace(printer)) pd.PrinterSettings.PrinterName = printer; else { try { pd.PrinterSettings.PrinterName = new PrinterSettings().PrinterName; } catch { } }
+                if (string.IsNullOrWhiteSpace(pd.PrinterSettings.PrinterName)) { img.Dispose(); ms.Dispose(); return false; }
+                if (!pd.PrinterSettings.IsValid) { img.Dispose(); ms.Dispose(); return false; }
+                pd.DocumentName = Path.GetFileName(path);
+                int pageIndex = 0;
+                pd.PrintPage += (s, e) =>
+                {
+                    try
+                    {
+                        if (frameCount > 1)
+                        {
+                            var dim = new FrameDimension(img.FrameDimensionsList[0]);
+                            img.SelectActiveFrame(dim, pageIndex);
+                        }
+                        Rectangle bounds = e.MarginBounds;
+                        // rotate to landscape if image wider than high and page is portrait
+                        if ((img.Width > img.Height) && bounds.Height > bounds.Width)
+                        {
+                            var tmp = bounds; bounds = new Rectangle(tmp.Left, tmp.Top, tmp.Height, tmp.Width);
+                        }
+                        float ratio = Math.Min((float)bounds.Width / img.Width, (float)bounds.Height / img.Height);
+                        int w = (int)(img.Width * ratio); int h = (int)(img.Height * ratio);
+                        int x = bounds.Left + (bounds.Width - w) / 2; int y = bounds.Top + (bounds.Height - h) / 2;
+                        e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                        e.Graphics.DrawImage(img, new Rectangle(x, y, w, h));
+                        pageIndex++;
+                        e.HasMorePages = pageIndex < frameCount;
+                    }
+                    catch { e.HasMorePages = false; }
+                };
+                pd.EndPrint += (s, e) => { try { img.Dispose(); } catch { } try { ms.Dispose(); } catch { } };
+                pd.Print();
+                return true;
+            }
+            catch { return false; }
         }
     }
 }
