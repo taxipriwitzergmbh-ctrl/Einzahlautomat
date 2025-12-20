@@ -31,6 +31,8 @@ namespace Geldautomat
         private WebBrowser _pdfViewer;
         private Panel _imgScrollPanel;
         private PictureBox _imgViewer;
+        private Timer _previewTimer;
+        private string _currentPreviewPath;
 
         private string _root;
         private string _currentPath;
@@ -75,7 +77,7 @@ namespace Geldautomat
             Controls.Add(_header);
             _title = new Label { Text = "Dokumente", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(20, 0), Size = new Size(700, 64), BackColor = Color.Transparent };
             _header.Controls.Add(_title);
-            var btnHeaderClose = new Button { Text = "\u2715", Font = new Font("Segoe UI Symbol", 18F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 56, 8), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            var btnHeaderClose = new Button { Text = "\u2715", Font = new Font("Segue UI Symbol", 18F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 56, 8), Anchor = AnchorStyles.Top | AnchorStyles.Right };
             btnHeaderClose.FlatAppearance.BorderSize = 0; btnHeaderClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 80, 80); btnHeaderClose.Click += (s, e) => Close();
             _header.Controls.Add(btnHeaderClose);
 
@@ -117,13 +119,32 @@ namespace Geldautomat
             _btnClosePreview.Click += (s, e) => HidePreview();
             _previewHeader.Controls.Add(_btnClosePreview);
 
-            _pdfViewer = new WebBrowser { Dock = DockStyle.Fill, AllowWebBrowserDrop = false, IsWebBrowserContextMenuEnabled = false, ScriptErrorsSuppressed = true, Visible = false };
+            _pdfViewer = new WebBrowser { Dock = DockStyle.Fill, AllowWebBrowserDrop = false, IsWebBrowserContextMenuEnabled = false, ScriptErrorsSuppressed = true, Visible = false, AllowNavigation = true };
+            _pdfViewer.DocumentCompleted += (s, e) => { try { _previewTimer?.Stop(); } catch { } };
             _previewOverlay.Controls.Add(_pdfViewer);
 
             _imgScrollPanel = new Panel { Dock = DockStyle.Fill, AutoScroll = true, Visible = false, BackColor = Color.Black };
             _previewOverlay.Controls.Add(_imgScrollPanel);
             _imgViewer = new PictureBox { SizeMode = PictureBoxSizeMode.Zoom, Location = new Point(0, 0) };
             _imgScrollPanel.Controls.Add(_imgViewer);
+
+            _previewTimer = new Timer { Interval = 600 };
+            _previewTimer.Tick += (s, e) =>
+            {
+                try
+                {
+                    _previewTimer.Stop();
+                    bool loaded = false;
+                    try { loaded = _pdfViewer.ReadyState == WebBrowserReadyState.Complete && _pdfViewer.Document != null; } catch { loaded = false; }
+                    if (!loaded && !string.IsNullOrEmpty(_currentPreviewPath))
+                    {
+                        // Fallback: extern öffnen
+                        HidePreview();
+                        OpenExternal(_currentPreviewPath);
+                    }
+                }
+                catch { }
+            };
 
             // initial layout
             Relayout();
@@ -184,6 +205,7 @@ namespace Geldautomat
             try
             {
                 _breadcrumbPanel.Controls.Clear();
+                _breadcrumbPanel.Controls.Add(new Label { Text = "Aktueller Pfad:", AutoSize = true, Padding = new Padding(6, 10, 12, 0), Font = new Font("Segoe UI", 11F, FontStyle.Bold), ForeColor = Color.FromArgb(33,33,33) });
                 string rel = MakeRelativePath(_currentPath, _root);
                 var parts = string.IsNullOrEmpty(rel) ? new string[0] : rel.Split(new[] { Path.DirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
                 var btnRoot = MakeNavButton(Path.GetFileName(_root).Length > 0 ? Path.GetFileName(_root) : _root, _root);
@@ -192,7 +214,7 @@ namespace Geldautomat
                 foreach (var p in parts)
                 {
                     running = Path.Combine(running, p);
-                    _breadcrumbPanel.Controls.Add(new Label { Text = "/", AutoSize = true, Padding = new Padding(6, 10, 6, 0), ForeColor = Color.Gray });
+                    _breadcrumbPanel.Controls.Add(new Label { Text = "/", AutoSize = true, Padding = new Padding(12, 6, 12, 0), Font = new Font("Segoe UI", 16F, FontStyle.Bold), ForeColor = Color.Gray });
                     _breadcrumbPanel.Controls.Add(MakeNavButton(p, running));
                 }
             }
@@ -245,6 +267,12 @@ namespace Geldautomat
                     if (!string.IsNullOrEmpty(rel)) depth = rel.Split(new[] { Path.DirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries).Length;
                 }
                 catch { depth = 0; }
+
+                // Auf Root-Ebene (depth==0) keine Unterordner-Buttons anzeigen, um Duplikate zu vermeiden
+                if (depth == 0)
+                {
+                    return;
+                }
 
                 string listBase = _currentPath;
                 if (depth >= 2)
@@ -565,7 +593,15 @@ namespace Geldautomat
                 if (IsPdf(path))
                 {
                     _pdfViewer.Visible = true;
-                    try { _pdfViewer.Navigate(path); }
+                    try
+                    {
+                        _currentPreviewPath = path;
+                        // Render via HTML embed to improve compatibility
+                        var fileUri = new Uri(path).AbsoluteUri;
+                        _pdfViewer.DocumentText = $"<html><body style='margin:0;padding:0;background:#fff;'><embed src='{fileUri}' type='application/pdf' width='100%' height='100%'/></body></html>";
+                        _previewTimer.Stop();
+                        _previewTimer.Start();
+                    }
                     catch { _pdfViewer.Visible = false; }
                 }
                 else if (IsImage(path))
@@ -605,6 +641,7 @@ namespace Geldautomat
             try
             {
                 _previewOverlay.Visible = false;
+                try { _previewTimer?.Stop(); } catch { }
                 try
                 {
                     if (_imgViewer.Image != null)
@@ -668,13 +705,31 @@ namespace Geldautomat
             try
             {
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
-                var psi = new ProcessStartInfo(path)
+                var printer = string.Empty;
+                try { printer = IniHelper.ReadValue("UI", "DocumentPrinter", AppSettings.IniPath) ?? string.Empty; } catch { }
+                ProcessStartInfo psi;
+                if (!string.IsNullOrWhiteSpace(printer))
                 {
-                    Verb = "print",
-                    CreateNoWindow = true,
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    UseShellExecute = true
-                };
+                    psi = new ProcessStartInfo
+                    {
+                        FileName = path,
+                        Verb = "printto",
+                        Arguments = '"' + printer + '"',
+                        CreateNoWindow = true,
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        UseShellExecute = true
+                    };
+                }
+                else
+                {
+                    psi = new ProcessStartInfo(path)
+                    {
+                        Verb = "print",
+                        CreateNoWindow = true,
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        UseShellExecute = true
+                    };
+                }
                 Process.Start(psi);
                 try { MessageBox.Show(this, "Druckauftrag gesendet.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
             }
