@@ -706,32 +706,49 @@ namespace Geldautomat
         {
             try
             {
-                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
-                var printer = string.Empty;
+                if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+                string printer = string.Empty;
                 try { printer = IniHelper.ReadValue("UI", "DocumentPrinter", AppSettings.IniPath) ?? string.Empty; } catch { }
+
+                // Validate explicit printer once (optional)
+                if (!string.IsNullOrWhiteSpace(printer))
+                {
+                    try
+                    {
+                        var ps = new PrinterSettings { PrinterName = printer };
+                        if (!ps.IsValid)
+                        {
+                            MessageBox.Show(this, "Der konfigurierte Drucker ist ungültig oder nicht erreichbar: " + printer, "Drucker", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+                    catch { }
+                }
 
                 if (IsImage(path))
                 {
-                    if (!PrintImageFile(path, printer)) throw new InvalidOperationException("Bild konnte nicht gedruckt werden.");
-                    try { MessageBox.Show(this, "Druckauftrag gesendet.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
+                    var ok = PrintImageFile(path, printer);
+                    if (ok) TryNotifySpoolQueued();
+                    else MessageBox.Show(this, "Bild konnte nicht gedruckt werden.", "Druckfehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
                 if (IsPdf(path))
                 {
-                    // Use Windows shell verbs only (no Acrobat), matching Explorer's context menu behavior
-                    var psiPdf = string.IsNullOrWhiteSpace(printer)
-                        ? new ProcessStartInfo(path) { Verb = "print", CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden, UseShellExecute = true }
-                        : new ProcessStartInfo { FileName = path, Verb = "printto", Arguments = '"' + printer + '"', CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden, UseShellExecute = true };
-                    Process.Start(psiPdf);
-                    try { MessageBox.Show(this, "Druckauftrag gesendet.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
+                    // Require SumatraPDF and use it exclusively for PDF
+                    bool started = TrySumatraSilentPrint(path, printer);
+                    if (started)
+                    {
+                        TryNotifySpoolQueued();
+                        return;
+                    }
+                    // Sumatra not found or failed -> show prompt and do not claim success
+                    ShowSumatraDownloadPrompt();
                     return;
                 }
 
-                // Unknown type -> try shell print
-                var psi = new ProcessStartInfo(path) { Verb = "print", CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden, UseShellExecute = true };
-                Process.Start(psi);
-                try { MessageBox.Show(this, "Druckauftrag gesendet.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
+                // Unknown types are not supported
+                MessageBox.Show(this, "Dieser Dateityp wird zum Drucken nicht unterstützt.", "Druckfehler", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             catch (Exception ex)
             {
@@ -739,7 +756,113 @@ namespace Geldautomat
             }
         }
 
-        private bool PrintImageFile(string path, string printer)
+        private void ShowSumatraDownloadPrompt()
+        {
+            try
+            {
+                var dlg = new Form
+                {
+                    FormBorderStyle = FormBorderStyle.None,
+                    StartPosition = FormStartPosition.CenterParent,
+                    Width = 560,
+                    Height = 220,
+                    BackColor = Color.White
+                };
+                try { dlg.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, dlg.Width, dlg.Height, 14, 14)); } catch { }
+
+                var header = new Panel { Dock = DockStyle.Top, Height = 56 };
+                header.Paint += (s, e) =>
+                {
+                    using (var brush = new LinearGradientBrush(header.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                    { e.Graphics.FillRectangle(brush, header.ClientRectangle); }
+                };
+                dlg.Controls.Add(header);
+
+                var title = new Label
+                {
+                    Text = "PDF-Drucker benötigt",
+                    AutoSize = false,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    Location = new Point(16, 0),
+                    Size = new Size(420, 56)
+                };
+                header.Controls.Add(title);
+
+                var body = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
+                dlg.Controls.Add(body);
+                var info = new Label
+                {
+                    Text = "Für den direkten PDF-Druck wird SumatraPDF benötigt.\r\nKlicken Sie auf 'Herunterladen', um die offizielle Download-Seite zu öffnen.",
+                    AutoSize = false,
+                    Location = new Point(16, 20),
+                    Size = new Size(520, 60),
+                    Font = new Font("Segoe UI", 11.5F)
+                };
+                body.Controls.Add(info);
+
+                var panelButtons = new Panel { Dock = DockStyle.Bottom, Height = 84 };
+                body.Controls.Add(panelButtons);
+
+                var btnDownload = new Button
+                {
+                    Text = "Herunterladen",
+                    Width = 150,
+                    Height = 44,
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = Color.FromArgb(76, 175, 80),
+                    ForeColor = Color.White,
+                    Font = new Font("Segoe UI Variable", 14F, FontStyle.Bold),
+                    TabStop = false
+                };
+                btnDownload.FlatAppearance.BorderSize = 0;
+                try { btnDownload.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnDownload.Width, btnDownload.Height, 12, 12)); } catch { }
+                btnDownload.Click += (s, e) =>
+                {
+                    try
+                    {
+                        // Official download page
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "https://www.sumatrapdfreader.org/free-pdf-reader.html",
+                            UseShellExecute = true
+                        });
+                    }
+                    catch { }
+                    try { dlg.Close(); } catch { }
+                };
+
+                var btnClose = new Button
+                {
+                    Text = "Schließen",
+                    Width = 120,
+                    Height = 44,
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = Color.FromArgb(229, 57, 53),
+                    ForeColor = Color.White,
+                    Font = new Font("Segoe UI Variable", 14F, FontStyle.Bold),
+                    TabStop = false
+                };
+                btnClose.FlatAppearance.BorderSize = 0;
+                try { btnClose.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnClose.Width, btnClose.Height, 12, 12)); } catch { }
+                btnClose.Click += (s, e) => { try { dlg.Close(); } catch { } };
+
+                int spacing = 16;
+                int totalWidth = btnDownload.Width + btnClose.Width + spacing;
+                int startX = (dlg.ClientSize.Width - totalWidth) / 2;
+                int y = 20;
+                btnDownload.Location = new Point(startX, y);
+                btnClose.Location = new Point(btnDownload.Right + spacing, y);
+                panelButtons.Controls.Add(btnDownload);
+                panelButtons.Controls.Add(btnClose);
+
+                try { dlg.ShowDialog(this); } catch { dlg.ShowDialog(); }
+            }
+            catch { }
+        }
+
+        private static bool PrintImageFile(string path, string printer)
         {
             try
             {
@@ -747,10 +870,9 @@ namespace Geldautomat
                 var ms = new MemoryStream(data);
                 var img = Image.FromStream(ms);
                 int frameCount = 1;
-                try { var dim = new FrameDimension(img.FrameDimensionsList[0]); frameCount = img.GetFrameCount(dim); } catch { frameCount = 1; }
+                try { var dimCheck = new FrameDimension(img.FrameDimensionsList[0]); frameCount = img.GetFrameCount(dimCheck); } catch { frameCount = 1; }
 
                 var pd = new PrintDocument();
-                // Use chosen printer or fall back to system default
                 if (!string.IsNullOrWhiteSpace(printer)) pd.PrinterSettings.PrinterName = printer; else { try { pd.PrinterSettings.PrinterName = new PrinterSettings().PrinterName; } catch { } }
                 if (string.IsNullOrWhiteSpace(pd.PrinterSettings.PrinterName)) { img.Dispose(); ms.Dispose(); return false; }
                 if (!pd.PrinterSettings.IsValid) { img.Dispose(); ms.Dispose(); return false; }
@@ -766,7 +888,6 @@ namespace Geldautomat
                             img.SelectActiveFrame(dim, pageIndex);
                         }
                         Rectangle bounds = e.MarginBounds;
-                        // rotate to landscape if image wider than high and page is portrait
                         if ((img.Width > img.Height) && bounds.Height > bounds.Width)
                         {
                             var tmp = bounds; bounds = new Rectangle(tmp.Left, tmp.Top, tmp.Height, tmp.Width);
@@ -786,6 +907,135 @@ namespace Geldautomat
                 return true;
             }
             catch { return false; }
+        }
+
+        private bool TryShellPrint(string path, string printer)
+        {
+            try
+            {
+                Process proc;
+                if (string.IsNullOrWhiteSpace(printer))
+                {
+                    var psi = new ProcessStartInfo(path)
+                    {
+                        Verb = "print",
+                        CreateNoWindow = true,
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        UseShellExecute = true
+                    };
+                    proc = Process.Start(psi);
+                }
+                else
+                {
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = path,
+                        Verb = "printto",
+                        Arguments = '"' + printer + '"',
+                        CreateNoWindow = true,
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        UseShellExecute = true
+                    };
+                    proc = Process.Start(psi);
+                }
+                bool started = proc != null;
+                try { System.Threading.Thread.Sleep(400); } catch { }
+                try { proc?.Dispose(); } catch { }
+                return started;
+            }
+            catch { return false; }
+        }
+
+        private bool TryAcrobatSilentPrint(string path, string printer)
+        {
+            try
+            {
+                var acroPath = FindAcrobatPath();
+                if (string.IsNullOrEmpty(acroPath) || !File.Exists(acroPath)) return false;
+                var args = string.IsNullOrWhiteSpace(printer)
+                    ? $"/p \"{path}\""
+                    : $"/t \"{path}\" \"{printer}\"";
+                var psi = new ProcessStartInfo
+                {
+                    FileName = acroPath,
+                    Arguments = args,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+                var p = Process.Start(psi);
+                bool started = p != null;
+                try { System.Threading.Thread.Sleep(600); } catch { }
+                try { p?.Dispose(); } catch { }
+                return started;
+            }
+            catch { return false; }
+        }
+
+        private string FindAcrobatPath()
+        {
+            try
+            {
+                string[] candidates = new[]
+                {
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Adobe", "Acrobat Reader DC", "Reader", "AcroRd32.exe"),
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Adobe", "Acrobat Reader DC", "Reader", "AcroRd32.exe")
+                };
+                foreach (var c in candidates) { if (File.Exists(c)) return c; }
+                try
+                {
+                    using (var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\AcroRd32.exe"))
+                    {
+                        var v = k?.GetValue(null) as string; if (!string.IsNullOrWhiteSpace(v) && File.Exists(v)) return v;
+                    }
+                }
+                catch { }
+            }
+            catch { }
+            return null;
+        }
+
+        private bool TrySumatraSilentPrint(string path, string printer)
+        {
+            try
+            {
+                string baseDir = Application.StartupPath;
+                // Prefer Sumatra in subfolder 'PDF' next to Geldautomat.exe
+                string preferred = Path.Combine(baseDir, "PDF", "SumatraPDF.exe");
+                string[] candidates = new[]
+                {
+                    preferred,
+                    Path.Combine(baseDir, "SumatraPDF.exe"),
+                    Path.Combine(baseDir, "Ressourcen", "SumatraPDF.exe")
+                };
+                string exe = candidates.FirstOrDefault(File.Exists);
+                if (string.IsNullOrEmpty(exe)) return false;
+
+                string absFile = Path.GetFullPath(path);
+                string args = string.IsNullOrWhiteSpace(printer)
+                    ? $"-silent -print-to-default \"{absFile}\""
+                    : $"-silent -print-to \"{printer}\" \"{absFile}\"";
+                var psi = new ProcessStartInfo
+                {
+                    FileName = exe,
+                    Arguments = args,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    WorkingDirectory = Path.GetDirectoryName(exe) ?? baseDir
+                };
+                var p = Process.Start(psi);
+                bool started = p != null;
+                try { System.Threading.Thread.Sleep(600); } catch { }
+                try { p?.Dispose(); } catch { }
+                return started;
+            }
+            catch { return false; }
+        }
+
+        private void TryNotifySpoolQueued()
+        {
+            try { MessageBox.Show(this, "Druckauftrag gesendet.", "Drucken", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
         }
     }
 }
