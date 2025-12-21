@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
@@ -28,6 +28,7 @@ namespace Geldautomat
         private string _nfcBuffer = string.Empty;
         private Timer _nfcIdleTimer;
         private const int NfcIdleTimeoutMs = 800;
+        private bool _nfcCollectMode = false; // collect full token (letters+digits)
 
         public AuthForm(int pid, PersonalInfo personal, NV200_SSP ssp, Action<PersonalInfo> onSuccessOpenTarget)
         {
@@ -55,7 +56,7 @@ namespace Geldautomat
         {
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
-            ClientSize = _requireNfc ? new Size(500, 700) : new Size(520, 420);
+            ClientSize = _allowCode ? new Size(520, 740) : (_requireNfc ? new Size(500, 700) : new Size(520, 420));
             BackColor = Color.White;
             DoubleBuffered = true;
             KeyPreview = true;
@@ -66,17 +67,19 @@ namespace Geldautomat
             _header.Paint += (s, e) => { using (var brush = new LinearGradientBrush(_header.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f)) e.Graphics.FillRectangle(brush, _header.ClientRectangle); };
             Controls.Add(_header);
 
-            _title = new Label { Text = _requireNfc ? "Bitte erneut authentifizieren" : "Verifizierung", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold), ForeColor = Color.White, Dock = DockStyle.Fill, Padding = new Padding(16, 0, 0, 0), BackColor = Color.Transparent };
+            string titleText = _requireNfc ? "Bitte erneut authentifizieren" : (_allowCode ? "Passwort eingeben / NFC vorhalten" : "Verifizierung");
+            _title = new Label { Text = titleText, AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold), ForeColor = Color.White, Dock = DockStyle.Fill, Padding = new Padding(16, 0, 0, 0), BackColor = Color.Transparent };
             _header.Controls.Add(_title);
 
             int contentTop = _header.Bottom + 12;
             _lblInfo = new Label { Text = $"Mitarbeiter: {_personal?.Vorname} {_personal?.Name}", AutoSize = false, Location = new Point(24, contentTop), Size = new Size(ClientSize.Width - 48, 30), Font = new Font("Segoe UI", 12F, FontStyle.Bold) };
             Controls.Add(_lblInfo);
 
-            _txtCode = new TextBox { Location = new Point(24, _lblInfo.Bottom + 12), Size = new Size(ClientSize.Width - 48, 46), Font = new Font("Segoe UI Variable", 18F), UseSystemPasswordChar = true, TextAlign = HorizontalAlignment.Center, Visible = _allowCode };
+            _txtCode = new TextBox { Location = new Point(24, _lblInfo.Bottom + 12), Size = new Size(ClientSize.Width - 48, 50), Font = new Font("Segoe UI Variable", 20F), UseSystemPasswordChar = true, TextAlign = HorizontalAlignment.Center, Visible = _allowCode };
             Controls.Add(_txtCode);
 
-            _numPadPanel = new Panel { Location = new Point(24, _txtCode.Bottom + 12), Size = new Size(ClientSize.Width - 48, 220), Visible = _allowCode };
+            int padTop = _txtCode.Bottom + 12;
+            _numPadPanel = new Panel { Location = new Point(24, padTop), Size = new Size(ClientSize.Width - 48, 252), Visible = _allowCode };
             Controls.Add(_numPadPanel);
             if (_allowCode) BuildNumPad();
 
@@ -86,7 +89,7 @@ namespace Geldautomat
             if (_requireNfc || !_allowCode)
             {
                 int topY = _lblInfo.Bottom + 12;
-                int availableH = ClientSize.Height - topY - 80;
+                int availableH = ClientSize.Height - topY - 100;
                 int availableW = ClientSize.Width - 48;
                 if (availableH < 100) availableH = ClientSize.Height - _header.Height - 40;
                 if (availableW < 100) availableW = ClientSize.Width;
@@ -118,16 +121,22 @@ namespace Geldautomat
                 }
             }
 
-            _btnOk = new Button { Text = "Weiter", Location = new Point(ClientSize.Width - 240, ClientSize.Height - 64), Size = new Size(110, 44), BackColor = Color.FromArgb(76, 175, 80), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            // Centered buttons
+            int buttonsTop = (_allowCode ? _numPadPanel.Bottom + 18 : ClientSize.Height - 80);
+            int btnW = 140, btnH = 44;
+            int totalW = btnW * 2 + 20;
+            int startX = (ClientSize.Width - totalW) / 2;
+
+            _btnOk = new Button { Text = "Weiter", Location = new Point(startX, buttonsTop), Size = new Size(btnW, btnH), BackColor = Color.FromArgb(76, 175, 80), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             _btnOk.FlatAppearance.BorderSize = 0; _btnOk.TabStop = false; _btnOk.Click += async (s, e) => await TryCompleteAsyncByCode(); _btnOk.Visible = _allowCode; Controls.Add(_btnOk);
 
-            _btnCancel = new Button { Text = "Abbrechen", Location = new Point(ClientSize.Width - 120, ClientSize.Height - 64), Size = new Size(110, 44), BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            _btnCancel = new Button { Text = "Abbrechen", Location = new Point(startX + btnW + 20, buttonsTop), Size = new Size(btnW, btnH), BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             _btnCancel.FlatAppearance.BorderSize = 0; _btnCancel.TabStop = false; _btnCancel.DialogResult = DialogResult.None; _btnCancel.Click += (s, e) => Close(); Controls.Add(_btnCancel);
 
-            KeyDown += DocumentsAuthForm_KeyDown;
-            KeyPress += DocumentsAuthForm_KeyPress;
+            KeyDown += AuthForm_KeyDown;
+            KeyPress += AuthForm_KeyPress;
             _nfcIdleTimer = new Timer { Interval = NfcIdleTimeoutMs };
-            _nfcIdleTimer.Tick += (s, e) => { _nfcIdleTimer.Stop(); _nfcBuffer = string.Empty; };
+            _nfcIdleTimer.Tick += (s, e) => { _nfcIdleTimer.Stop(); _nfcBuffer = string.Empty; _nfcCollectMode = false; };
 
             try { if (Program.CoinFeeder != null) Program.CoinFeeder.NfcReceived += OnCoinFeederNfc; } catch { }
         }
@@ -162,18 +171,19 @@ namespace Geldautomat
 
         private void BuildNumPad()
         {
-            int btnW = 100, btnH = 56, pad = 12;
-            string[] keys = { "1","2","3","4","5","6","7","8","9","?","0","OK" };
+            int btnW = 110, btnH = 60, pad = 12;
+            string[] keys = { "1","2","3","4","5","6","7","8","9","←","0","OK" };
+            int cols = 3;
             for (int i = 0; i < keys.Length; i++)
             {
-                int r = i / 3, c = i % 3;
-                var b = new Button { Text = keys[i], Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold), Size = new Size(btnW, btnH), Location = new Point(c * (btnW + pad), r * (btnH + pad)), BackColor = Color.FromArgb(245, 247, 250), FlatStyle = FlatStyle.Flat, Tag = keys[i] };
+                int r = i / cols, c = i % cols;
+                var b = new Button { Text = keys[i], Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold), Size = new Size(btnW, btnH), Location = new Point(c * (btnW + pad), r * (btnH + pad)), BackColor = Color.FromArgb(245, 247, 250), FlatStyle = FlatStyle.Flat, Tag = keys[i] };
                 b.FlatAppearance.BorderSize = 0;
                 b.Click += (s, e) =>
                 {
                     var key = (string)((Button)s).Tag;
                     if (key == "OK") { _btnOk.PerformClick(); return; }
-                    if (key == "?") { if (_txtCode.Text.Length > 0) _txtCode.Text = _txtCode.Text.Substring(0, _txtCode.Text.Length - 1); return; }
+                    if (key == "←") { if (_txtCode.Text.Length > 0) _txtCode.Text = _txtCode.Text.Substring(0, _txtCode.Text.Length - 1); return; }
                     if (_txtCode.Text.Length < 8) _txtCode.Text += key;
                     _txtCode.Focus(); _txtCode.SelectionStart = _txtCode.Text.Length;
                 };
@@ -239,11 +249,45 @@ namespace Geldautomat
             catch { }
         }
 
-        private void DocumentsAuthForm_KeyDown(object sender, KeyEventArgs e)
+        private void AuthForm_KeyDown(object sender, KeyEventArgs e)
         {
             if ((_requireNfc || !_allowCode) && e.Control && e.KeyCode == Keys.V)
             {
-                try { var clip = Clipboard.GetText(); if (!string.IsNullOrWhiteSpace(clip)) { _nfcBuffer = clip.Trim(); _nfcIdleTimer.Stop(); } } catch { }
+                try { var clip = Clipboard.GetText(); if (!string.IsNullOrWhiteSpace(clip)) { _nfcBuffer = clip.Trim(); _nfcCollectMode = true; _nfcIdleTimer.Stop(); } } catch { }
+            }
+
+            // Start NFC collect mode when any letter typed
+            if (e.KeyCode >= Keys.A && e.KeyCode <= Keys.Z)
+            {
+                char ch = (char)('A' + (e.KeyCode - Keys.A));
+                if (_nfcBuffer.Length < 128) _nfcBuffer += ch;
+                _nfcCollectMode = true; _nfcIdleTimer.Stop(); _nfcIdleTimer.Start(); e.SuppressKeyPress = true; return;
+            }
+
+            // NEW: also start NFC collect mode when any digit typed (top row or numpad)
+            if ((e.KeyCode >= Keys.D0 && e.KeyCode <= Keys.D9) || (e.KeyCode >= Keys.NumPad0 && e.KeyCode <= Keys.NumPad9))
+            {
+                char ch = '\0';
+                if (e.KeyCode >= Keys.D0 && e.KeyCode <= Keys.D9) ch = (char)('0' + (e.KeyCode - Keys.D0));
+                else if (e.KeyCode >= Keys.NumPad0 && e.KeyCode <= Keys.NumPad9) ch = (char)('0' + (e.KeyCode - Keys.NumPad0));
+                if (ch != '\0' && _nfcBuffer.Length < 128) _nfcBuffer += ch;
+                _nfcCollectMode = true; _nfcIdleTimer.Stop(); _nfcIdleTimer.Start(); e.SuppressKeyPress = true; return;
+            }
+
+            if (_nfcCollectMode)
+            {
+                if (e.KeyCode == Keys.Back)
+                {
+                    if (_nfcBuffer.Length > 0) _nfcBuffer = _nfcBuffer.Substring(0, _nfcBuffer.Length - 1);
+                    e.SuppressKeyPress = true; return;
+                }
+                if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Return)
+                {
+                    string token = _nfcBuffer.Trim(); _nfcIdleTimer.Stop(); _nfcBuffer = string.Empty; _nfcCollectMode = false;
+                    e.SuppressKeyPress = true;
+                    if (token.Length > 0) { TryCompleteAsyncByNfc(token).ConfigureAwait(false); }
+                    return;
+                }
             }
 
             if (_requireNfc || !_allowCode)
@@ -272,8 +316,26 @@ namespace Geldautomat
             e.SuppressKeyPress = true;
         }
 
-        private void DocumentsAuthForm_KeyPress(object sender, KeyPressEventArgs e)
+        private void AuthForm_KeyPress(object sender, KeyPressEventArgs e)
         {
+            // Letters or digits begin/continue NFC buffer and enable collect mode
+            if (char.IsLetterOrDigit(e.KeyChar))
+            {
+                if (_nfcBuffer.Length < 128) _nfcBuffer += char.ToUpperInvariant(e.KeyChar);
+                _nfcCollectMode = true; _nfcIdleTimer.Stop(); _nfcIdleTimer.Start(); e.Handled = true; return;
+            }
+
+            if (_nfcCollectMode)
+            {
+                if (e.KeyChar == '\r' || e.KeyChar == '\n')
+                {
+                    var token = _nfcBuffer.Trim(); _nfcIdleTimer.Stop(); _nfcBuffer = string.Empty; _nfcCollectMode = false;
+                    e.Handled = true; if (token.Length > 0) { TryCompleteAsyncByNfc(token).ConfigureAwait(false); }
+                    return;
+                }
+                if (e.KeyChar == '\b') { e.Handled = true; return; }
+            }
+
             if (_requireNfc || !_allowCode)
             {
                 char ch = e.KeyChar;
