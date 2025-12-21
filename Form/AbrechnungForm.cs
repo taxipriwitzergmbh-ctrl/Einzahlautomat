@@ -567,7 +567,7 @@ namespace Geldautomat
                         try { frmDocs.BringToFront(); frmDocs.Activate(); } catch { }
                     };
 
-                    var auth = new DocumentsAuthForm(_personal.PID, _personal, _ssp, openDocs);
+                    var auth = new AuthForm(_personal.PID, _personal, _ssp, openDocs);
                     auth.StartPosition = FormStartPosition.CenterParent;
                     if (Program.KioskModeEnabled)
                     {
@@ -2069,7 +2069,9 @@ namespace Geldautomat
             decimal raw19 = Math.Abs(Convert.ToDecimal(row["Betrag19"])); decimal raw7 = Math.Abs(Convert.ToDecimal(row["Betrag7"])); decimal raw0 = Math.Abs(Convert.ToDecimal(row["Betrag0"]));
             if (_currentZahlungIstEinzahlung)
             {
-                decimal summe = raw19 + raw7 + raw0; lblB19.Text = $"19%: {raw19:C2}"; lblB7.Text = $"7%: {raw7:C2}"; lblB0.Text = $"0%: {raw0:C2}"; lblSumme.Text = $"Summe: {summe:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; var rest = Math.Max(0m, summe - _eingezahltSession); var noch = Math.Max(0m, rest - _personalGuthaben); lblNoch.Text = $"Noch zu zahlen: {noch:C2}"; try { lblNoch.ForeColor = (noch > 0m) ? Color.Red : Color.Green; } catch { }
+                decimal summe = raw19 + raw7 + raw0; lblB19.Text = $"19%: {raw19:C2}"; lblB7.Text = $"7%: {raw7:C2}"; lblB0.Text = $"0%: {raw0:C2}"; lblSumme.Text = $"Summe: {summe:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}";
+                var rest = Math.Max(0m, summe - _eingezahltSession); var noch = Math.Max(0m, rest - _personalGuthaben);
+                lblNoch.Text = $"Noch zu zahlen: {noch:C2}"; try { lblNoch.ForeColor = (noch > 0m) ? Color.Red : Color.Green; } catch { }
                 UpdateBuchenEnabled();
             }
             else

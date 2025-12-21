@@ -991,3 +991,51 @@ Summe Gesamt: 200,00 €
 
 ------------------------------------- END --------------------------------------
 2025-12-21 16:31:11.809 | Logger Shutdown gestartet: DelayedShutdown
+2025-12-21 16:42:26.934 | [Coin2] INI SmartCoin/2: Typ='V1', ComPort='', SSPAddress='16'
+2025-12-21 16:42:26.973 | [Coin2] Connect() auf Gerät 2 initiiert.
+2025-12-21 16:42:26.983 | [Coin2] Watchdog gestartet
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-21 16:42:26.983 | Programmstart
+2025-12-21 16:42:27.110 | NV200/2 verbunden auf COM5
+2025-12-21 16:42:27.634 | Login-Form angezeigt
+2025-12-21 16:42:30.450 | NFC-Login erkannt: Token='1234', PID=1
+2025-12-21 16:42:30.483 | Login OK: Manuel Priwitzer (PID=1), Schicht 122012, Admin=False, Personalguthaben: 0,00 €
+2025-12-21 16:42:30.483 | __________________________________________________________________________
+2025-12-21 16:42:30.490 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 0,00 €
+-- NV200/2 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=2,10€=5,20€=7,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 200,00 €
+Summe Gesamt: 200,00 €
+2025-12-21 16:42:30.491 | Baseline gesetzt: 200,00 € (Anmeldung Manuel Priwitzer)
+2025-12-21 16:42:34.319 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-21 16:42:35.074 | [Coin2] Auto-Reconnect: Connect
+2025-12-21 16:42:35.889 | [Coin2] Auto-Reconnect: Enable
+2025-12-21 16:42:40.333 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-21 16:42:41.086 | [Coin2] Auto-Reconnect: Connect
+2025-12-21 16:42:41.915 | [Coin2] Auto-Reconnect: Enable
+2025-12-21 16:42:43.286 | [Coin2] Durch Konfiguration deaktiviert (Watchdog/Reconnect gestoppt)
+2025-12-21 16:42:43.286 | Verzögerter Shutdown gestartet – Geräte werden geschlossen...
+2025-12-21 16:42:43.488 | CoinManager heruntergefahren
+2025-12-21 16:42:43.489 | Coin2Manager heruntergefahren
+2025-12-21 16:42:44.152 | [INFO] Port geschlossen
+2025-12-21 16:42:44.152 | Geräte getrennt – Warte 5 Sekunden vor Prozessende...
+2025-12-21 16:42:49.178 | Beenden jetzt.
+
+
+
+
+
+------------------------------------- END --------------------------------------
+2025-12-21 16:42:49.181 | Logger Shutdown gestartet: DelayedShutdown

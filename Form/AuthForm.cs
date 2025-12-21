@@ -6,7 +6,7 @@ using System.Drawing.Drawing2D;
 
 namespace Geldautomat
 {
-    public class DocumentsAuthForm : Form
+    public class AuthForm : Form
     {
         private readonly int _pid;
         private readonly PersonalInfo _personal;
@@ -29,7 +29,7 @@ namespace Geldautomat
         private Timer _nfcIdleTimer;
         private const int NfcIdleTimeoutMs = 800;
 
-        public DocumentsAuthForm(int pid, PersonalInfo personal, NV200_SSP ssp, Action<PersonalInfo> onSuccessOpenTarget)
+        public AuthForm(int pid, PersonalInfo personal, NV200_SSP ssp, Action<PersonalInfo> onSuccessOpenTarget)
         {
             _pid = pid;
             _personal = personal;
@@ -80,11 +80,9 @@ namespace Geldautomat
             Controls.Add(_numPadPanel);
             if (_allowCode) BuildNumPad();
 
-            // Hidden NFC TextBox to capture keyboard input
             _txtNfcHidden = new TextBox { Visible = false, TabStop = false, Size = new Size(1, 1), Location = new Point(-100, -100) };
             Controls.Add(_txtNfcHidden);
 
-            // NFC-only image layout
             if (_requireNfc || !_allowCode)
             {
                 int topY = _lblInfo.Bottom + 12;

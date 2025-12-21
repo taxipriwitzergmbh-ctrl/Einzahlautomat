@@ -1061,3 +1061,38 @@
 2025-12-21 16:31:05.991 | Status: Getrennt
 2025-12-21 16:31:06.002 | HardDisconnect done
 2025-12-21 16:31:06.126 | Status: getrennt
+2025-12-21 16:42:26.901 | Status: Verbinde...
+2025-12-21 16:42:26.909 | Thread gestartet
+2025-12-21 16:42:26.919 | Open SSPComPort (COM3) failed
+2025-12-21 16:42:26.925 | Status: Port nicht verfügbar
+2025-12-21 16:42:27.968 | Open SSPComPort (COM3) failed
+2025-12-21 16:42:28.994 | Open SSPComPort (COM3) failed
+2025-12-21 16:42:30.018 | Open SSPComPort (COM3) failed
+2025-12-21 16:42:30.493 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:42:31.044 | Open SSPComPort (COM3) failed
+2025-12-21 16:42:31.247 | REQ Level 1 ct [plain]
+2025-12-21 16:42:31.258 | REQ Level 2 ct [plain]
+2025-12-21 16:42:31.268 | REQ Level 5 ct [plain]
+2025-12-21 16:42:31.277 | REQ Level 10 ct [plain]
+2025-12-21 16:42:31.286 | REQ Level 20 ct [plain]
+2025-12-21 16:42:31.295 | REQ Level 50 ct [plain]
+2025-12-21 16:42:31.304 | REQ Level 100 ct [plain]
+2025-12-21 16:42:31.313 | REQ Level 200 ct [plain]
+2025-12-21 16:42:31.322 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:42:32.062 | Open SSPComPort (COM3) failed
+2025-12-21 16:42:33.093 | Open SSPComPort (COM3) failed
+2025-12-21 16:42:34.120 | Open SSPComPort (COM3) failed
+2025-12-21 16:42:35.145 | Open SSPComPort (COM3) failed
+2025-12-21 16:42:36.177 | Open SSPComPort (COM3) failed
+2025-12-21 16:42:37.195 | Open SSPComPort (COM3) failed
+2025-12-21 16:42:38.213 | Open SSPComPort (COM3) failed
+2025-12-21 16:42:39.241 | Open SSPComPort (COM3) failed
+2025-12-21 16:42:40.271 | Open SSPComPort (COM3) failed
+2025-12-21 16:42:41.295 | Open SSPComPort (COM3) failed
+2025-12-21 16:42:42.324 | Open SSPComPort (COM3) failed
+2025-12-21 16:42:43.294 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:42:43.308 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:42:43.319 | HardDisconnect init
+2025-12-21 16:42:43.349 | Status: Getrennt
+2025-12-21 16:42:43.359 | HardDisconnect done
+2025-12-21 16:42:43.478 | Status: getrennt

@@ -111,6 +111,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Allgemeine_Klassen\AuswahlItem.cs" />
+    <Compile Include="Form\AuthForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Form\BackgroundForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -125,9 +128,6 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Form\CreatePaymentForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Form\DocumentsAuthForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Form\DocumentsForm.cs">
