@@ -40,6 +40,10 @@ namespace Geldautomat
         private TextBox _txtDocStore;
         private Button _btnDocStoreBrowse;
 
+        private CheckBox _chkTimeTrackingEnabled; // NEW
+        private CheckBox _chkTimeTrackingPwd; // NEW
+        private Label _lblTimeTrackingPwd; // NEW
+
         public GeneralSettingsForm()
         {
             BuildUi();
@@ -210,6 +214,21 @@ namespace Geldautomat
             _btnClose.FlatAppearance.BorderSize = 0;
             _btnClose.Click += (s, e) => Close();
             Controls.Add(_btnClose);
+
+            // Insert time tracking toggles after documents settings block
+            y += 28;
+            var lblHours = new Label { Text = "Zeiterfassung anzeigen", AutoSize = true, Location = new Point(left + 26, y), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.Transparent };
+            _chkTimeTrackingEnabled = new CheckBox { Location = new Point(left, y - 2), AutoSize = true };
+            Controls.Add(lblHours);
+            Controls.Add(_chkTimeTrackingEnabled);
+
+            y += 28;
+            _lblTimeTrackingPwd = new Label { Text = "Passwortabfrage für Zeiterfassung", AutoSize = true, Location = new Point(left + 26, y), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.Transparent, Visible = false };
+            _chkTimeTrackingPwd = new CheckBox { Location = new Point(left, y - 2), AutoSize = true, Visible = false };
+            Controls.Add(_lblTimeTrackingPwd);
+            Controls.Add(_chkTimeTrackingPwd);
+
+            _chkTimeTrackingEnabled.CheckedChanged += (s, e) => { ToggleTimeTrackingPwd(_chkTimeTrackingEnabled.Checked); };
         }
 
         private void HeaderPanel_Paint(object sender, PaintEventArgs e)
@@ -248,6 +267,16 @@ namespace Geldautomat
                         _txtDocStore.Text = dlg.SelectedPath;
                     }
                 }
+            }
+            catch { }
+        }
+
+        private void ToggleTimeTrackingPwd(bool show)
+        {
+            try
+            {
+                _lblTimeTrackingPwd.Visible = show;
+                _chkTimeTrackingPwd.Visible = show;
             }
             catch { }
         }
@@ -322,7 +351,23 @@ namespace Geldautomat
                 if (!string.IsNullOrWhiteSpace(ds)) _txtDocStore.Text = ds.Trim(); else _txtDocStore.Text = string.Empty;
             }
             catch { _txtDocStore.Text = string.Empty; }
+            bool hoursOn = false;
+            try
+            {
+                var hours = IniHelper.ReadValue("UI", "TimeTrackingEnabled", AppSettings.IniPath);
+                hoursOn = !string.IsNullOrWhiteSpace(hours) && (hours.Equals("true", StringComparison.OrdinalIgnoreCase) || hours.Equals("1") || hours.Equals("yes", StringComparison.OrdinalIgnoreCase) || hours.Equals("on", StringComparison.OrdinalIgnoreCase));
+                _chkTimeTrackingEnabled.Checked = hoursOn;
+            }
+            catch { _chkTimeTrackingEnabled.Checked = false; }
+            try
+            {
+                var hpwd = IniHelper.ReadValue("UI", "TimeTrackingPasswordRequired", AppSettings.IniPath);
+                bool req = !string.IsNullOrWhiteSpace(hpwd) && (hpwd.Equals("true", StringComparison.OrdinalIgnoreCase) || hpwd.Equals("1") || hpwd.Equals("yes", StringComparison.OrdinalIgnoreCase) || hpwd.Equals("on", StringComparison.OrdinalIgnoreCase));
+                _chkTimeTrackingPwd.Checked = req;
+            }
+            catch { _chkTimeTrackingPwd.Checked = false; }
             ToggleDocStoreUi(docsOn);
+            ToggleTimeTrackingPwd(hoursOn);
         }
 
         private void SaveValues()
@@ -396,6 +441,8 @@ namespace Geldautomat
             try { IniHelper.WriteValue("UI", "QrCodeEnabled", _chkQrCodeEnabled.Checked ? "True" : "False", AppSettings.IniPath); } catch { }
             try { IniHelper.WriteValue("UI", "DocumentsEnabled", _chkDocumentsEnabled.Checked ? "True" : "False", AppSettings.IniPath); } catch { }
             try { IniHelper.WriteValue("UI", "DocStore", (_txtDocStore.Text ?? string.Empty).Trim(), AppSettings.IniPath); } catch { }
+            try { IniHelper.WriteValue("UI", "TimeTrackingEnabled", _chkTimeTrackingEnabled.Checked ? "True" : "False", AppSettings.IniPath); } catch { }
+            try { IniHelper.WriteValue("UI", "TimeTrackingPasswordRequired", _chkTimeTrackingPwd.Checked ? "True" : "False", AppSettings.IniPath); } catch { }
 
             try { AppLogger.Log($"Allgemeine Einstellungen gespeichert. Prompt={( _chkReceiptPromptEnabled.Checked ? "on" : "off")}, QR={( _chkQrCodeEnabled.Checked ? "on" : "off")}, Docs={( _chkDocumentsEnabled.Checked ? "on" : "off")}, DocStore='{_txtDocStore.Text}'"); } catch { }
             try { MessageBox.Show(this, "Einstellungen gespeichert.\nHinweis: Änderungen an NFC/Device-ID wirken erst nach Neustart.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }

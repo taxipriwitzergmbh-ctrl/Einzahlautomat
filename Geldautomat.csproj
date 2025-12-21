@@ -136,6 +136,9 @@
     <Compile Include="Form\Admin\GeneralSettingsForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Form\HoursOverviewForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Form\Kassensturz\KassensturzRm5Form.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -582,6 +582,88 @@ namespace Geldautomat
             };
             headerPanel.Controls.Add(btnDocuments);
 
+            // NEU: Stunden-Button links neben Dokumente
+            bool hoursEnabled = false; bool hoursPwdRequired = false;
+            try
+            {
+                var hours = IniHelper.ReadValue("UI", "TimeTrackingEnabled", AppSettings.IniPath);
+                hoursEnabled = !string.IsNullOrWhiteSpace(hours) && (hours.Equals("true", StringComparison.OrdinalIgnoreCase) || hours.Equals("1") || hours.Equals("yes", StringComparison.OrdinalIgnoreCase) || hours.Equals("on", StringComparison.OrdinalIgnoreCase));
+                var hpwd = IniHelper.ReadValue("UI", "TimeTrackingPasswordRequired", AppSettings.IniPath);
+                hoursPwdRequired = !string.IsNullOrWhiteSpace(hpwd) && (hpwd.Equals("true", StringComparison.OrdinalIgnoreCase) || hpwd.Equals("1") || hpwd.Equals("yes", StringComparison.OrdinalIgnoreCase) || hpwd.Equals("on", StringComparison.OrdinalIgnoreCase));
+            }
+            catch { }
+
+            var btnHours = new Button
+            {
+                Text = string.Empty,
+                Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = Color.FromArgb(255, 143, 0),
+                FlatStyle = FlatStyle.Flat,
+                Size = new Size(56, 56),
+                Location = new Point(ClientSize.Width - 340, 2),
+                TabStop = false,
+                Visible = hoursEnabled
+            };
+            btnHours.FlatAppearance.BorderSize = 0;
+            btnHours.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 183, 77);
+            btnHours.Paint += (s, pe) =>
+            {
+                try
+                {
+                    var g = pe.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias;
+                    var r = ((Button)s).ClientRectangle;
+                    int cx = r.Left + r.Width / 2; int cy = r.Top + r.Height / 2;
+                    int radius = Math.Min(r.Width, r.Height) / 2 - 12;
+                    using (var pen = new Pen(Color.White, 3f))
+                    {
+                        g.DrawEllipse(pen, cx - radius, cy - radius, radius * 2, radius * 2);
+                        // clock hands
+                        g.DrawLine(pen, cx, cy, cx, cy - radius + 6); // hour up
+                        g.DrawLine(pen, cx, cy, cx + radius - 8, cy); // minute right
+                    }
+                }
+                catch { }
+            };
+            btnHours.Click += (s, e) =>
+            {
+                try
+                {
+                    Action<PersonalInfo> openHours = (p) =>
+                    {
+                        var frmHours = new HoursOverviewForm(p);
+                        frmHours.StartPosition = FormStartPosition.CenterScreen;
+                        if (Program.KioskModeEnabled)
+                        {
+                            bool prevTopMost = TopMost; try { TopMost = false; } catch { }
+                            frmHours.TopMost = true;
+                            frmHours.FormClosed += (s3, e3) => { try { TopMost = prevTopMost; Activate(); BringToFront(); } catch { } };
+                        }
+                        frmHours.Show();
+                        try { frmHours.BringToFront(); frmHours.Activate(); } catch { }
+                    };
+
+                    if (hoursPwdRequired)
+                    {
+                        var auth = new AuthForm(_personal.PID, _personal, _ssp, openHours);
+                        auth.StartPosition = FormStartPosition.CenterParent;
+                        if (Program.KioskModeEnabled)
+                        {
+                            bool prevTopMost = TopMost; try { TopMost = false; } catch { }
+                            auth.TopMost = true;
+                            auth.FormClosed += (s4, e4) => { try { TopMost = prevTopMost; Activate(); BringToFront(); } catch { } };
+                        }
+                        auth.Show(this);
+                    }
+                    else
+                    {
+                        openHours(_personal);
+                    }
+                }
+                catch { }
+            };
+            headerPanel.Controls.Add(btnHours);
+
             try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24)); } catch { }
 
             tabControl = new TabControl
@@ -1980,7 +2062,7 @@ namespace Geldautomat
             if (_details.EinzahlungBisher != 0)
             {
                 decimal einnahmenBar = _details.Betrag19 + _details.Betrag7 + _details.Betrag0 + _details.EinzahlungBisher; decimal diff = einnahmenBar - _details.EinzahlungBisher; if (diff > 0) infoText = $"Nachzahlung Schicht \"{kennzeichen}\" vom {datum}"; else if (diff < 0) infoText = $"Rückzahlung Schicht \"{kennzeichen}\" vom {datum}"; else infoText = $"Schicht \"{kennzeichen}\" vom {datum}";
-            }
+        }
             else infoText = $"Schicht \"{kennzeichen}\" vom {datum}";
             lblBelegInfo.Text = infoText;
             for (int i = 0; i < auswahlAnzahl.Length; i++) { auswahlAnzahl[i] = 0; if (lblAnzahl[i] != null) lblAnzahl[i].Text = "0"; }
@@ -1993,46 +2075,46 @@ namespace Geldautomat
 
             // NV200/1
             try
-            {
+        {
                 if (_ssp != null)
-                {
+            {
                     _ssp.AllowAutoEnable(true);
                     _ssp.SetInhibit(false);
                     _ssp.Freigeben();
                     try { _ssp.ConfigureBezel(0, 255, 0); } catch { }
                     try { _ssp.MitarbeiterEingeloggt = true; } catch { } // added
-                }
             }
+        }
             catch { }
 
             // NV200/2
             try
-            {
+        {
                 var ssp2 = Program.NV2002Instance;
                 if (ssp2 != null)
-                {
+            {
                     ssp2.AllowAutoEnable(true);
                     ssp2.SetInhibit(false);
                     ssp2.Freigeben();
                     try { ssp2.ConfigureBezel(0, 255, 0); } catch { }
                     try { ssp2.MitarbeiterEingeloggt = true; } catch { }
                 }
-            }
+                }
             catch { }
 
             // SmartCoin/1 (Singleton)
             try
-            {
+                {
                 AttachCoinEvents();
                 if (_coin != null)
-                {
-                    if (!_coin.Connected)
                     {
+                    if (!_coin.Connected)
+                        {
                         try { _coin.Connect(); } catch { }
-                    }
+                        }
                     _coin.Enable(true);
+                    }
                 }
-            }
             catch { }
 
             // SmartCoin/2
@@ -2053,7 +2135,7 @@ namespace Geldautomat
 
             // UI/Bestände aktualisieren
             try
-            {
+                {
                 SafeRefreshAvailability();
                 RequestCoinLevels();
                 UpdatePlusMinusEnabled();
@@ -2069,9 +2151,7 @@ namespace Geldautomat
             decimal raw19 = Math.Abs(Convert.ToDecimal(row["Betrag19"])); decimal raw7 = Math.Abs(Convert.ToDecimal(row["Betrag7"])); decimal raw0 = Math.Abs(Convert.ToDecimal(row["Betrag0"]));
             if (_currentZahlungIstEinzahlung)
             {
-                decimal summe = raw19 + raw7 + raw0; lblB19.Text = $"19%: {raw19:C2}"; lblB7.Text = $"7%: {raw7:C2}"; lblB0.Text = $"0%: {raw0:C2}"; lblSumme.Text = $"Summe: {summe:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}";
-                var rest = Math.Max(0m, summe - _eingezahltSession); var noch = Math.Max(0m, rest - _personalGuthaben);
-                lblNoch.Text = $"Noch zu zahlen: {noch:C2}"; try { lblNoch.ForeColor = (noch > 0m) ? Color.Red : Color.Green; } catch { }
+                decimal summe = raw19 + raw7 + raw0; lblB19.Text = $"19%: {raw19:C2}"; lblB7.Text = $"7%: {raw7:C2}"; lblB0.Text = $"0%: {raw0:C2}"; lblSumme.Text = $"Summe: {summe:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; var rest = Math.Max(0m, summe - _eingezahltSession); var noch = Math.Max(0m, rest - _personalGuthaben); lblNoch.Text = $"Noch zu zahlen: {noch:C2}"; try { lblNoch.ForeColor = (noch > 0m) ? Color.Red : Color.Green; } catch { }
                 UpdateBuchenEnabled();
             }
             else

@@ -1607,3 +1607,138 @@ Summe Gesamt: 200,00 €
 
 ------------------------------------- END --------------------------------------
 2025-12-21 17:09:28.897 | Logger Shutdown gestartet: DelayedShutdown
+2025-12-21 17:24:09.330 | [Coin2] INI SmartCoin/2: Typ='V1', ComPort='', SSPAddress='16'
+2025-12-21 17:24:09.364 | [Coin2] Connect() auf Gerät 2 initiiert.
+2025-12-21 17:24:09.365 | [Coin2] Watchdog gestartet
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-21 17:24:09.367 | Programmstart
+2025-12-21 17:24:09.451 | NV200/2 verbunden auf COM5
+2025-12-21 17:24:10.019 | Login-Form angezeigt
+2025-12-21 17:24:12.611 | NFC-Login erkannt: Token='1234', PID=1
+2025-12-21 17:24:12.638 | Login OK: Manuel Priwitzer (PID=1), Schicht 122012, Admin=False, Personalguthaben: 0,00 €
+2025-12-21 17:24:12.639 | __________________________________________________________________________
+2025-12-21 17:24:12.643 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 0,00 €
+-- NV200/2 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=2,10€=5,20€=7,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 200,00 €
+Summe Gesamt: 200,00 €
+2025-12-21 17:24:12.644 | Baseline gesetzt: 200,00 € (Anmeldung Manuel Priwitzer)
+2025-12-21 17:24:16.650 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-21 17:24:17.410 | [Coin2] Auto-Reconnect: Connect
+2025-12-21 17:24:18.230 | [Coin2] Auto-Reconnect: Enable
+2025-12-21 17:24:22.687 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-21 17:24:23.444 | [Coin2] Auto-Reconnect: Connect
+2025-12-21 17:24:24.273 | [Coin2] Auto-Reconnect: Enable
+2025-12-21 17:24:28.718 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-21 17:24:29.484 | [Coin2] Auto-Reconnect: Connect
+2025-12-21 17:24:30.307 | [Coin2] Auto-Reconnect: Enable
+2025-12-21 17:24:34.175 | Allgemeine Einstellungen gespeichert. Prompt=on, QR=on, Docs=on, DocStore='C:\Users\m.priwitzer\Documents\Dateien'
+2025-12-21 17:24:34.762 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-21 17:24:35.525 | [Coin2] Auto-Reconnect: Connect
+2025-12-21 17:24:36.348 | [Coin2] Auto-Reconnect: Enable
+2025-12-21 17:24:40.805 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-21 17:24:41.563 | [Coin2] Auto-Reconnect: Connect
+2025-12-21 17:24:42.376 | [Coin2] Auto-Reconnect: Enable
+2025-12-21 17:24:43.678 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 0,00 €
+-- NV200/2 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=2,10€=5,20€=7,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 200,00 €
+Summe Gesamt: 200,00 €
+2025-12-21 17:24:43.709 | Kassenbestand: 12771,70 €
+2025-12-21 17:24:43.709 | Kassendifferenz bei Abmeldung: -12571,70 €
+
+--------------------------------------------------------------------------------
+
+2025-12-21 17:24:45.714 | NFC-Login erkannt: Token='1234', PID=1
+2025-12-21 17:24:45.731 | Login OK: Manuel Priwitzer (PID=1), Schicht 122012, Admin=False, Personalguthaben: 0,00 €
+2025-12-21 17:24:45.731 | __________________________________________________________________________
+2025-12-21 17:24:45.731 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 0,00 €
+-- NV200/2 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=2,10€=5,20€=7,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 200,00 €
+Summe Gesamt: 200,00 €
+2025-12-21 17:24:46.865 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-21 17:24:47.620 | [Coin2] Auto-Reconnect: Connect
+2025-12-21 17:24:48.450 | [Coin2] Auto-Reconnect: Enable
+2025-12-21 17:24:52.918 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-21 17:24:53.665 | [Coin2] Auto-Reconnect: Connect
+2025-12-21 17:24:54.486 | [Coin2] Auto-Reconnect: Enable
+2025-12-21 17:24:58.990 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-21 17:24:59.236 | Allgemeine Einstellungen gespeichert. Prompt=on, QR=on, Docs=on, DocStore='C:\Users\m.priwitzer\Documents\Dateien'
+2025-12-21 17:24:59.732 | [Coin2] Auto-Reconnect: Connect
+2025-12-21 17:25:00.550 | [Coin2] Auto-Reconnect: Enable
+2025-12-21 17:25:05.021 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-21 17:25:05.781 | [Coin2] Auto-Reconnect: Connect
+2025-12-21 17:25:06.608 | [Coin2] Auto-Reconnect: Enable
+2025-12-21 17:25:07.767 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 0,00 €
+-- NV200/2 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=2,10€=5,20€=7,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 200,00 €
+Summe Gesamt: 200,00 €
+2025-12-21 17:25:07.774 | Kassenbestand: 12771,70 €
+2025-12-21 17:25:07.774 | Kassendifferenz bei Abmeldung: -12571,70 €
+
+--------------------------------------------------------------------------------
+
+2025-12-21 17:25:10.016 | NFC-Login erkannt: Token='1234', PID=1
+2025-12-21 17:25:10.035 | Login OK: Manuel Priwitzer (PID=1), Schicht 122012, Admin=False, Personalguthaben: 0,00 €
+2025-12-21 17:25:10.035 | __________________________________________________________________________
+2025-12-21 17:25:10.035 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 0,00 €
+-- NV200/2 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=2,10€=5,20€=7,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 200,00 €
+Summe Gesamt: 200,00 €
+2025-12-21 17:25:20.404 | [Coin2] Durch Konfiguration deaktiviert (Watchdog/Reconnect gestoppt)
+2025-12-21 17:25:20.404 | Verzögerter Shutdown gestartet – Geräte werden geschlossen...
+2025-12-21 17:25:21.514 | CoinManager heruntergefahren
+2025-12-21 17:25:21.515 | Coin2Manager heruntergefahren
+2025-12-21 17:25:22.166 | [INFO] Port geschlossen
+2025-12-21 17:25:22.166 | Geräte getrennt – Warte 5 Sekunden vor Prozessende...
+2025-12-21 17:25:27.196 | Beenden jetzt.
+
+
+
+
+
+------------------------------------- END --------------------------------------
+2025-12-21 17:25:27.199 | Logger Shutdown gestartet: DelayedShutdown
