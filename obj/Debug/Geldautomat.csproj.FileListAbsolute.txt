@@ -13,4 +13,3 @@ Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\obj\Debug\Geldautomat.cspro
 Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\obj\Debug\Geldauto.CA6B8DE8.Up2Date
 Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\obj\Debug\Geldautomat.exe
 Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\obj\Debug\Geldautomat.pdb
-Z:\2. Abteilungsleitung\IT\Programierung\Geldautomat\obj\Debug\Geldautomat.exe.config

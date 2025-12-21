@@ -82,26 +82,26 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Allgemeine_Klassen\AccountingRules.cs" />
-    <Compile Include="Form\AdminCoin2Form.cs">
+    <Compile Include="Form\Admin\AdminCoin2Form.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form\AdminCoinFeederForm.cs">
+    <Compile Include="Form\Admin\AdminCoinFeederForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form\AdminCoinForm.cs">
+    <Compile Include="Form\Admin\AdminCoinForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Allgemeine_Klassen\AdminMode.cs" />
-    <Compile Include="Form\AdminNV200Form.cs">
+    <Compile Include="Form\Admin\AdminNV200Form.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form\AdminNV200Form.MaxConfig.cs">
+    <Compile Include="Form\Admin\AdminNV200Form.MaxConfig.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form\AdminNV200_2Form.cs">
+    <Compile Include="Form\Admin\AdminNV200_2Form.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form\AdminOverviewForm.cs">
+    <Compile Include="Form\Admin\AdminOverviewForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Allgemeine_Klassen\AppConfigReader.cs" />
@@ -130,28 +130,28 @@
     <Compile Include="Form\DocumentsForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form\GeneralSettingsForm.cs">
+    <Compile Include="Form\Admin\GeneralSettingsForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form\KassensturzRm5Form.cs">
+    <Compile Include="Form\Kassensturz\KassensturzRm5Form.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form\LogViewForm.cs">
+    <Compile Include="Form\Admin\LogViewForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form\MailSettingsForm.cs">
+    <Compile Include="Form\Admin\MailSettingsForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Form\PaymentSettingsForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form\PersonalVerwaltungForm.cs">
+    <Compile Include="Form\Admin\PersonalVerwaltungForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form\PersonalVerwaltungForm.Designer.cs">
+    <Compile Include="Form\Admin\PersonalVerwaltungForm.Designer.cs">
       <DependentUpon>PersonalVerwaltungForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Form\PrinterConfigForm.cs">
+    <Compile Include="Form\Admin\PrinterConfigForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Form\ProcessingAnimation.cs" />
@@ -171,17 +171,17 @@
     <Compile Include="Devices\CoinFeederController.cs" />
     <Compile Include="Allgemeine_Klassen\GeldautomatService.cs" />
     <Compile Include="Allgemeine_Klassen\IniHelper.cs" />
-    <Compile Include="Form\KassenbestandForm.cs">
+    <Compile Include="Form\Admin\KassenbestandForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Allgemeine_Klassen\KassenbuchEntry.cs" />
-    <Compile Include="Form\KassensturzForm.cs">
+    <Compile Include="Form\Kassensturz\KassensturzForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form\KassensturzNV200.cs">
+    <Compile Include="Form\Kassensturz\KassensturzNV200.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form\KassensturzSmartCoinForm.cs">
+    <Compile Include="Form\Kassensturz\KassensturzSmartCoinForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Allgemeine_Klassen\KontoZuordnung.cs" />
