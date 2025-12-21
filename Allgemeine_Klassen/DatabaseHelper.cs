@@ -305,8 +305,63 @@ namespace Geldautomat
         public async Task<int> InsertKassenbuchZahlungAsync(byte typ,string buchungstext,decimal betrag19,decimal betrag7,decimal betrag0,int persId,int firmenId,int? kost1,int? kost2,int? konto,decimal betragGesamt)
         { await EnsureOpenAsync().ConfigureAwait(false); bool hasUserAnlage=false; try { using (var chk=_connection.CreateCommand()) { chk.CommandText="SELECT 1 FROM sys.columns WHERE Name='UserAnlage' AND Object_ID=OBJECT_ID('dbo.TKassenbuchZahlungen')"; var o= await chk.ExecuteScalarAsync().ConfigureAwait(false); hasUserAnlage=o!=null && o!=DBNull.Value; } } catch { hasUserAnlage=false; } using (var cmd=_connection.CreateCommand()) { cmd.CommandText = hasUserAnlage? "INSERT INTO TKassenbuchZahlungen (Typ,Buchungstext,Betrag19,Betrag7,Betrag0,PersId,FirmenID,DeviceID,ErfasstAm,Kost1,Kost2,Konto,BetragGesamt,Verbucht,UserAnlage) VALUES (@Typ,@Buchungstext,@Betrag19,@Betrag7,@Betrag0,@PersId,@FirmenID,@DeviceID,SYSDATETIME(),@Kost1,@Kost2,@Konto,@BetragGesamt,0,@UserAnlage); SELECT SCOPE_IDENTITY();" : "INSERT INTO TKassenbuchZahlungen (Typ,Buchungstext,Betrag19,Betrag7,Betrag0,PersId,FirmenID,DeviceID,ErfasstAm,Kost1,Kost2,Konto,BetragGesamt,Verbucht) VALUES (@Typ,@Buchungstext,@Betrag19,@Betrag7,@Betrag0,@PersId,@FirmenID,@DeviceID,SYSDATETIME(),@Kost1,@Kost2,@Konto,@BetragGesamt,0); SELECT SCOPE_IDENTITY();"; cmd.Parameters.AddWithValue("@Typ", typ); cmd.Parameters.AddWithValue("@Buchungstext", (object)buchungstext ?? DBNull.Value); cmd.Parameters.AddWithValue("@Betrag19", betrag19); cmd.Parameters.AddWithValue("@Betrag7", betrag7); cmd.Parameters.AddWithValue("@Betrag0", betrag0); cmd.Parameters.AddWithValue("@PersId", persId); cmd.Parameters.AddWithValue("@FirmenID", firmenId); cmd.Parameters.AddWithValue("@DeviceID", CurrentDeviceId); cmd.Parameters.AddWithValue("@Kost1", (object)kost1 ?? DBNull.Value); cmd.Parameters.AddWithValue("@Kost2", (object)kost2 ?? DBNull.Value); cmd.Parameters.AddWithValue("@Konto", (object)konto ?? DBNull.Value); cmd.Parameters.AddWithValue("@BetragGesamt", betragGesamt); if (hasUserAnlage) cmd.Parameters.AddWithValue("@UserAnlage", persId); var o= await cmd.ExecuteScalarAsync().ConfigureAwait(false); return Convert.ToInt32(Convert.ToDecimal(o)); } }
 
-        public async Task<DataTable> GetActivePersonalAsync()
-        { await EnsureOpenAsync().ConfigureAwait(false); using (var cmd=_connection.CreateCommand()) { cmd.CommandText = "SELECT PID,LTRIM(RTRIM(COALESCE(Name,''))) + CASE WHEN NULLIF(Vorname,'') IS NULL THEN '' ELSE ', ' + Vorname END AS Name,Name AS Nachname,Vorname FROM TPersonal WITH (NOLOCK) WHERE (Gesperrt=0 OR Gesperrt IS NULL) AND (AustrittAm IS NULL OR AustrittAm>SYSDATETIME()) ORDER BY Name,Vorname"; using (var reader= await cmd.ExecuteReaderAsync().ConfigureAwait(false)) { var dt=new DataTable(); dt.Load(reader); return dt; } } }
+        public async Task<DataTable> GetZeiterfassungAsync(int pid, DateTime von, DateTime bis)
+        {
+            await EnsureOpenAsync().ConfigureAwait(false);
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = @"SELECT h.AutoID, h.Typ, h.ZeitVon, h.ZeitBis, h.PID, h.FID, h.Bemerkung, h.ZeitAnlage, h.UserAnlage, h.ZeitBearbeitet, h.UserBearbeitet,
+                                           f.Kennzeichen
+                                      FROM THistoryZeiterfassung h WITH (NOLOCK)
+                                      LEFT JOIN TFahrzeuge f ON h.FID = f.FID
+                                     WHERE h.PID = @PID AND h.ZeitVon >= @Von AND h.ZeitVon < @Bis
+                                     ORDER BY h.ZeitVon";
+                cmd.Parameters.AddWithValue("@PID", pid);
+                cmd.Parameters.AddWithValue("@Von", von);
+                cmd.Parameters.AddWithValue("@Bis", bis);
+                var dt = new DataTable();
+                using (var rdr = await cmd.ExecuteReaderAsync().ConfigureAwait(false))
+                {
+                    dt.Load(rdr);
+                }
+                // Computed columns for UI convenience (do not affect DB)
+                if (!dt.Columns.Contains("Wt")) dt.Columns.Add("Wt", typeof(string));
+                if (!dt.Columns.Contains("Dauer")) dt.Columns.Add("Dauer", typeof(string));
+                if (!dt.Columns.Contains("TypText")) dt.Columns.Add("TypText", typeof(string));
+                if (!dt.Columns.Contains("Zusatz")) dt.Columns.Add("Zusatz", typeof(string));
+                foreach (DataRow row in dt.Rows)
+                {
+                    try
+                    {
+                        var vonTs = row["ZeitVon"] != DBNull.Value ? (DateTime)row["ZeitVon"] : DateTime.MinValue;
+                        var bisTs = row["ZeitBis"] != DBNull.Value ? (DateTime)row["ZeitBis"] : DateTime.MinValue;
+                        var diff = (bisTs > vonTs) ? (bisTs - vonTs) : TimeSpan.Zero;
+                        row["Wt"] = vonTs == DateTime.MinValue ? string.Empty : vonTs.ToString("ddd");
+                        row["Dauer"] = string.Format("{0}:{1:00}", (int)diff.TotalHours, diff.Minutes);
+                        int typ = row["Typ"] == DBNull.Value ? 0 : Convert.ToInt32(row["Typ"]);
+                        string typText;
+                        switch (typ)
+                        {
+                            case 0: typText = "Arbeit"; break;
+                            case 1: typText = "Pause"; break;
+                            case 2: typText = "Pause (Abw.)"; break;
+                            default: typText = string.Empty; break;
+                        }
+                        row["TypText"] = typText;
+                        string zusatz = string.Empty;
+                        int fid = row["FID"] == DBNull.Value ? 0 : Convert.ToInt32(row["FID"]);
+                        if (fid > 0)
+                        {
+                            var kz = dt.Columns.Contains("Kennzeichen") && row["Kennzeichen"] != DBNull.Value ? (string)row["Kennzeichen"] : null;
+                            zusatz = string.IsNullOrWhiteSpace(kz) ? ("Fhz: " + fid) : ("Fhz: " + kz.Replace(" ", ""));
+                        }
+                        row["Zusatz"] = zusatz;
+                    }
+                    catch { }
+                }
+                return dt;
+            }
+        }
 
         public async Task MarkZahlungAlsVerbuchtAsync(int belegnummer)
         { await EnsureOpenAsync().ConfigureAwait(false); using (var cmd=_connection.CreateCommand()) { cmd.CommandText="UPDATE TKassenbuchZahlungen SET Verbucht=1, DeviceID=@DID WHERE Belegnummer=@bnr"; cmd.Parameters.AddWithValue("@DID", CurrentDeviceId); cmd.Parameters.AddWithValue("@bnr", belegnummer); await cmd.ExecuteNonQueryAsync().ConfigureAwait(false); } }
