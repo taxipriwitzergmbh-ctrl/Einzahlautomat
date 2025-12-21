@@ -127,6 +127,9 @@
     <Compile Include="Form\CreatePaymentForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Form\DocumentsAuthForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Form\DocumentsForm.cs">
       <SubType>Form</SubType>
     </Compile>

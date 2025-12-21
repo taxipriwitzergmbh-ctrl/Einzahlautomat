@@ -552,17 +552,31 @@ namespace Geldautomat
             {
                 try
                 {
-                    var frmDocs = new DocumentsForm(_personal);
-                    frmDocs.StartPosition = FormStartPosition.CenterScreen;
+                    Action<PersonalInfo> openDocs = (p) =>
+                    {
+                        var frmDocs = new DocumentsForm(p);
+                        frmDocs.StartPosition = FormStartPosition.CenterScreen;
+                        if (Program.KioskModeEnabled)
+                        {
+                            bool prevTopMost = TopMost;
+                            try { TopMost = false; } catch { }
+                            frmDocs.TopMost = true;
+                            frmDocs.FormClosed += (s3, e3) => { try { TopMost = prevTopMost; Activate(); BringToFront(); } catch { } };
+                        }
+                        frmDocs.Show();
+                        try { frmDocs.BringToFront(); frmDocs.Activate(); } catch { }
+                    };
+
+                    var auth = new DocumentsAuthForm(_personal.PID, _personal, _ssp, openDocs);
+                    auth.StartPosition = FormStartPosition.CenterParent;
                     if (Program.KioskModeEnabled)
                     {
                         bool prevTopMost = TopMost;
                         try { TopMost = false; } catch { }
-                        frmDocs.TopMost = true;
-                        frmDocs.FormClosed += (s3, e3) => { try { TopMost = prevTopMost; Activate(); BringToFront(); } catch { } };
+                        auth.TopMost = true;
+                        auth.FormClosed += (s3, e3) => { try { TopMost = prevTopMost; Activate(); BringToFront(); } catch { } };
                     }
-                    frmDocs.Show();
-                    try { frmDocs.BringToFront(); frmDocs.Activate(); } catch { }
+                    auth.Show(this);
                 }
                 catch { }
             };
@@ -1025,7 +1039,6 @@ namespace Geldautomat
                 {
                     decimal summe = -raw19 - raw7 - raw0;
                     lblB19.Text = $"19%: {-raw19:C2}"; lblB7.Text = $"7%: {-raw7:C2}"; lblB0.Text = $"0%: {-raw0:C2}"; lblSumme.Text = $"Summe: {summe:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; lblNoch.Text = "Noch zu zahlen: 0,00 €"; try { lblNoch.ForeColor = Color.Green; } catch { }
-                    UpdateBuchenEnabled(); return;
                 }
             }
             if (_details == null)
@@ -1260,6 +1273,7 @@ namespace Geldautomat
                 btnNo.Location = new Point(btnQr.Right + spacing, y);
                 panelButtons.Controls.AddRange(new Control[] { btnMail, btnPrint, btnQr, btnNo });
 
+
                 // Shadow (optional, no-op if not supported)
                 try
                 {
@@ -1319,7 +1333,6 @@ namespace Geldautomat
                 if (oldestSchicht != null) LadeSchicht(oldestSchicht.Schicht); else if (oldestAuszahlung != null) LadeAuszahlung(oldestAuszahlung.Auszahlung);
             }
             catch (Exception ex) { MessageBox.Show(this, $"NV200: Verbindung beim Öffnen fehlgeschlagen:\r\n{ex.Message}", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error); }
-            if (!_personalGuthabenPreloaded)
             {
                 using (var db = new DatabaseHelper()) { _personalGuthaben = await db.GetLastPersonalGuthabenSaldoAsync(_personal.PID); }
             }
@@ -1572,11 +1585,8 @@ namespace Geldautomat
                                 var pgEntry = new KassenbuchEntry { PersId = _personal.PID, SchichtId = 0, Typ = "Personalguthaben", Buchungstext = AccountingRules.ComposePgEinzahlungText(_personal), Kost1 = zpg.Kost1, Kost2 = zpg.Kost2, Konto = zpg.Konto, Betrag19 = 0m, Betrag7 = 0m, Betrag0 = -Math.Round(vonGuthaben, 2), SaldoPersonalguthaben = neuerSaldo, FirmenId = -1, AutomatenName = AppSettings.AutomatenName, Kassenbestand = GetCurrentKassenbestandEuro() };
                                 await db.InsertKassenbuchAsync(pgEntry); _personalGuthaben = neuerSaldo; lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}";
                             }
-                            string kennzeichen = "";
-                            if (_details.FhzId > 0)
-                            {
-                                try { var fahrzeug = await db.GetFahrzeugInfoAsync(_details.FhzId); if (fahrzeug != null) kennzeichen = fahrzeug.Kennzeichen; } catch { }
-                            }
+                            string kennzeichen = ""; // ensure declared before use
+                            try { if (_details.FhzId > 0) { var fahrzeug = await db.GetFahrzeugInfoAsync(_details.FhzId); if (fahrzeug != null) kennzeichen = fahrzeug.Kennzeichen; } } catch { }
                             string buchungstextSchicht = AccountingRules.ComposeSchichtBuchungstext(_personal, _details, kennzeichen);
                             decimal diffSum = _details.Betrag19 + _details.Betrag7 + _details.Betrag0; bool istNachzahlung = _details.EinzahlungBisher != 0m && diffSum > 0m; bool istRueckzahlung = _details.EinzahlungBisher != 0m && diffSum < 0m;
                             if (istNachzahlung || istRueckzahlung)
@@ -1588,7 +1598,8 @@ namespace Geldautomat
                                     string namePrefix = $"{_personal.Vorname} {_personal.Name}";
                                     if (buchungstextSchicht.StartsWith(namePrefix, StringComparison.OrdinalIgnoreCase)) buchungstextSchicht = namePrefix + " " + marker + " " + buchungstextSchicht.Substring(namePrefix.Length).TrimStart(); else buchungstextSchicht += " " + marker;
                                 }
-                            }
+                                }
+                            
                             if (offen19 != 0m)
                             {
                                 var z19 = AccountingRules.GetKontierung19(_details); if (z19.Kost1 == 0 && z19.Kost2 == 0 && z19.Konto == 0) { var fb = ApplyRuleFallback("19", _details); if (fb.Kost1 != 0 || fb.Kost2 != 0 || fb.Konto != 0) z19 = fb; }
@@ -2168,7 +2179,7 @@ namespace Geldautomat
                         btnSchichtAuswahl.Visible = _auswahlItems != null && _auswahlItems.Count > 1; if (_auswahlItems == null || _auswahlItems.Count == 0) { _details = null; _currentAuszahlungRow = null; lblBelegInfo.Text = string.Empty; lblB19.Text = "19%: 0,00 €"; lblB7.Text = "7%: 0,00 €"; lblB0.Text = "0%: 0,00 €"; lblSumme.Text = "Summe: 0,00 €"; lblNoch.Text = "Noch zu zahlen: 0,00 €"; UpdateBuchenEnabled(); return; }
                         var nextShift = _auswahlItems.Where(a => a.Schicht != null).OrderBy(a => a.Schicht.StartZeit).FirstOrDefault(); if (nextShift != null) { LadeSchicht(nextShift.Schicht); return; }
                         DataRow nextPay = null; DateTime? min = null; foreach (var ai in _auswahlItems.Where(a => a.Auszahlung != null)) { var row = ai.Auszahlung; DateTime t = (row.Table.Columns.Contains("ErfasstAm") && row["ErfasstAm"] != DBNull.Value) ? Convert.ToDateTime(row["ErfasstAm"]) : DateTime.MinValue; if (!min.HasValue || t < min.Value) { min = t; nextPay = row; } }
-                        if (nextPay != null) { LadeAuszahlung(nextPay); return; }
+                        if (nextPay != null) { _currentAuszahlungRow = nextPay; _currentZahlungIstEinzahlung = false; return; }
                         lblBelegInfo.Text = string.Empty; UpdateBuchenEnabled();
                     }
                     catch { try { lblBelegInfo.Text = string.Empty; } catch { } }

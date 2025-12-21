@@ -70,3 +70,994 @@
 2025-12-21 02:18:31.609 | Status: Getrennt
 2025-12-21 02:18:31.622 | HardDisconnect done
 2025-12-21 02:18:31.738 | Status: getrennt
+2025-12-21 02:34:15.611 | Status: Verbinde...
+2025-12-21 02:34:15.625 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:15.633 | Thread gestartet
+2025-12-21 02:34:15.642 | Status: Port nicht verfügbar
+2025-12-21 02:34:16.717 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:17.742 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:18.761 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:19.778 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:20.806 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:21.835 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:22.862 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:23.160 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 02:34:23.861 | REQ Level 1 ct [plain]
+2025-12-21 02:34:23.870 | REQ Level 2 ct [plain]
+2025-12-21 02:34:23.879 | REQ Level 5 ct [plain]
+2025-12-21 02:34:23.890 | REQ Level 10 ct [plain]
+2025-12-21 02:34:23.901 | REQ Level 20 ct [plain]
+2025-12-21 02:34:23.911 | REQ Level 50 ct [plain]
+2025-12-21 02:34:23.884 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:23.921 | REQ Level 100 ct [plain]
+2025-12-21 02:34:23.937 | REQ Level 200 ct [plain]
+2025-12-21 02:34:23.947 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 02:34:24.940 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:25.966 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:26.994 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:28.020 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:29.047 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:30.074 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:31.103 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:32.136 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:33.166 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:34.193 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:35.210 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:36.240 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:37.267 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:38.288 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:39.306 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:40.333 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:41.359 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:42.387 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:43.418 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:44.447 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:45.476 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:46.503 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:47.534 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:48.556 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:49.588 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:50.618 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:51.652 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:52.669 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:53.697 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:54.729 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:55.760 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:56.784 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:57.818 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:58.847 | Open SSPComPort (COM3) failed
+2025-12-21 02:34:59.905 | Open SSPComPort (COM3) failed
+2025-12-21 02:35:00.979 | Open SSPComPort (COM3) failed
+2025-12-21 02:35:02.008 | Open SSPComPort (COM3) failed
+2025-12-21 02:35:03.038 | Open SSPComPort (COM3) failed
+2025-12-21 02:35:04.074 | Open SSPComPort (COM3) failed
+2025-12-21 02:35:05.104 | Open SSPComPort (COM3) failed
+2025-12-21 02:35:06.134 | Open SSPComPort (COM3) failed
+2025-12-21 02:35:07.164 | Open SSPComPort (COM3) failed
+2025-12-21 02:35:08.194 | Open SSPComPort (COM3) failed
+2025-12-21 02:35:09.226 | Open SSPComPort (COM3) failed
+2025-12-21 02:35:10.256 | Open SSPComPort (COM3) failed
+2025-12-21 02:35:11.284 | Open SSPComPort (COM3) failed
+2025-12-21 02:35:12.308 | Open SSPComPort (COM3) failed
+2025-12-21 02:35:13.334 | Open SSPComPort (COM3) failed
+2025-12-21 02:35:14.278 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 02:35:14.291 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 02:35:14.302 | HardDisconnect init
+2025-12-21 02:35:14.362 | Status: Getrennt
+2025-12-21 02:35:14.372 | HardDisconnect done
+2025-12-21 02:35:14.495 | Status: getrennt
+2025-12-21 02:47:59.734 | Status: Verbinde...
+2025-12-21 02:47:59.749 | Open SSPComPort (COM3) failed
+2025-12-21 02:47:59.752 | Thread gestartet
+2025-12-21 02:47:59.760 | Status: Port nicht verfügbar
+2025-12-21 02:48:00.810 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:01.839 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:02.866 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:03.898 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:04.929 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:05.958 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:06.981 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:08.011 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:09.039 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:10.067 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:11.100 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:12.144 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:13.175 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:14.205 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:15.238 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:16.269 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:17.300 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:18.330 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:19.353 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:20.383 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:21.410 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:22.426 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:23.440 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:24.474 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:25.505 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:26.535 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:27.562 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:28.594 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:29.627 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:30.655 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:31.680 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:32.712 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:33.738 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:34.769 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:35.798 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:36.831 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:37.862 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:38.893 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:39.922 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:40.948 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:41.977 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:43.011 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:44.041 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:45.069 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:46.100 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:47.128 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:48.157 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:49.185 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:50.202 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:51.221 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:52.247 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:53.267 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:54.293 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:55.315 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:56.333 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:57.363 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:58.398 | Open SSPComPort (COM3) failed
+2025-12-21 02:48:59.425 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:00.443 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:01.475 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:02.502 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:03.533 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:04.558 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:05.588 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:06.617 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:07.647 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:08.674 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:09.704 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:10.736 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:11.769 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:12.798 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:13.832 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:14.864 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:15.895 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:16.923 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:17.955 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:18.933 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 02:49:18.982 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:19.544 | REQ Level 1 ct [plain]
+2025-12-21 02:49:19.553 | REQ Level 2 ct [plain]
+2025-12-21 02:49:19.561 | REQ Level 5 ct [plain]
+2025-12-21 02:49:19.569 | REQ Level 10 ct [plain]
+2025-12-21 02:49:19.577 | REQ Level 20 ct [plain]
+2025-12-21 02:49:19.587 | REQ Level 50 ct [plain]
+2025-12-21 02:49:19.595 | REQ Level 100 ct [plain]
+2025-12-21 02:49:19.604 | REQ Level 200 ct [plain]
+2025-12-21 02:49:19.612 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 02:49:20.000 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:21.032 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:22.067 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:23.096 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:24.128 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:25.164 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:26.191 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:27.224 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:28.251 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:29.267 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:30.301 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:31.332 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:32.359 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:33.390 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:34.425 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:35.453 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:36.484 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:37.510 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:38.536 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:39.563 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:40.597 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:41.628 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:42.656 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:43.687 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:44.717 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:45.743 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:46.766 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:47.792 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:48.820 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:49.847 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:50.871 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:51.903 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:52.930 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:53.959 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:54.987 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:56.018 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:57.045 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:58.071 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:59.072 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 02:49:59.085 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 02:49:59.095 | HardDisconnect init
+2025-12-21 02:49:59.086 | Open SSPComPort (COM3) failed
+2025-12-21 02:49:59.125 | Status: Getrennt
+2025-12-21 02:49:59.140 | HardDisconnect done
+2025-12-21 02:49:59.255 | Status: getrennt
+2025-12-21 02:51:53.748 | Status: Verbinde...
+2025-12-21 02:51:53.782 | Open SSPComPort (COM3) failed
+2025-12-21 02:51:53.783 | Thread gestartet
+2025-12-21 02:51:53.794 | Status: Port nicht verfügbar
+2025-12-21 02:51:54.838 | Open SSPComPort (COM3) failed
+2025-12-21 02:51:55.865 | Open SSPComPort (COM3) failed
+2025-12-21 02:51:56.893 | Open SSPComPort (COM3) failed
+2025-12-21 02:51:57.917 | Open SSPComPort (COM3) failed
+2025-12-21 02:51:58.944 | Open SSPComPort (COM3) failed
+2025-12-21 02:51:59.968 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:00.436 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 02:52:00.929 | REQ Level 1 ct [plain]
+2025-12-21 02:52:00.937 | REQ Level 2 ct [plain]
+2025-12-21 02:52:00.942 | REQ Level 5 ct [plain]
+2025-12-21 02:52:00.948 | REQ Level 10 ct [plain]
+2025-12-21 02:52:00.953 | REQ Level 20 ct [plain]
+2025-12-21 02:52:00.958 | REQ Level 50 ct [plain]
+2025-12-21 02:52:00.965 | REQ Level 100 ct [plain]
+2025-12-21 02:52:00.972 | REQ Level 200 ct [plain]
+2025-12-21 02:52:00.978 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 02:52:00.987 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:02.003 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:03.019 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:04.038 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:05.059 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:06.082 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:07.110 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:08.141 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:09.174 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:10.205 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:11.236 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:12.267 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:13.297 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:14.329 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:15.361 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:16.391 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:17.420 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:18.453 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:19.480 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:20.504 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:21.533 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:22.204 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 02:52:22.219 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 02:52:22.230 | HardDisconnect init
+2025-12-21 02:52:22.572 | Status: Getrennt
+2025-12-21 02:52:22.584 | HardDisconnect done
+2025-12-21 02:52:22.703 | Status: getrennt
+2025-12-21 02:52:36.648 | Status: Verbinde...
+2025-12-21 02:52:36.701 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:36.701 | Thread gestartet
+2025-12-21 02:52:36.707 | Status: Port nicht verfügbar
+2025-12-21 02:52:37.772 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:38.800 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:39.829 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:40.848 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:41.876 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:42.906 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:43.948 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:45.000 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:46.031 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:47.062 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:48.080 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:49.111 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:50.124 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:51.140 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:51.365 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 02:52:52.050 | REQ Level 1 ct [plain]
+2025-12-21 02:52:52.058 | REQ Level 2 ct [plain]
+2025-12-21 02:52:52.067 | REQ Level 5 ct [plain]
+2025-12-21 02:52:52.075 | REQ Level 10 ct [plain]
+2025-12-21 02:52:52.082 | REQ Level 20 ct [plain]
+2025-12-21 02:52:52.089 | REQ Level 50 ct [plain]
+2025-12-21 02:52:52.097 | REQ Level 100 ct [plain]
+2025-12-21 02:52:52.104 | REQ Level 200 ct [plain]
+2025-12-21 02:52:52.112 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 02:52:52.170 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:53.230 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:54.259 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:55.284 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:56.314 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:57.345 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:58.371 | Open SSPComPort (COM3) failed
+2025-12-21 02:52:59.398 | Open SSPComPort (COM3) failed
+2025-12-21 02:53:00.427 | Open SSPComPort (COM3) failed
+2025-12-21 02:53:01.452 | Open SSPComPort (COM3) failed
+2025-12-21 02:53:02.486 | Open SSPComPort (COM3) failed
+2025-12-21 02:53:03.511 | Open SSPComPort (COM3) failed
+2025-12-21 02:53:04.536 | Open SSPComPort (COM3) failed
+2025-12-21 02:53:05.567 | Open SSPComPort (COM3) failed
+2025-12-21 02:53:06.597 | Open SSPComPort (COM3) failed
+2025-12-21 02:53:07.627 | Open SSPComPort (COM3) failed
+2025-12-21 02:53:08.643 | Open SSPComPort (COM3) failed
+2025-12-21 02:53:09.672 | Open SSPComPort (COM3) failed
+2025-12-21 02:53:10.705 | Open SSPComPort (COM3) failed
+2025-12-21 02:53:11.734 | Open SSPComPort (COM3) failed
+2025-12-21 02:53:12.190 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 02:53:12.205 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 02:53:12.221 | HardDisconnect init
+2025-12-21 02:53:12.761 | Status: Getrennt
+2025-12-21 02:53:12.773 | HardDisconnect done
+2025-12-21 02:53:12.890 | Status: getrennt
+2025-12-21 15:26:32.336 | Status: Verbinde...
+2025-12-21 15:26:32.354 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:32.363 | Thread gestartet
+2025-12-21 15:26:32.371 | Status: Port nicht verfügbar
+2025-12-21 15:26:33.420 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:34.452 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:35.484 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:36.508 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:37.532 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:38.549 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:39.567 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:40.598 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:40.652 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:26:41.303 | REQ Level 1 ct [plain]
+2025-12-21 15:26:41.322 | REQ Level 2 ct [plain]
+2025-12-21 15:26:41.335 | REQ Level 5 ct [plain]
+2025-12-21 15:26:41.349 | REQ Level 10 ct [plain]
+2025-12-21 15:26:41.359 | REQ Level 20 ct [plain]
+2025-12-21 15:26:41.367 | REQ Level 50 ct [plain]
+2025-12-21 15:26:41.375 | REQ Level 100 ct [plain]
+2025-12-21 15:26:41.382 | REQ Level 200 ct [plain]
+2025-12-21 15:26:41.388 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:26:41.625 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:42.655 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:43.679 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:44.706 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:45.736 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:46.760 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:47.787 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:48.810 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:49.833 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:50.859 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:51.891 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:52.910 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:53.941 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:54.971 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:55.998 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:57.037 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:58.067 | Open SSPComPort (COM3) failed
+2025-12-21 15:26:59.090 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:00.120 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:01.146 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:02.214 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:03.240 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:04.263 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:05.295 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:06.327 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:07.355 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:08.375 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:09.406 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:10.433 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:11.472 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:12.501 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:13.530 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:14.561 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:15.586 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:16.612 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:17.653 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:18.680 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:19.707 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:20.736 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:21.650 | REQ Level 1 ct [plain]
+2025-12-21 15:27:21.664 | REQ Level 2 ct [plain]
+2025-12-21 15:27:21.677 | REQ Level 5 ct [plain]
+2025-12-21 15:27:21.690 | REQ Level 10 ct [plain]
+2025-12-21 15:27:21.704 | REQ Level 20 ct [plain]
+2025-12-21 15:27:21.720 | REQ Level 50 ct [plain]
+2025-12-21 15:27:21.734 | REQ Level 100 ct [plain]
+2025-12-21 15:27:21.749 | REQ Level 200 ct [plain]
+2025-12-21 15:27:21.760 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:22.783 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:23.176 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:27:23.197 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:27:23.829 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:24.863 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:25.894 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:26.925 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:27.957 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:28.386 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:27:28.684 | REQ Level 1 ct [plain]
+2025-12-21 15:27:28.692 | REQ Level 2 ct [plain]
+2025-12-21 15:27:28.699 | REQ Level 5 ct [plain]
+2025-12-21 15:27:28.707 | REQ Level 10 ct [plain]
+2025-12-21 15:27:28.715 | REQ Level 20 ct [plain]
+2025-12-21 15:27:28.725 | REQ Level 50 ct [plain]
+2025-12-21 15:27:28.732 | REQ Level 100 ct [plain]
+2025-12-21 15:27:28.740 | REQ Level 200 ct [plain]
+2025-12-21 15:27:28.747 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:27:28.995 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:30.028 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:31.061 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:32.093 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:33.120 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:34.144 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:35.174 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:36.209 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:37.233 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:38.263 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:39.292 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:40.321 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:41.348 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:42.376 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:43.397 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:44.424 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:45.454 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:46.485 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:47.524 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:48.546 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:49.574 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:50.595 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:51.627 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:52.655 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:53.679 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:54.704 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:55.732 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:56.757 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:57.787 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:58.814 | Open SSPComPort (COM3) failed
+2025-12-21 15:27:59.754 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:27:59.770 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:27:59.783 | HardDisconnect init
+2025-12-21 15:27:59.866 | Status: Getrennt
+2025-12-21 15:27:59.884 | HardDisconnect done
+2025-12-21 15:28:00.011 | Status: getrennt
+2025-12-21 15:30:40.777 | Status: Verbinde...
+2025-12-21 15:30:40.793 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:40.795 | Thread gestartet
+2025-12-21 15:30:40.800 | Status: Port nicht verfügbar
+2025-12-21 15:30:41.842 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:42.872 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:43.900 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:44.931 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:45.956 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:46.987 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:48.010 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:49.036 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:49.371 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:30:49.998 | REQ Level 1 ct [plain]
+2025-12-21 15:30:50.006 | REQ Level 2 ct [plain]
+2025-12-21 15:30:50.014 | REQ Level 5 ct [plain]
+2025-12-21 15:30:50.022 | REQ Level 10 ct [plain]
+2025-12-21 15:30:50.041 | REQ Level 20 ct [plain]
+2025-12-21 15:30:50.049 | REQ Level 50 ct [plain]
+2025-12-21 15:30:50.058 | REQ Level 100 ct [plain]
+2025-12-21 15:30:50.065 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:50.072 | REQ Level 200 ct [plain]
+2025-12-21 15:30:50.081 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:30:51.095 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:52.127 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:53.161 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:54.186 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:55.214 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:56.234 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:57.258 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:58.288 | Open SSPComPort (COM3) failed
+2025-12-21 15:30:59.308 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:00.329 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:01.356 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:02.383 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:03.402 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:04.431 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:05.461 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:06.479 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:07.500 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:08.533 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:09.568 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:10.593 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:11.621 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:12.645 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:13.395 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:31:13.409 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:31:13.420 | HardDisconnect init
+2025-12-21 15:31:13.679 | Status: Getrennt
+2025-12-21 15:31:13.692 | HardDisconnect done
+2025-12-21 15:31:13.809 | Status: getrennt
+2025-12-21 15:31:29.991 | Status: Verbinde...
+2025-12-21 15:31:30.009 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:30.011 | Thread gestartet
+2025-12-21 15:31:30.016 | Status: Port nicht verfügbar
+2025-12-21 15:31:31.076 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:32.151 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:33.051 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:31:33.213 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:33.768 | REQ Level 1 ct [plain]
+2025-12-21 15:31:33.778 | REQ Level 2 ct [plain]
+2025-12-21 15:31:33.787 | REQ Level 5 ct [plain]
+2025-12-21 15:31:33.799 | REQ Level 10 ct [plain]
+2025-12-21 15:31:33.813 | REQ Level 20 ct [plain]
+2025-12-21 15:31:33.824 | REQ Level 50 ct [plain]
+2025-12-21 15:31:33.835 | REQ Level 100 ct [plain]
+2025-12-21 15:31:33.845 | REQ Level 200 ct [plain]
+2025-12-21 15:31:33.854 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:31:34.314 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:35.336 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:36.369 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:37.401 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:38.427 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:39.455 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:40.484 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:41.510 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:42.535 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:43.567 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:44.595 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:45.626 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:46.659 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:47.688 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:48.726 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:49.745 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:50.764 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:51.799 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:52.832 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:53.862 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:54.889 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:55.918 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:56.947 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:57.974 | Open SSPComPort (COM3) failed
+2025-12-21 15:31:59.002 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:00.030 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:01.059 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:02.084 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:03.110 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:04.137 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:05.174 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:06.199 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:07.224 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:08.253 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:09.280 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:10.308 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:11.326 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:12.361 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:13.386 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:14.405 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:15.432 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:16.459 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:17.477 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:18.505 | Open SSPComPort (COM3) failed
+2025-12-21 15:32:18.706 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:32:18.717 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:32:18.727 | HardDisconnect init
+2025-12-21 15:32:19.543 | Status: Getrennt
+2025-12-21 15:32:19.556 | HardDisconnect done
+2025-12-21 15:32:19.675 | Status: getrennt
+2025-12-21 15:47:40.406 | Status: Verbinde...
+2025-12-21 15:47:40.414 | Thread gestartet
+2025-12-21 15:47:40.448 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:40.453 | Status: Port nicht verfügbar
+2025-12-21 15:47:41.547 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:42.571 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:43.585 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:43.714 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:47:44.109 | REQ Level 1 ct [plain]
+2025-12-21 15:47:44.113 | REQ Level 2 ct [plain]
+2025-12-21 15:47:44.118 | REQ Level 5 ct [plain]
+2025-12-21 15:47:44.123 | REQ Level 10 ct [plain]
+2025-12-21 15:47:44.128 | REQ Level 20 ct [plain]
+2025-12-21 15:47:44.132 | REQ Level 50 ct [plain]
+2025-12-21 15:47:44.137 | REQ Level 100 ct [plain]
+2025-12-21 15:47:44.141 | REQ Level 200 ct [plain]
+2025-12-21 15:47:44.146 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:47:44.598 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:45.612 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:46.624 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:47.635 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:48.646 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:49.669 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:50.694 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:51.709 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:52.721 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:53.741 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:54.768 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:55.793 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:56.806 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:57.817 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:58.834 | Open SSPComPort (COM3) failed
+2025-12-21 15:47:59.856 | Open SSPComPort (COM3) failed
+2025-12-21 15:48:00.873 | Open SSPComPort (COM3) failed
+2025-12-21 15:48:01.884 | Open SSPComPort (COM3) failed
+2025-12-21 15:48:02.904 | Open SSPComPort (COM3) failed
+2025-12-21 15:48:03.915 | Open SSPComPort (COM3) failed
+2025-12-21 15:48:04.936 | Open SSPComPort (COM3) failed
+2025-12-21 15:48:05.957 | Open SSPComPort (COM3) failed
+2025-12-21 15:48:06.435 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:48:06.442 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:48:06.448 | HardDisconnect init
+2025-12-21 15:48:06.981 | Status: Getrennt
+2025-12-21 15:48:06.987 | HardDisconnect done
+2025-12-21 15:48:07.102 | Status: getrennt
+2025-12-21 15:49:28.950 | Status: Verbinde...
+2025-12-21 15:49:28.971 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:28.975 | Thread gestartet
+2025-12-21 15:49:28.978 | Status: Port nicht verfügbar
+2025-12-21 15:49:30.015 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:31.133 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:32.162 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:33.178 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:33.684 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:49:34.190 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:34.203 | REQ Level 1 ct [plain]
+2025-12-21 15:49:34.211 | REQ Level 2 ct [plain]
+2025-12-21 15:49:34.218 | REQ Level 5 ct [plain]
+2025-12-21 15:49:34.227 | REQ Level 10 ct [plain]
+2025-12-21 15:49:34.245 | REQ Level 20 ct [plain]
+2025-12-21 15:49:34.251 | REQ Level 50 ct [plain]
+2025-12-21 15:49:34.257 | REQ Level 100 ct [plain]
+2025-12-21 15:49:34.264 | REQ Level 200 ct [plain]
+2025-12-21 15:49:34.271 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:49:35.205 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:36.227 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:37.247 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:38.266 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:39.289 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:40.311 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:41.328 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:42.350 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:43.369 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:44.390 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:45.412 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:46.434 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:47.459 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:48.480 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:49.495 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:50.517 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:51.541 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:52.586 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:53.787 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:54.986 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:56.187 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:57.391 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:58.591 | Open SSPComPort (COM3) failed
+2025-12-21 15:49:59.792 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:00.992 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:02.185 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:03.380 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:04.579 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:05.767 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:06.976 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:08.176 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:09.378 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:10.590 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:11.780 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:12.971 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:14.169 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:15.374 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:16.574 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:17.777 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:18.968 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:20.167 | Open SSPComPort (COM3) failed
+2025-12-21 15:50:20.250 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:50:20.259 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 15:50:20.264 | HardDisconnect init
+2025-12-21 15:50:21.373 | Status: Getrennt
+2025-12-21 15:50:21.384 | HardDisconnect done
+2025-12-21 15:50:21.518 | Status: getrennt
+2025-12-21 16:18:13.181 | Status: Verbinde...
+2025-12-21 16:18:13.192 | Thread gestartet
+2025-12-21 16:18:13.221 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:13.228 | Status: Port nicht verfügbar
+2025-12-21 16:18:14.287 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:15.350 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:16.381 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:16.816 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:18:17.398 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:17.538 | REQ Level 1 ct [plain]
+2025-12-21 16:18:17.547 | REQ Level 2 ct [plain]
+2025-12-21 16:18:17.555 | REQ Level 5 ct [plain]
+2025-12-21 16:18:17.563 | REQ Level 10 ct [plain]
+2025-12-21 16:18:17.571 | REQ Level 20 ct [plain]
+2025-12-21 16:18:17.578 | REQ Level 50 ct [plain]
+2025-12-21 16:18:17.584 | REQ Level 100 ct [plain]
+2025-12-21 16:18:17.592 | REQ Level 200 ct [plain]
+2025-12-21 16:18:17.599 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:18:18.422 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:19.448 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:20.477 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:21.501 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:22.528 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:23.552 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:24.584 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:25.614 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:26.640 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:27.667 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:28.691 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:29.712 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:30.737 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:31.770 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:32.801 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:33.830 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:34.858 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:35.884 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:36.903 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:37.935 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:38.960 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:39.988 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:41.019 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:42.046 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:43.074 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:44.103 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:45.128 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:46.154 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:47.182 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:48.206 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:49.237 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:50.266 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:51.284 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:52.311 | Open SSPComPort (COM3) failed
+2025-12-21 16:18:52.730 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:18:52.744 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:18:52.755 | HardDisconnect init
+2025-12-21 16:18:53.340 | Status: Getrennt
+2025-12-21 16:18:53.353 | HardDisconnect done
+2025-12-21 16:18:53.471 | Status: getrennt
+2025-12-21 16:21:50.007 | Status: Verbinde...
+2025-12-21 16:21:50.034 | Open SSPComPort (COM3) failed
+2025-12-21 16:21:50.034 | Thread gestartet
+2025-12-21 16:21:50.046 | Status: Port nicht verfügbar
+2025-12-21 16:21:51.108 | Open SSPComPort (COM3) failed
+2025-12-21 16:21:52.166 | Open SSPComPort (COM3) failed
+2025-12-21 16:21:53.184 | Open SSPComPort (COM3) failed
+2025-12-21 16:21:53.292 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:21:54.096 | REQ Level 1 ct [plain]
+2025-12-21 16:21:54.103 | REQ Level 2 ct [plain]
+2025-12-21 16:21:54.109 | REQ Level 5 ct [plain]
+2025-12-21 16:21:54.116 | REQ Level 10 ct [plain]
+2025-12-21 16:21:54.123 | REQ Level 20 ct [plain]
+2025-12-21 16:21:54.132 | REQ Level 50 ct [plain]
+2025-12-21 16:21:54.140 | REQ Level 100 ct [plain]
+2025-12-21 16:21:54.147 | REQ Level 200 ct [plain]
+2025-12-21 16:21:54.154 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:21:54.208 | Open SSPComPort (COM3) failed
+2025-12-21 16:21:55.223 | Open SSPComPort (COM3) failed
+2025-12-21 16:21:56.251 | Open SSPComPort (COM3) failed
+2025-12-21 16:21:57.271 | Open SSPComPort (COM3) failed
+2025-12-21 16:21:58.300 | Open SSPComPort (COM3) failed
+2025-12-21 16:21:59.317 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:00.335 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:01.348 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:02.376 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:03.402 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:04.427 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:05.452 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:06.473 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:07.500 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:08.527 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:09.551 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:10.577 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:11.607 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:12.637 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:13.670 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:14.697 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:15.722 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:16.746 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:17.762 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:18.793 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:19.823 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:20.848 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:21.870 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:22.898 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:23.929 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:24.956 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:25.984 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:27.021 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:27.817 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:22:27.831 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:22:27.842 | HardDisconnect init
+2025-12-21 16:22:28.061 | Status: Getrennt
+2025-12-21 16:22:28.072 | HardDisconnect done
+2025-12-21 16:22:28.188 | Status: getrennt
+2025-12-21 16:22:42.963 | Status: Verbinde...
+2025-12-21 16:22:43.014 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:43.014 | Thread gestartet
+2025-12-21 16:22:43.021 | Status: Port nicht verfügbar
+2025-12-21 16:22:44.081 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:45.140 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:46.166 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:47.188 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:48.215 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:49.238 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:50.259 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:51.289 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:52.316 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:53.055 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:22:53.334 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:53.786 | REQ Level 1 ct [plain]
+2025-12-21 16:22:53.794 | REQ Level 2 ct [plain]
+2025-12-21 16:22:53.801 | REQ Level 5 ct [plain]
+2025-12-21 16:22:53.809 | REQ Level 10 ct [plain]
+2025-12-21 16:22:53.816 | REQ Level 20 ct [plain]
+2025-12-21 16:22:53.822 | REQ Level 50 ct [plain]
+2025-12-21 16:22:53.829 | REQ Level 100 ct [plain]
+2025-12-21 16:22:53.837 | REQ Level 200 ct [plain]
+2025-12-21 16:22:53.843 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:22:54.355 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:55.385 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:56.412 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:57.429 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:58.462 | Open SSPComPort (COM3) failed
+2025-12-21 16:22:59.484 | Open SSPComPort (COM3) failed
+2025-12-21 16:23:00.511 | Open SSPComPort (COM3) failed
+2025-12-21 16:23:01.541 | Open SSPComPort (COM3) failed
+2025-12-21 16:23:02.568 | Open SSPComPort (COM3) failed
+2025-12-21 16:23:03.585 | Open SSPComPort (COM3) failed
+2025-12-21 16:23:04.614 | Open SSPComPort (COM3) failed
+2025-12-21 16:23:05.644 | Open SSPComPort (COM3) failed
+2025-12-21 16:23:06.672 | Open SSPComPort (COM3) failed
+2025-12-21 16:23:07.712 | Open SSPComPort (COM3) failed
+2025-12-21 16:23:08.741 | Open SSPComPort (COM3) failed
+2025-12-21 16:23:09.772 | Open SSPComPort (COM3) failed
+2025-12-21 16:23:10.801 | Open SSPComPort (COM3) failed
+2025-12-21 16:23:11.824 | Open SSPComPort (COM3) failed
+2025-12-21 16:23:12.654 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:23:12.668 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:23:12.679 | HardDisconnect init
+2025-12-21 16:23:12.861 | Status: Getrennt
+2025-12-21 16:23:12.872 | HardDisconnect done
+2025-12-21 16:23:12.990 | Status: getrennt
+2025-12-21 16:25:06.856 | Status: Verbinde...
+2025-12-21 16:25:06.873 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:06.873 | Thread gestartet
+2025-12-21 16:25:06.877 | Status: Port nicht verfügbar
+2025-12-21 16:25:07.923 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:08.952 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:09.980 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:11.007 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:12.040 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:13.070 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:14.096 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:15.118 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:16.148 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:17.178 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:18.209 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:19.242 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:20.271 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:21.286 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:22.312 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:23.342 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:24.368 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:25.395 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:26.421 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:27.443 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:28.474 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:29.490 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:30.522 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:31.552 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:32.584 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:33.614 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:34.647 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:35.671 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:36.698 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:37.725 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:38.754 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:39.777 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:40.804 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:40.840 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:25:41.613 | REQ Level 1 ct [plain]
+2025-12-21 16:25:41.623 | REQ Level 2 ct [plain]
+2025-12-21 16:25:41.632 | REQ Level 5 ct [plain]
+2025-12-21 16:25:41.641 | REQ Level 10 ct [plain]
+2025-12-21 16:25:41.652 | REQ Level 20 ct [plain]
+2025-12-21 16:25:41.661 | REQ Level 50 ct [plain]
+2025-12-21 16:25:41.670 | REQ Level 100 ct [plain]
+2025-12-21 16:25:41.677 | REQ Level 200 ct [plain]
+2025-12-21 16:25:41.684 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:25:41.832 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:42.863 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:43.891 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:44.916 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:45.940 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:46.970 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:47.999 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:49.026 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:50.049 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:51.078 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:52.106 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:53.132 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:54.160 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:55.200 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:56.268 | Open SSPComPort (COM3) failed
+2025-12-21 16:25:56.566 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:25:56.578 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:25:56.589 | HardDisconnect init
+2025-12-21 16:25:57.305 | Status: Getrennt
+2025-12-21 16:25:57.318 | HardDisconnect done
+2025-12-21 16:25:57.438 | Status: getrennt
+2025-12-21 16:26:10.727 | Status: Verbinde...
+2025-12-21 16:26:10.741 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:10.741 | Thread gestartet
+2025-12-21 16:26:10.746 | Status: Port nicht verfügbar
+2025-12-21 16:26:11.791 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:12.829 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:13.859 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:14.888 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:15.918 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:16.939 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:17.963 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:18.988 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:19.649 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:26:20.015 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:20.456 | REQ Level 1 ct [plain]
+2025-12-21 16:26:20.466 | REQ Level 2 ct [plain]
+2025-12-21 16:26:20.476 | REQ Level 5 ct [plain]
+2025-12-21 16:26:20.484 | REQ Level 10 ct [plain]
+2025-12-21 16:26:20.492 | REQ Level 20 ct [plain]
+2025-12-21 16:26:20.500 | REQ Level 50 ct [plain]
+2025-12-21 16:26:20.507 | REQ Level 100 ct [plain]
+2025-12-21 16:26:20.512 | REQ Level 200 ct [plain]
+2025-12-21 16:26:20.519 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:26:21.046 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:22.060 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:23.092 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:24.124 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:25.157 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:26.187 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:27.216 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:28.243 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:29.275 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:30.299 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:31.325 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:32.359 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:33.384 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:34.405 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:35.432 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:36.457 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:37.484 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:38.515 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:39.545 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:40.574 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:41.615 | Open SSPComPort (COM3) failed
+2025-12-21 16:26:42.249 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:26:42.263 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:26:42.273 | HardDisconnect init
+2025-12-21 16:26:42.694 | Status: Getrennt
+2025-12-21 16:26:42.707 | HardDisconnect done
+2025-12-21 16:26:42.824 | Status: getrennt
+2025-12-21 16:30:39.248 | Status: Verbinde...
+2025-12-21 16:30:39.264 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:39.266 | Thread gestartet
+2025-12-21 16:30:39.270 | Status: Port nicht verfügbar
+2025-12-21 16:30:40.314 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:41.346 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:42.378 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:43.402 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:44.298 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:30:44.420 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:44.891 | REQ Level 1 ct [plain]
+2025-12-21 16:30:44.898 | REQ Level 2 ct [plain]
+2025-12-21 16:30:44.905 | REQ Level 5 ct [plain]
+2025-12-21 16:30:44.912 | REQ Level 10 ct [plain]
+2025-12-21 16:30:44.919 | REQ Level 20 ct [plain]
+2025-12-21 16:30:44.927 | REQ Level 50 ct [plain]
+2025-12-21 16:30:44.933 | REQ Level 100 ct [plain]
+2025-12-21 16:30:44.941 | REQ Level 200 ct [plain]
+2025-12-21 16:30:44.949 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:30:45.448 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:46.474 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:47.502 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:48.529 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:49.562 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:50.590 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:51.619 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:52.634 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:53.659 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:54.687 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:55.716 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:56.747 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:57.779 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:58.808 | Open SSPComPort (COM3) failed
+2025-12-21 16:30:59.839 | Open SSPComPort (COM3) failed
+2025-12-21 16:31:00.868 | Open SSPComPort (COM3) failed
+2025-12-21 16:31:01.897 | Open SSPComPort (COM3) failed
+2025-12-21 16:31:02.929 | Open SSPComPort (COM3) failed
+2025-12-21 16:31:03.959 | Open SSPComPort (COM3) failed
+2025-12-21 16:31:04.972 | Open SSPComPort (COM3) failed
+2025-12-21 16:31:05.486 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:31:05.497 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-21 16:31:05.505 | HardDisconnect init
+2025-12-21 16:31:05.991 | Status: Getrennt
+2025-12-21 16:31:06.002 | HardDisconnect done
+2025-12-21 16:31:06.126 | Status: getrennt
