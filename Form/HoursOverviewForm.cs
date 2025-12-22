@@ -438,7 +438,7 @@ namespace Geldautomat
                         else if (_grid.Columns.Contains("Dauer") && r.Cells["Dauer"].Value != null && r.Cells["Dauer"].Value != DBNull.Value)
                         {
                             var dstr = r.Cells["Dauer"].Value.ToString();
-                            var parts = dstr.Split(':');
+                            var parts = dstr.Split(':' );
                             if (parts.Length == 2 && int.TryParse(parts[0], out int h) && int.TryParse(parts[1], out int m)) rowMinutes = h * 60 + m;
                             else if (int.TryParse(dstr, out int mm)) rowMinutes = mm;
                         }
@@ -862,86 +862,288 @@ namespace Geldautomat
         {
             try
             {
-                var text = GenerateReportText(table) ?? string.Empty;
-                var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-
+                // produce a nicely formatted table PDF
                 var doc = new PdfDocument();
                 try { if (GlobalFontSettings.FontResolver == null) GlobalFontSettings.FontResolver = new PdfFontResolver(); } catch { }
                 doc.Info.Title = "Zeiterfassung";
 
-                // choose a font family that exists on the host system; prefer Segoe UI/Arial/Tahoma/Verdana
-                string[] preferred = new[] { "Segoe UI", "Arial", "Tahoma", "Verdana", "Times New Roman", "Helvetica" };
-                string fontFamily = null;
-                try
-                {
-                    var installed = System.Drawing.FontFamily.Families.Select(f => f.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-                    foreach (var p in preferred)
-                    {
-                        if (installed.Contains(p)) { fontFamily = p; break; }
-                    }
-                    if (string.IsNullOrWhiteSpace(fontFamily)) fontFamily = installed.FirstOrDefault() ?? "Arial";
-                }
-                catch { fontFamily = "Arial"; }
+                // choose font (no XFontStyle constants to keep compatibility)
+                XFont headerFont = new XFont("Segoe UI", 16);
+                XFont titleFont = new XFont("Segoe UI", 20);
+                XFont font = new XFont("Segoe UI", 11);
+
                 const double margin = 40.0;
 
-                XGraphics gfx = null;
-                XFont font = null;
-                XFont headerFont = null;
-                double y = 0;
-                double lineHeight = 0;
+                // layout
+                var page = doc.AddPage();
+                page.Size = PdfSharp.PageSize.A4;
+                var gfx = XGraphics.FromPdfPage(page);
 
-                Action StartNewPage = () =>
+                double y = margin;
+                double pageHeight = page.Height;
+                double pageWidth = page.Width;
+                double contentWidth = pageWidth - margin * 2;
+
+                // title
+                gfx.DrawString($"Zeiterfassung für: {_personal?.Vorname} {_personal?.Name}", titleFont, XBrushes.Black, new XRect(margin, y, contentWidth, 30), XStringFormats.TopLeft);
+                y += 30 + 6;
+                gfx.DrawString(lblPeriod.Text, headerFont, XBrushes.Black, new XRect(margin, y, contentWidth, 22), XStringFormats.TopLeft);
+                y += 22 + 12;
+
+                // draw separator
+                gfx.DrawLine(XPens.Gray, margin, y, pageWidth - margin, y);
+                y += 8;
+
+                // table columns (points)
+                double colTag = 50;
+                double colDatum = 90;
+                double colVon = 70;
+                double colBis = 70;
+                double colDauer = 60;
+                double colTyp = 140;
+                double colZusatz = contentWidth - (colTag + colDatum + colVon + colBis + colDauer + colTyp);
+                if (colZusatz < 80) { colZusatz = 80; colTyp = Math.Max(60, contentWidth - (colTag + colDatum + colVon + colBis + colDauer + colZusatz)); }
+
+                // header row
+                double rowHeight = Math.Max(18, font.GetHeight() + 6);
+                var penBorder = new XPen(XColors.LightGray, 0.5);
+                double x = margin;
+                // draw header background
+                gfx.DrawRectangle(XBrushes.WhiteSmoke, x, y, contentWidth, rowHeight);
+
+                gfx.DrawString("Tag", font, XBrushes.Black, new XRect(x + 4, y + 3, colTag - 8, rowHeight), XStringFormats.TopLeft); x += colTag;
+                gfx.DrawString("Datum", font, XBrushes.Black, new XRect(x + 4, y + 3, colDatum - 8, rowHeight), XStringFormats.TopLeft); x += colDatum;
+                gfx.DrawString("Von", font, XBrushes.Black, new XRect(x + 4, y + 3, colVon - 8, rowHeight), XStringFormats.TopLeft); x += colVon;
+                gfx.DrawString("Bis", font, XBrushes.Black, new XRect(x + 4, y + 3, colBis - 8, rowHeight), XStringFormats.TopLeft); x += colBis;
+                gfx.DrawString("Dauer", font, XBrushes.Black, new XRect(x + 4, y + 3, colDauer - 8, rowHeight), XStringFormats.TopLeft); x += colDauer;
+                gfx.DrawString("Typ", font, XBrushes.Black, new XRect(x + 4, y + 3, colTyp - 8, rowHeight), XStringFormats.TopLeft); x += colTyp;
+                gfx.DrawString("Fahrzeug", font, XBrushes.Black, new XRect(x + 4, y + 3, colZusatz - 8, rowHeight), XStringFormats.TopLeft);
+
+                // draw header borders
+                gfx.DrawRectangle(penBorder, margin, y, contentWidth, rowHeight);
+                // vertical lines
+                double vx = margin; gfx.DrawLine(penBorder, vx+colTag, y, vx+colTag, y+rowHeight); vx += colTag; gfx.DrawLine(penBorder, vx+colDatum, y, vx+colDatum, y+rowHeight); vx += colDatum; gfx.DrawLine(penBorder, vx+colVon, y, vx+colVon, y+rowHeight); vx += colVon; gfx.DrawLine(penBorder, vx+colBis, y, vx+colBis, y+rowHeight); vx += colBis; gfx.DrawLine(penBorder, vx+colDauer, y, vx+colDauer, y+rowHeight); vx += colDauer; gfx.DrawLine(penBorder, vx+colTyp, y, vx+colTyp, y+rowHeight);
+
+                y += rowHeight;
+
+                // compute summary totals from the same data source (prefer DataView to keep sort)
+                int totalArbeitMin = 0, totalPauseMin = 0, totalNichtGewertetMin = 0, totalUrlaubMin = 0, totalKrankMin = 0;
+                var dvSource = _grid.DataSource as DataView;
+                IEnumerable<DataRow> rowsToIterate;
+                if (dvSource != null)
+                    rowsToIterate = dvSource.Cast<DataRowView>().Select(r => r.Row);
+                else
+                    rowsToIterate = table.Rows.Cast<DataRow>();
+
+                foreach (var rsum in rowsToIterate)
                 {
-                    var page = doc.AddPage();
-                    page.Size = PdfSharp.PageSize.A4;
-                    gfx = XGraphics.FromPdfPage(page);
-                    // create XFont using a system-installed family determined above
-                    headerFont = new XFont(fontFamily, 14);
-                    font = new XFont(fontFamily, 10);
-                    lineHeight = font.GetHeight() + 4;
-                    y = margin;
-                    // header
-                    gfx.DrawString($"Zeiterfassung für: {_personal?.Vorname} {_personal?.Name}", headerFont, XBrushes.Black, new XRect(margin, y, page.Width - margin * 2, lineHeight), XStringFormats.TopLeft);
-                    y += lineHeight + 6;
-                    gfx.DrawString(lblPeriod.Text, font, XBrushes.Black, new XRect(margin, y, page.Width - margin * 2, lineHeight), XStringFormats.TopLeft);
-                    y += lineHeight + 8;
-                };
-
-                StartNewPage();
-
-                foreach (var line in lines)
-                {
-                    if (y + lineHeight > gfx.PageSize.Height - margin)
+                    try
                     {
-                        StartNewPage();
+                        if (rsum.Table.Columns.Contains("Datum") && rsum["Datum"] == DBNull.Value) continue;
+                        int minutes = 0;
+                        try
+                        {
+                            if (rsum.Table.Columns.Contains("ZeitVon") && rsum.Table.Columns.Contains("ZeitBis") && rsum["ZeitVon"] != DBNull.Value && rsum["ZeitBis"] != DBNull.Value)
+                            {
+                                var zv = (DateTime)rsum["ZeitVon"]; var zb = (DateTime)rsum["ZeitBis"]; minutes = (int)Math.Round((zb - zv).TotalMinutes);
+                            }
+                            else if (rsum.Table.Columns.Contains("Dauer") && rsum["Dauer"] != DBNull.Value)
+                            {
+                                var dstr = rsum["Dauer"].ToString(); var parts = dstr.Split(':');
+                                if (parts.Length == 2 && int.TryParse(parts[0], out int h) && int.TryParse(parts[1], out int m)) minutes = h * 60 + m; else if (int.TryParse(dstr, out int mm)) minutes = mm;
+                            }
+                        }
+                        catch { }
+                        string typText = string.Empty; if (rsum.Table.Columns.Contains("TypText") && rsum["TypText"] != DBNull.Value) typText = rsum["TypText"].ToString().ToLowerInvariant();
+                        int typCode = -1; try { if (rsum.Table.Columns.Contains("Typ") && rsum["Typ"] != DBNull.Value) int.TryParse(rsum["Typ"].ToString(), out typCode); } catch { }
+
+                        if (typText.Contains("arbeit")) totalArbeitMin += minutes;
+                        else if (typText.Contains("pause")) { if (minutes > 0 && minutes < 15) totalNichtGewertetMin += minutes; else totalPauseMin += minutes; }
+                        else if (typText.Contains("urlaub")) totalUrlaubMin += minutes;
+                        else if (typText.Contains("krank")) totalKrankMin += minutes;
+                        else if (typCode == 11) totalUrlaubMin += minutes;
+                        else if (typCode == 21) totalKrankMin += minutes;
                     }
-                    gfx.DrawString(line, font, XBrushes.Black, new XRect(margin, y, gfx.PageSize.Width - margin * 2, lineHeight), XStringFormats.TopLeft);
-                    y += lineHeight;
+                    catch { }
                 }
 
+                // draw summary band (yellow)
+                try
+                {
+                    int netto = totalArbeitMin - totalPauseMin; if (netto < 0) netto = 0;
+                    int istMin = netto + totalUrlaubMin + totalKrankMin;
+                    double bandHeight = 48;
+                    var bandBrush = new XSolidBrush(XColor.FromArgb(255, 255, 250, 205));
+                    gfx.DrawRectangle(bandBrush, margin, y, contentWidth, bandHeight);
+                    double sx = margin + 8; double sy = y + 8;
+                    var boldFont = new XFont(font.FontFamily.Name, 11);
+                    gfx.DrawString($"Arbeitszeit: {totalArbeitMin/60}:{(totalArbeitMin%60).ToString("D2")}", boldFont, XBrushes.Black, new XRect(sx, sy, 220, 16), XStringFormats.TopLeft);
+                    gfx.DrawString($"Pause: {totalPauseMin/60}:{(totalPauseMin%60).ToString("D2")}", boldFont, XBrushes.Black, new XRect(sx + 220, sy, 180, 16), XStringFormats.TopLeft);
+                    gfx.DrawString($"Pause <15 min: {totalNichtGewertetMin/60}:{(totalNichtGewertetMin%60).ToString("D2")}", boldFont, XBrushes.Black, new XRect(sx + 400, sy, 220, 16), XStringFormats.TopLeft);
+                    gfx.DrawString($"Nettoarbeitszeit: {netto/60}:{(netto%60).ToString("D2")}", boldFont, XBrushes.Black, new XRect(sx + 640, sy, 220, 16), XStringFormats.TopLeft);
+                    gfx.DrawString($"Ist-Stunden: {istMin/60}:{(istMin%60).ToString("D2")}", boldFont, XBrushes.Black, new XRect(sx + 900, sy, 220, 16), XStringFormats.TopLeft);
+                    // second line
+                    gfx.DrawString($"Urlaub: {totalUrlaubMin/60}:{(totalUrlaubMin%60).ToString("D2")}", font, XBrushes.Black, new XRect(sx, sy + 20, 220, 16), XStringFormats.TopLeft);
+                    gfx.DrawString($"Krankheit: {totalKrankMin/60}:{(totalKrankMin%60).ToString("D2")}", font, XBrushes.Black, new XRect(sx + 220, sy + 20, 220, 16), XStringFormats.TopLeft);
+                    y += bandHeight + 8;
+                }
+                catch { }
+
+                // rows
+                int rowIndex = 0;
+                foreach (DataRow row in (dvSource != null ? dvSource.Cast<DataRowView>().Select(rv => rv.Row) : table.Rows.Cast<DataRow>()))
+                 {
+                     try
+                     {
+                        if (row.Table.Columns.Contains("Datum") && row["Datum"] == DBNull.Value) continue;
+                        // prepare values
+                        string wt = row.Table.Columns.Contains("Wt") && row["Wt"] != DBNull.Value ? row["Wt"].ToString() : "";
+                        DateTime? date = null; try { if (row["Datum"] != DBNull.Value) date = (DateTime)row["Datum"]; } catch { }
+                        string d = date.HasValue ? date.Value.ToString("dd.MM.yyyy") : string.Empty;
+                        // show only time for Von/Bis (we already have the date column)
+                        string zv = string.Empty; string zb = string.Empty;
+                        try { if (row.Table.Columns.Contains("ZeitVon") && row["ZeitVon"] != DBNull.Value) zv = ((DateTime)row["ZeitVon"]).ToString("HH:mm"); } catch { }
+                        try { if (row.Table.Columns.Contains("ZeitBis") && row["ZeitBis"] != DBNull.Value) zb = ((DateTime)row["ZeitBis"]).ToString("HH:mm"); } catch { }
+                          string dauer = row.Table.Columns.Contains("Dauer") && row["Dauer"] != DBNull.Value ? row["Dauer"].ToString() : "";
+                          string typ = row.Table.Columns.Contains("TypText") && row["TypText"] != DBNull.Value ? row["TypText"].ToString() : (row.Table.Columns.Contains("Typ") && row["Typ"] != DBNull.Value ? row["Typ"].ToString() : "");
+                          string zus = row.Table.Columns.Contains("Zusatz") && row["Zusatz"] != DBNull.Value ? row["Zusatz"].ToString() : "";
+
+                        // compute row minutes (prefer ZeitVon/ZeitBis)
+                        int rowMinutes = 0;
+                        try
+                        {
+                            if (row.Table.Columns.Contains("ZeitVon") && row.Table.Columns.Contains("ZeitBis") && row["ZeitVon"] != DBNull.Value && row["ZeitVon"] != DBNull.Value && row["ZeitBis"] != null && row["ZeitBis"] != DBNull.Value)
+                            {
+                                var zvdt = (DateTime)row["ZeitVon"]; var zbdt = (DateTime)row["ZeitBis"]; rowMinutes = (int)Math.Round((zbdt - zvdt).TotalMinutes);
+                            }
+                            else if (row.Table.Columns.Contains("Dauer") && row["Dauer"] != DBNull.Value)
+                            {
+                                var dstr = row["Dauer"].ToString(); var parts = dstr.Split(':');
+                                if (parts.Length == 2 && int.TryParse(parts[0], out int h) && int.TryParse(parts[1], out int m)) rowMinutes = h * 60 + m; else if (int.TryParse(dstr, out int mm)) rowMinutes = mm;
+                            }
+                        }
+                        catch { }
+
+                        // determine typCode if present
+                        int typCode = -1; try { if (row.Table.Columns.Contains("Typ") && row["Typ"] != DBNull.Value) int.TryParse(row["Typ"].ToString(), out typCode); } catch { }
+
+                        // hide day label for any Pause rows (also <15min)
+                        var typLower = (typ ?? string.Empty).ToLowerInvariant();
+                        if (typLower.Contains("pause")) wt = string.Empty;
+
+                        // determine background color by priority: Typ codes -> short pause -> Sunday -> alternating
+                        XBrush rowBrush = null;
+                        bool applied = false;
+                        try
+                        {
+                            // 1) Typ codes (highest priority)
+                            if (typCode == 11)
+                            {
+                                rowBrush = new XSolidBrush(XColor.FromArgb(255, 255, 250, 205)); // Urlaub light yellow
+                                applied = true;
+                            }
+                            else if (typCode == 21)
+                            {
+                                rowBrush = new XSolidBrush(XColor.FromArgb(255, 220, 80, 80)); // Krank
+                                applied = true;
+                            }
+                            // 2) short pause
+                            if (!applied)
+                            {
+                                if (!string.IsNullOrWhiteSpace(typLower) && typLower.Contains("pause") && rowMinutes > 0 && rowMinutes < 15)
+                                {
+                                    rowBrush = new XSolidBrush(XColor.FromArgb(235, 242, 255));
+                                    applied = true;
+                                }
+                            }
+                            // 3) Sunday highlight
+                            if (!applied)
+                            {
+                                if (date.HasValue && date.Value.DayOfWeek == DayOfWeek.Sunday)
+                                {
+                                    // light red for Sundays
+                                    rowBrush = new XSolidBrush(XColor.FromArgb(255, 255, 220, 220));
+                                    applied = true;
+                                }
+                            }
+                        }
+                        catch { }
+
+                         // row height (single line)
+                         double thisRowHeight = rowHeight;
+                         // page break if needed
+                         if (y + thisRowHeight + margin > pageHeight)
+                         {
+                            // new page
+                            page = doc.AddPage(); page.Size = PdfSharp.PageSize.A4; gfx = XGraphics.FromPdfPage(page);
+                            y = margin;
+
+                            // draw header on new page
+                            gfx.DrawString($"Zeiterfassung für: {_personal?.Vorname} {_personal?.Name}", titleFont, XBrushes.Black, new XRect(margin, y, contentWidth, 30), XStringFormats.TopLeft);
+                            y += 30 + 6;
+                            gfx.DrawString(lblPeriod.Text, headerFont, XBrushes.Black, new XRect(margin, y, contentWidth, 22), XStringFormats.TopLeft);
+                            y += 22 + 12;
+                            gfx.DrawLine(XPens.Gray, margin, y, pageWidth - margin, y);
+                            y += 8;
+
+                            // header row
+                            x = margin;
+                            gfx.DrawRectangle(XBrushes.WhiteSmoke, x, y, contentWidth, rowHeight);
+                            gfx.DrawString("Tag", font, XBrushes.Black, new XRect(x + 4, y + 3, colTag - 8, rowHeight), XStringFormats.TopLeft); x += colTag;
+                            gfx.DrawString("Datum", font, XBrushes.Black, new XRect(x + 4, y + 3, colDatum - 8, rowHeight), XStringFormats.TopLeft); x += colDatum;
+                            gfx.DrawString("Von", font, XBrushes.Black, new XRect(x + 4, y + 3, colVon - 8, rowHeight), XStringFormats.TopLeft); x += colVon;
+                            gfx.DrawString("Bis", font, XBrushes.Black, new XRect(x + 4, y + 3, colBis - 8, rowHeight), XStringFormats.TopLeft); x += colBis;
+                            gfx.DrawString("Dauer", font, XBrushes.Black, new XRect(x + 4, y + 3, colDauer - 8, rowHeight), XStringFormats.TopLeft); x += colDauer;
+                            gfx.DrawString("Typ", font, XBrushes.Black, new XRect(x + 4, y + 3, colTyp - 8, rowHeight), XStringFormats.TopLeft); x += colTyp;
+                            gfx.DrawString("Fahrzeug", font, XBrushes.Black, new XRect(x + 4, y + 3, colZusatz - 8, rowHeight), XStringFormats.TopLeft);
+                            gfx.DrawRectangle(penBorder, margin, y, contentWidth, rowHeight);
+                            y += rowHeight;
+                        }
+
+                        // alternating background (only if no specific color applied)
+                        if (rowBrush == null)
+                        {
+                            if (rowIndex % 2 == 1) gfx.DrawRectangle(new XSolidBrush(XColor.FromArgb(240, 248, 255)), margin, y, contentWidth, thisRowHeight);
+                        }
+                        else
+                        {
+                            gfx.DrawRectangle(rowBrush, margin, y, contentWidth, thisRowHeight);
+                        }
+
+                         x = margin;
+                         gfx.DrawString(wt, font, XBrushes.Black, new XRect(x + 4, y + 3, colTag - 8, thisRowHeight), XStringFormats.TopLeft); x += colTag;
+                         gfx.DrawString(d, font, XBrushes.Black, new XRect(x + 4, y + 3, colDatum - 8, thisRowHeight), XStringFormats.TopLeft); x += colDatum;
+                         gfx.DrawString(zv, font, XBrushes.Black, new XRect(x + 4, y + 3, colVon - 8, thisRowHeight), XStringFormats.TopLeft); x += colVon;
+                         gfx.DrawString(zb, font, XBrushes.Black, new XRect(x + 4, y + 3, colBis - 8, thisRowHeight), XStringFormats.TopLeft); x += colBis;
+                         gfx.DrawString(dauer, font, XBrushes.Black, new XRect(x + 4, y + 3, colDauer - 8, thisRowHeight), XStringFormats.TopLeft); x += colDauer;
+                         gfx.DrawString(typ, font, XBrushes.Black, new XRect(x + 4, y + 3, colTyp - 8, thisRowHeight), XStringFormats.TopLeft); x += colTyp;
+                         gfx.DrawString(zus, font, XBrushes.Black, new XRect(x + 4, y + 3, colZusatz - 8, thisRowHeight), XStringFormats.TopLeft);
+
+                         // borders for row
+                         gfx.DrawRectangle(penBorder, margin, y, contentWidth, thisRowHeight);
+
+                         y += thisRowHeight;
+                         rowIndex++;
+                     }
+                     catch { }
+                 }
+
+
+                // save
                 try { var dir = Path.GetDirectoryName(pdfPath); if (!string.IsNullOrWhiteSpace(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir); } catch { }
                 doc.Save(pdfPath);
                 doc.Close();
 
-                // Verify file exists and has content
                 try
                 {
                     var fi = new FileInfo(pdfPath);
                     return fi.Exists && fi.Length > 0;
                 }
-                catch
-                {
-                    return File.Exists(pdfPath);
-                }
+                catch { return File.Exists(pdfPath); }
             }
             catch (Exception ex)
             {
-                try
-                {
-                    var logPath = Path.ChangeExtension(pdfPath, ".pdf.err.txt");
-                    File.WriteAllText(logPath, ex.ToString());
-                }
-                catch { }
+                try { var logPath = Path.ChangeExtension(pdfPath, ".pdf.err.txt"); File.WriteAllText(logPath, ex.ToString()); } catch { }
                 return false;
             }
         }
