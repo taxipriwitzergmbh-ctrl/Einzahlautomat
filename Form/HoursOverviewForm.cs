@@ -20,6 +20,11 @@ namespace Geldautomat
         private Button _btnHelp;
         private DataGridView _grid;
         private Label _lblInfo;
+        private Label lblPeriod; // shows selected month/year
+
+        // summary
+        private Panel _summaryPanel;
+        private Label lblSumArbeit, lblSumShortPause, lblSumPause, lblNetto, lblSumUrlaub, lblSumKrank;
 
         public HoursOverviewForm(PersonalInfo personal)
         {
@@ -52,11 +57,11 @@ namespace Geldautomat
             _btnClose = new Button { Text = "Schließen", AutoSize = false, Size = new Size(160, 48), BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Location = new Point(ClientSize.Width - 176, 12), Anchor = AnchorStyles.Top | AnchorStyles.Right };
             _btnClose.FlatAppearance.BorderSize = 0; _btnClose.Click += (s, e) => Close(); _header.Controls.Add(_btnClose);
 
-            // Monat/Jahr Auswahl (touch-freundlich)
             _cbMonth = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 16F), Location = new Point(420, 14), Size = new Size(230, 40) };
             _cbMonth.Items.AddRange(new object[] { "Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember" });
             _cbMonth.SelectedIndexChanged += (s, e) => Reload();
             _header.Controls.Add(_cbMonth);
+
             _cbYear = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 16F), Location = new Point(660, 14), Size = new Size(120, 40) };
             int yNow = DateTime.Now.Year; for (int y = yNow - 5; y <= yNow + 1; y++) _cbYear.Items.Add(y);
             _cbYear.SelectedIndexChanged += (s, e) => Reload();
@@ -66,7 +71,6 @@ namespace Geldautomat
             _btnPrev.FlatAppearance.BorderSize = 0; _btnPrev.Click += (s, e) => ShiftMonth(-1);
             _header.Controls.Add(_btnPrev);
 
-            // fixed _btnNext initialization (removed malformed duplicate/new.Size)
             _btnNext = new Button { Text = "▶", Font = new Font("Segoe UI", 18F, FontStyle.Bold), Size = new Size(48, 40), Location = new Point(788, 14), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             _btnNext.FlatAppearance.BorderSize = 0; _btnNext.Click += (s, e) => ShiftMonth(+1);
             _header.Controls.Add(_btnNext);
@@ -75,13 +79,34 @@ namespace Geldautomat
             _btnHelp.FlatAppearance.BorderSize = 0; _btnHelp.Click += (s, e) => ShowHelp();
             _header.Controls.Add(_btnHelp);
 
-            _lblInfo = new Label { Text = $"Mitarbeiter: {_personal?.Vorname} {_personal?.Name}", AutoSize = false, Location = new Point(16, _header.Bottom + 10), Size = new Size(ClientSize.Width - 32, 32), Font = new Font("Segoe UI", 14F, FontStyle.Bold) };
+            _lblInfo = new Label { Text = $"Mitarbeiter: {_personal?.Vorname} {_personal?.Name}", AutoSize = false, Location = new Point(16, _header.Bottom + 10), Size = new Size(520, 32), Font = new Font("Segoe UI", 14F, FontStyle.Bold) };
             Controls.Add(_lblInfo);
+
+            // period label (month/year) to the right of employee label
+            lblPeriod = new Label { Text = "", AutoSize = true, Location = new Point(16 + 540, _header.Bottom + 10), Font = new Font("Segoe UI", 14F, FontStyle.Regular) };
+            Controls.Add(lblPeriod);
+
+            // Summary panel above the grid
+            _summaryPanel = new Panel { Location = new Point(16, _lblInfo.Bottom + 8), Size = new Size(ClientSize.Width - 32, 72), BackColor = Color.FromArgb(248, 250, 255), BorderStyle = BorderStyle.FixedSingle };
+            Controls.Add(_summaryPanel);
+
+            lblSumArbeit = new Label { Text = "Arbeitszeit: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(8, 8), AutoSize = true };
+            _summaryPanel.Controls.Add(lblSumArbeit);
+            lblSumPause = new Label { Text = "Pause: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(180, 8), AutoSize = true };
+            _summaryPanel.Controls.Add(lblSumPause);
+            lblSumShortPause = new Label { Text = "Kurzpause: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(340, 8), AutoSize = true };
+            _summaryPanel.Controls.Add(lblSumShortPause);
+            lblNetto = new Label { Text = "Nettoarbeitszeit: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(520, 8), AutoSize = true };
+            _summaryPanel.Controls.Add(lblNetto);
+            lblSumUrlaub = new Label { Text = "Urlaub: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(8, 36), AutoSize = true };
+            _summaryPanel.Controls.Add(lblSumUrlaub);
+            lblSumKrank = new Label { Text = "Krankheit: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(180, 36), AutoSize = true };
+            _summaryPanel.Controls.Add(lblSumKrank);
 
             _grid = new DataGridView
             {
-                Location = new Point(16, _lblInfo.Bottom + 8),
-                Size = new Size(ClientSize.Width - 32, ClientSize.Height - (_lblInfo.Bottom + 24)),
+                Location = new Point(16, _summaryPanel.Bottom + 8),
+                Size = new Size(ClientSize.Width - 32, ClientSize.Height - (_summaryPanel.Bottom + 24)),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
@@ -91,7 +116,7 @@ namespace Geldautomat
                 MultiSelect = false,
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None, // disable fill to honor explicit widths
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
                 ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing,
                 ColumnHeadersHeight = 40,
                 Font = new Font("Segoe UI", 14F)
@@ -99,6 +124,8 @@ namespace Geldautomat
             _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(220, 240, 255);
             _grid.DefaultCellStyle.SelectionForeColor = Color.Black;
             Controls.Add(_grid);
+
+            try { _header.BringToFront(); _title.BringToFront(); _btnClose.BringToFront(); _cbMonth.BringToFront(); _cbYear.BringToFront(); _btnPrev.BringToFront(); _btnNext.BringToFront(); _btnHelp.BringToFront(); } catch { }
         }
 
         private void ShowHelp()
@@ -132,44 +159,50 @@ namespace Geldautomat
                 {
                     var dt = await db.GetZeiterfassungAsync(_personal.PID, von, bis);
 
-                    // Create a UI copy of the table so we don't modify the original DB result
+                    // work on a UI copy so DB result isn't modified
                     var uiDt = dt.Clone();
-                    // Relax nullability and set sane defaults for UI table
-                    foreach (DataColumn col in uiDt.Columns)
+                    foreach (DataColumn c in uiDt.Columns)
                     {
-                        try
-                        {
-                            col.AllowDBNull = true;
-                            if (col.DataType == typeof(string)) col.DefaultValue = string.Empty;
-                            else if (col.DataType == typeof(DateTime)) col.DefaultValue = DBNull.Value;
-                            else col.DefaultValue = Activator.CreateInstance(col.DataType);
-                        }
-                        catch { }
+                        try { c.AllowDBNull = true; if (c.DataType == typeof(string)) c.DefaultValue = string.Empty; else if (c.DataType == typeof(DateTime)) c.DefaultValue = DBNull.Value; else c.DefaultValue = Activator.CreateInstance(c.DataType); } catch { }
                     }
-
-                    // Import rows from DB result
                     foreach (DataRow r in dt.Rows) uiDt.ImportRow(r);
 
-                    // Ensure Datum column exists in UI table
                     if (!uiDt.Columns.Contains("Datum")) uiDt.Columns.Add(new DataColumn("Datum", typeof(DateTime)) { AllowDBNull = true, DefaultValue = DBNull.Value });
 
-                    // Fill Datum from ZeitVon/ZeitBis where available
+                    // populate Datum if possible
                     foreach (DataRow r in uiDt.Rows)
                     {
                         try
                         {
-                            var v = uiDt.Columns.Contains("ZeitVon") && r["ZeitVon"] != DBNull.Value ? (DateTime)r["ZeitVon"] : DateTime.MinValue;
-                            if (v != DateTime.MinValue) r["Datum"] = v.Date;
+                            if (uiDt.Columns.Contains("ZeitVon") && r["ZeitVon"] != DBNull.Value) r["Datum"] = ((DateTime)r["ZeitVon"]).Date;
                             else if (uiDt.Columns.Contains("ZeitBis") && r["ZeitBis"] != DBNull.Value) r["Datum"] = ((DateTime)r["ZeitBis"]).Date;
                         }
                         catch { }
                     }
 
-                    // Insert missing days (TypText="Frei") before binding — only in UI table
+                    // add missing days only to UI table
                     EnsureAllDaysRows(uiDt, von, bis);
 
-                    // sort on view and bind
-                    uiDt.DefaultView.Sort = "Datum ASC, ZeitVon ASC";
+                    // add sort column so Arbeit before Pause
+                    if (!uiDt.Columns.Contains("SortTyp")) uiDt.Columns.Add(new DataColumn("SortTyp", typeof(int)) { AllowDBNull = true, DefaultValue = 3 });
+                    foreach (DataRow r in uiDt.Rows)
+                    {
+                        try
+                        {
+                            string t = string.Empty;
+                            if (uiDt.Columns.Contains("TypText") && r["TypText"] != DBNull.Value) t = r["TypText"].ToString();
+                            else if (uiDt.Columns.Contains("Typ") && r["Typ"] != DBNull.Value) t = r["Typ"].ToString();
+                            var tl = t.ToLowerInvariant();
+                            int sort = 3;
+                            if (tl.Contains("arbeit")) sort = 0; else if (tl.Contains("pause")) sort = 1; else if (tl.Contains("frei")) sort = 2;
+                            r["SortTyp"] = sort;
+                        }
+                        catch { r["SortTyp"] = 3; }
+                    }
+
+                    // update displayed period label
+                    try { lblPeriod.Text = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month) + " " + year.ToString(); } catch { }
+                    uiDt.DefaultView.Sort = "Datum ASC, SortTyp ASC, ZeitVon ASC";
                     BindGrid(uiDt.DefaultView);
                 }
             }
@@ -181,7 +214,7 @@ namespace Geldautomat
 
         private void EnsureAllDaysRows(DataTable dt, DateTime start, DateTime end)
         {
-            // Ensure needed columns with permissive null rules for UI table
+            // ensure columns exist on UI table
             if (!dt.Columns.Contains("Wt")) dt.Columns.Add(new DataColumn("Wt", typeof(string)) { AllowDBNull = true, DefaultValue = string.Empty });
             if (!dt.Columns.Contains("TypText")) dt.Columns.Add(new DataColumn("TypText", typeof(string)) { AllowDBNull = true, DefaultValue = string.Empty });
             if (!dt.Columns.Contains("Zusatz")) dt.Columns.Add(new DataColumn("Zusatz", typeof(string)) { AllowDBNull = true, DefaultValue = string.Empty });
@@ -201,8 +234,6 @@ namespace Geldautomat
                 if (!existingDates.Contains(day))
                 {
                     var row = dt.NewRow();
-
-                    // set obvious values
                     if (dt.Columns.Contains("Wt")) row["Wt"] = day.ToString("ddd");
                     if (dt.Columns.Contains("Datum")) row["Datum"] = day;
                     if (dt.Columns.Contains("ZeitVon")) row["ZeitVon"] = DBNull.Value;
@@ -211,7 +242,7 @@ namespace Geldautomat
                     if (dt.Columns.Contains("TypText")) row["TypText"] = "Frei";
                     if (dt.Columns.Contains("Zusatz")) row["Zusatz"] = string.Empty;
 
-                    // ensure all non-set columns have a valid default to avoid non-nullable errors
+                    // ensure defaults for any non-nullable columns
                     foreach (DataColumn col in dt.Columns)
                     {
                         if (row.IsNull(col))
@@ -223,10 +254,7 @@ namespace Geldautomat
                                 else if (col.DataType == typeof(DateTime)) row[col] = DateTime.MinValue;
                                 else row[col] = Activator.CreateInstance(col.DataType);
                             }
-                            catch
-                            {
-                                try { if (col.AllowDBNull) row[col] = DBNull.Value; else if (col.DataType == typeof(string)) row[col] = string.Empty; } catch { }
-                            }
+                            catch { try { if (col.AllowDBNull) row[col] = DBNull.Value; else if (col.DataType == typeof(string)) row[col] = string.Empty; } catch { } }
                         }
                     }
 
@@ -259,74 +287,131 @@ namespace Geldautomat
             SetDisplayIndex("TypText", order++);
             SetDisplayIndex("Zusatz", order++);
 
-            // alternating row color
             var altColor = Color.FromArgb(248, 251, 255);
             _grid.AlternatingRowsDefaultCellStyle.BackColor = altColor;
 
-            // Hide internal columns early
-            HideCol("AutoID"); HideCol("PID"); HideCol("Typ"); HideCol("FID"); HideCol("Bemerkung"); HideCol("ZeitAnlage"); HideCol("UserAnlage"); HideCol("ZeitBearbeitet"); HideCol("UserBearbeitet"); HideCol("Kennzeichen");
+            // hide internal columns
+            HideCol("AutoID"); HideCol("PID"); HideCol("Typ"); HideCol("FID"); HideCol("Bemerkung"); HideCol("ZeitAnlage"); HideCol("UserAnlage"); HideCol("ZeitBearbeitet"); HideCol("UserBearbeitet"); HideCol("Kennzeichen"); HideCol("SortTyp");
 
-            // Per-row adjustments: short pause highlight, Sunday highlight and hide Wt for pauses
-            bool hasTypCol = _grid.Columns.Contains("Typ");
+            // per-row visuals
             for (int i = 0; i < _grid.Rows.Count; i++)
             {
                 var r = _grid.Rows[i];
                 try
                 {
-                    // base background: respect alternating rows
                     Color bg = (i % 2 == 0) ? Color.White : altColor;
 
-                    // determine date
+                    // parse date
                     DateTime d = DateTime.MinValue;
-                    try { var dobj = _grid.Columns.Contains("Datum") ? r.Cells["Datum"].Value : null; if (dobj != null && dobj != DBNull.Value) DateTime.TryParse(dobj.ToString(), out d); } catch { }
+                    try { var dobj = r.Cells["Datum"].Value; if (dobj != null && dobj != DBNull.Value) DateTime.TryParse(dobj.ToString(), out d); } catch { }
 
-                    // determine typ and times
-                    string typText = null;
-                    try { if (_grid.Columns.Contains("TypText") && r.Cells["TypText"].Value != null && r.Cells["TypText"].Value != DBNull.Value) typText = r.Cells["TypText"].Value.ToString(); else if (_grid.Columns.Contains("Typ") && r.Cells["Typ"].Value != null && r.Cells["Typ"].Value != DBNull.Value) typText = r.Cells["Typ"].Value.ToString(); } catch { }
-                    DateTime vonVal = DateTime.MinValue, bisVal = DateTime.MinValue;
-                    try { if (_grid.Columns.Contains("ZeitVon") && r.Cells["ZeitVon"].Value != null && r.Cells["ZeitVon"].Value != DBNull.Value) DateTime.TryParse(r.Cells["ZeitVon"].Value.ToString(), out vonVal); } catch { }
-                    try { if (_grid.Columns.Contains("ZeitBis") && r.Cells["ZeitBis"].Value != null && r.Cells["ZeitBis"].Value != DBNull.Value) DateTime.TryParse(r.Cells["ZeitBis"].Value.ToString(), out bisVal); } catch { }
+                    // typ text
+                    string typText = string.Empty;
+                    try { if (r.Cells["TypText"].Value != null && r.Cells["TypText"].Value != DBNull.Value) typText = r.Cells["TypText"].Value.ToString(); } catch { }
 
-                    // short pause highlight (Typ==106 and duration <20min)
+                    // compute duration in minutes: prefer ZeitVon/ZeitBis
+                    int rowMinutes = 0;
                     try
                     {
-                        int typ = 0;
-                        if (hasTypCol && _grid.Columns.Contains("Typ") && r.Cells["Typ"].Value != null && r.Cells["Typ"].Value != DBNull.Value)
-                            int.TryParse(r.Cells["Typ"].Value.ToString(), out typ);
-                        if (bisVal > vonVal)
+                        if (_grid.Columns.Contains("ZeitVon") && _grid.Columns.Contains("ZeitBis") && r.Cells["ZeitVon"].Value != null && r.Cells["ZeitVon"].Value != DBNull.Value && r.Cells["ZeitBis"].Value != null && r.Cells["ZeitBis"].Value != DBNull.Value)
                         {
-                            var diff = bisVal - vonVal;
-                            if (typ == 106 && diff.TotalMinutes < 20)
+                            DateTime zv, zb; DateTime.TryParse(r.Cells["ZeitVon"].Value.ToString(), out zv); DateTime.TryParse(r.Cells["ZeitBis"].Value.ToString(), out zb);
+                            var ts = zb - zv; rowMinutes = (int)Math.Round(ts.TotalMinutes);
+                        }
+                        else if (_grid.Columns.Contains("Dauer") && r.Cells["Dauer"].Value != null && r.Cells["Dauer"].Value != DBNull.Value)
+                        {
+                            var dstr = r.Cells["Dauer"].Value.ToString();
+                            var parts = dstr.Split(':');
+                            if (parts.Length == 2 && int.TryParse(parts[0], out int h) && int.TryParse(parts[1], out int m)) rowMinutes = h * 60 + m;
+                            else if (int.TryParse(dstr, out int mm)) rowMinutes = mm;
+                        }
+                    }
+                    catch { }
+
+                    // update displayed Dauer from computed minutes to avoid DB rounding mismatches
+                    try { if (_grid.Columns.Contains("Dauer") && rowMinutes > 0) r.Cells["Dauer"].Value = $"{rowMinutes/60}:{(rowMinutes%60).ToString("D2")}"; } catch { }
+
+                    // short pause handling: mark pauses <15min as 'Pause <15 min' and color blue; exclude from Pause total
+                    try
+                    {
+                        if (!string.IsNullOrWhiteSpace(typText) && typText.ToLowerInvariant().Contains("pause"))
+                        {
+                            if (rowMinutes > 0 && rowMinutes < 15)
                             {
-                                bg = Color.FromArgb(235, 242, 255); // light blue
+                                if (_grid.Columns.Contains("TypText")) r.Cells["TypText"].Value = "Pause <15 min";
+                                r.DefaultCellStyle.BackColor = Color.FromArgb(235, 242, 255);
+                            }
+                            else
+                            {
+                                // regular pause: hide day label to group with the work row
+                                if (_grid.Columns.Contains("Wt")) r.Cells["Wt"].Value = string.Empty;
                             }
                         }
                     }
                     catch { }
 
-                    // Sunday highlight overrides other backgrounds
-                    try
-                    {
-                        if (d != DateTime.MinValue && d.DayOfWeek == DayOfWeek.Sunday)
-                        {
-                            bg = Color.FromArgb(255, 255, 220, 220); // subtle red
-                        }
-                    }
-                    catch { }
+                    // sunday highlight overrides other backgrounds
+                    try { if (d != DateTime.MinValue && d.DayOfWeek == DayOfWeek.Sunday) bg = Color.FromArgb(255, 255, 220, 220); } catch { }
 
-                    r.DefaultCellStyle.BackColor = bg;
-
-                    // hide Wt for Pause rows so pauses visually belong to previous Arbeit row
-                    try
-                    {
-                        if (!string.IsNullOrWhiteSpace(typText) && typText.ToLowerInvariant().Contains("pause"))
-                        {
-                            if (_grid.Columns.Contains("Wt")) r.Cells["Wt"].Value = string.Empty;
-                        }
-                    }
-                    catch { }
+                    r.DefaultCellStyle.BackColor = r.DefaultCellStyle.BackColor == Color.Empty ? bg : r.DefaultCellStyle.BackColor;
                 }
                 catch { }
+            }
+
+            // update summary from bound table
+            UpdateSummary(view.Table);
+        }
+
+        private void UpdateSummary(DataTable table)
+        {
+            try
+            {
+                int totalArbeitMin = 0, totalPauseMin = 0, totalNichtGewertetMin = 0, totalUrlaubMin = 0, totalKrankMin = 0;
+
+                foreach (DataRow row in table.Rows)
+                {
+                    if (row.Table.Columns.Contains("Datum") && row["Datum"] == DBNull.Value) continue;
+
+                    int minutes = 0;
+                    try
+                    {
+                        if (row.Table.Columns.Contains("ZeitVon") && row.Table.Columns.Contains("ZeitBis") && row["ZeitVon"] != DBNull.Value && row["ZeitBis"] != DBNull.Value)
+                        {
+                            var zv = (DateTime)row["ZeitVon"]; var zb = (DateTime)row["ZeitBis"]; var ts = zb - zv; minutes = (int)Math.Round(ts.TotalMinutes);
+                        }
+                        else if (row.Table.Columns.Contains("Dauer") && row["Dauer"] != DBNull.Value)
+                        {
+                            var dstr = row["Dauer"].ToString();
+                            var parts = dstr.Split(':');
+                            if (parts.Length == 2 && int.TryParse(parts[0], out int h) && int.TryParse(parts[1], out int m)) minutes = h * 60 + m;
+                            else if (int.TryParse(dstr, out int mm)) minutes = mm;
+                        }
+                    }
+                    catch { }
+
+                    string typText = string.Empty;
+                    if (row.Table.Columns.Contains("TypText") && row["TypText"] != DBNull.Value) typText = row["TypText"].ToString().ToLowerInvariant();
+
+                    if (typText.Contains("arbeit")) totalArbeitMin += minutes;
+                    else if (typText.Contains("pause"))
+                    {
+                        if (minutes > 0 && minutes < 15) totalNichtGewertetMin += minutes; else totalPauseMin += minutes;
+                    }
+                    else if (typText.Contains("urlaub")) totalUrlaubMin += minutes;
+                    else if (typText.Contains("krank")) totalKrankMin += minutes;
+                }
+
+                lblSumArbeit.Text = $"Arbeitszeit: {totalArbeitMin/60}:{(totalArbeitMin%60).ToString("D2")}";
+                lblSumPause.Text = $"Pause: {totalPauseMin/60}:{(totalPauseMin%60).ToString("D2")}";
+                lblSumShortPause.Text = $"Nicht gewertete Pausen: {totalNichtGewertetMin/60}:{(totalNichtGewertetMin%60).ToString("D2")}";
+                int netto = totalArbeitMin - totalPauseMin; if (netto < 0) netto = 0;
+                lblNetto.Text = $"Nettoarbeitszeit: {netto/60}:{(netto%60).ToString("D2")}";
+                lblSumUrlaub.Text = $"Urlaub: {totalUrlaubMin/60}:{(totalUrlaubMin%60).ToString("D2")}";
+                lblSumKrank.Text = $"Krankheit: {totalKrankMin/60}:{(totalKrankMin%60).ToString("D2")}";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Fehler bei der Aktualisierung der Zusammenfassung:\r\n" + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -339,7 +424,7 @@ namespace Geldautomat
                     var c = _grid.Columns[name];
                     c.Visible = true;
                     c.DisplayIndex = index;
-                    c.AutoSizeMode = DataGridViewAutoSizeColumnMode.None; // ensure fixed width
+                    c.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
                 }
             }
             catch { }
