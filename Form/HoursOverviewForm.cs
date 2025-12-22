@@ -4,13 +4,108 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using System.Reflection;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Drawing.Printing;
+using System.Text;
+using PdfSharp.Pdf;
+using PdfSharp.Drawing;
+using PdfSharp.Fonts;
+using Microsoft.Win32;
+using System.Collections.Generic;
 
 namespace Geldautomat
 {
+    // PdfSharp font resolver: resolves Windows font registry entries to font files
+    internal class PdfFontResolver : IFontResolver
+    {
+        private readonly Dictionary<string, string> _cache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        public FontResolverInfo ResolveTypeface(string familyName, bool isBold, bool isItalic)
+        {
+            try
+            {
+                // prefer exact family, then common fallbacks
+                var candidates = new List<string> { familyName };
+                if (!string.Equals(familyName, "Segoe UI", StringComparison.OrdinalIgnoreCase)) candidates.Add("Segoe UI");
+                candidates.Add("Arial"); candidates.Add("Tahoma"); candidates.Add("Verdana"); candidates.Add("Times New Roman");
+
+                foreach (var fam in candidates)
+                {
+                    var file = ResolveFontFileFromRegistry(fam);
+                    if (!string.IsNullOrEmpty(file))
+                    {
+                        // return FontResolverInfo with the filename as the face name
+                        return new FontResolverInfo(file);
+                    }
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        public byte[] GetFont(string faceName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(faceName)) return null;
+                string filename = faceName;
+                string path = filename;
+                if (!Path.IsPathRooted(path))
+                {
+                    var win = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                    path = Path.Combine(win, "Fonts", filename);
+                }
+                if (!File.Exists(path))
+                {
+                    // try to resolve via registry
+                    var resolved = ResolveFontFileFromRegistry(Path.GetFileNameWithoutExtension(filename));
+                    if (!string.IsNullOrEmpty(resolved))
+                    {
+                        var win = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                        var full = Path.Combine(win, "Fonts", resolved);
+                        if (File.Exists(full)) path = full;
+                    }
+                }
+                if (!File.Exists(path)) return null;
+                // cache
+                _cache[faceName] = path;
+                return File.ReadAllBytes(path);
+            }
+            catch { return null; }
+        }
+
+        private string ResolveFontFileFromRegistry(string familyKey)
+        {
+            try
+            {
+                using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts"))
+                {
+                    if (key == null) return null;
+                    foreach (var name in key.GetValueNames())
+                    {
+                        if (name.IndexOf(familyKey, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            var val = key.GetValue(name) as string;
+                            if (string.IsNullOrWhiteSpace(val)) continue;
+                            var file = val.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)[0].Trim();
+                            return file;
+                        }
+                    }
+                }
+            }
+            catch { }
+            return null;
+        }
+    }
+
     // Anzeige der Stunden/Zeiterfassung für einen Mitarbeiter
     public class HoursOverviewForm : Form
     {
         private readonly PersonalInfo _personal;
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
+
         private Panel _header;
         private Label _title;
         private Button _btnClose;
@@ -26,6 +121,7 @@ namespace Geldautomat
         // summary
         private Panel _summaryPanel;
         private Label lblSumArbeit, lblSumShortPause, lblSumPause, lblNetto, lblSumUrlaub, lblSumKrank;
+        private Label lblIstStunden;
 
         public HoursOverviewForm(PersonalInfo personal)
         {
@@ -85,6 +181,12 @@ namespace Geldautomat
             _btnHelp.FlatAppearance.BorderSize = 0; _btnHelp.Click += (s, e) => ShowHelp();
             _header.Controls.Add(_btnHelp);
 
+            // Print and Email buttons for exporting the current view (use document printer and mail settings)
+            var btnPrintMonth = new Button { Text = "Drucken", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Size = new Size(96, 40), Location = new Point(900, 14), BackColor = Color.FromArgb(76, 175, 80), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            btnPrintMonth.FlatAppearance.BorderSize = 0; btnPrintMonth.Click += (s, e) => PrintMonthReport(); _header.Controls.Add(btnPrintMonth);
+            var btnEmailMonth = new Button { Text = "per Mail", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Size = new Size(96, 40), Location = new Point(1004, 14), BackColor = Color.FromArgb(255, 167, 38), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            btnEmailMonth.FlatAppearance.BorderSize = 0; btnEmailMonth.Click += (s, e) => EmailMonthReport(); _header.Controls.Add(btnEmailMonth);
+
             _lblInfo = new Label { Text = $"Mitarbeiter: {_personal?.Vorname} {_personal?.Name}", AutoSize = false, Location = new Point(16, _header.Bottom + 10), Size = new Size(520, 32), Font = new Font("Segoe UI", 14F, FontStyle.Bold) };
             _lblInfo.BackColor = Color.Transparent;
             Controls.Add(_lblInfo);
@@ -111,6 +213,8 @@ namespace Geldautomat
             _summaryPanel.Controls.Add(lblSumUrlaub);
             lblSumKrank = new Label { Text = "Krankheit: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(180, 36), AutoSize = true };
             _summaryPanel.Controls.Add(lblSumKrank);
+            lblIstStunden = new Label { Text = "Ist-Stunden: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(760, 8), AutoSize = true };
+            _summaryPanel.Controls.Add(lblIstStunden);
 
             _grid = new DataGridView
             {
@@ -302,13 +406,13 @@ namespace Geldautomat
             // hide internal columns
             HideCol("AutoID"); HideCol("PID"); HideCol("Typ"); HideCol("FID"); HideCol("Bemerkung"); HideCol("ZeitAnlage"); HideCol("UserAnlage"); HideCol("ZeitBearbeitet"); HideCol("UserBearbeitet"); HideCol("Kennzeichen"); HideCol("SortTyp");
 
-            // per-row visuals
+            // per-row visuals with clear priority: Typ -> short pause -> Sunday -> alternating
             for (int i = 0; i < _grid.Rows.Count; i++)
             {
                 var r = _grid.Rows[i];
                 try
                 {
-                    Color bg = (i % 2 == 0) ? Color.White : altColor;
+                    Color bgDefault = (i % 2 == 0) ? Color.White : altColor;
 
                     // parse date
                     DateTime d = DateTime.MinValue;
@@ -341,46 +445,59 @@ namespace Geldautomat
                     }
                     catch { }
 
-                    // update displayed Dauer from computed minutes to avoid DB rounding mismatches
+                    // update displayed Dauer from computed minutes
                     try { if (_grid.Columns.Contains("Dauer") && rowMinutes > 0) r.Cells["Dauer"].Value = $"{rowMinutes/60}:{(rowMinutes%60).ToString("D2")}"; } catch { }
 
-                    // short pause handling: mark pauses <15min as 'Pause <15 min' and color blue; exclude from Pause total
-                    try
-                    {
-                        if (!string.IsNullOrWhiteSpace(typText) && typText.ToLowerInvariant().Contains("pause"))
-                        {
-                            if (rowMinutes > 0 && rowMinutes < 15)
-                            {
-                                if (_grid.Columns.Contains("TypText")) r.Cells["TypText"].Value = "Pause <15 min";
-                                r.DefaultCellStyle.BackColor = Color.FromArgb(235, 242, 255);
-                            }
-                            else
-                            {
-                                // regular pause: hide day label to group with the work row
-                                if (_grid.Columns.Contains("Wt")) r.Cells["Wt"].Value = string.Empty;
-                            }
-                        }
-                    }
-                    catch { }
+                    // decide background with priority
+                    Color finalBg = bgDefault;
+                    bool applied = false;
 
-                    // apply type-based coloring (Urlaub = typ 11 -> light yellow, Krank = typ 21 -> light red)
+                    // 1) Typ codes (highest priority)
                     try
                     {
                         if (typCode == 11)
                         {
-                            bg = Color.FromArgb(255, 255, 250, 205); // light yellow
+                            finalBg = Color.FromArgb(255, 255, 250, 205); // Urlaub light yellow
+                            applied = true;
+                            if (_grid.Columns.Contains("TypText")) r.Cells["TypText"].Value = "Urlaub";
                         }
                         else if (typCode == 21)
                         {
-                            bg = Color.FromArgb(255, 255, 200, 200); // light red
+                            finalBg = Color.FromArgb(255, 220, 80, 80); // Krank
+                            applied = true;
+                            if (_grid.Columns.Contains("TypText")) r.Cells["TypText"].Value = "Krankheit";
                         }
                     }
                     catch { }
 
-                    // sunday highlight overrides other backgrounds
-                    try { if (d != DateTime.MinValue && d.DayOfWeek == DayOfWeek.Sunday) bg = Color.FromArgb(255, 255, 220, 220); } catch { }
+                    // 2) short pause (only if no typ color applied)
+                    if (!applied)
+                    {
+                        try
+                        {
+                            if (!string.IsNullOrWhiteSpace(typText) && typText.ToLowerInvariant().Contains("pause") && rowMinutes > 0 && rowMinutes < 15)
+                            {
+                                finalBg = Color.FromArgb(235, 242, 255);
+                                applied = true;
+                                if (_grid.Columns.Contains("TypText")) r.Cells["TypText"].Value = "Pause <15 min";
+                            }
+                            else
+                            {
+                                // regular pause: hide day label to group with the work row
+                                if (!string.IsNullOrWhiteSpace(typText) && typText.ToLowerInvariant().Contains("pause") && _grid.Columns.Contains("Wt")) r.Cells["Wt"].Value = string.Empty;
+                            }
+                        }
+                        catch { }
+                    }
 
-                    r.DefaultCellStyle.BackColor = r.DefaultCellStyle.BackColor == Color.Empty ? bg : r.DefaultCellStyle.BackColor;
+                    // 3) Sunday highlight (only if still not applied)
+                    if (!applied)
+                    {
+                        try { if (d != DateTime.MinValue && d.DayOfWeek == DayOfWeek.Sunday) { finalBg = Color.FromArgb(255, 255, 220, 220); applied = true; } } catch { }
+                    }
+
+                    // apply final background to row
+                    try { r.DefaultCellStyle.BackColor = finalBg; } catch { }
                 }
                 catch { }
             }
@@ -409,7 +526,7 @@ namespace Geldautomat
                         else if (row.Table.Columns.Contains("Dauer") && row["Dauer"] != DBNull.Value)
                         {
                             var dstr = row["Dauer"].ToString();
-                            var parts = dstr.Split(':');
+                            var parts = dstr.Split(':' );
                             if (parts.Length == 2 && int.TryParse(parts[0], out int h) && int.TryParse(parts[1], out int m)) minutes = h * 60 + m;
                             else if (int.TryParse(dstr, out int mm)) minutes = mm;
                         }
@@ -439,6 +556,10 @@ namespace Geldautomat
                 lblNetto.Text = $"Nettoarbeitszeit: {netto/60}:{(netto%60).ToString("D2")}";
                 lblSumUrlaub.Text = $"Urlaub: {totalUrlaubMin/60}:{(totalUrlaubMin%60).ToString("D2")}";
                 lblSumKrank.Text = $"Krankheit: {totalKrankMin/60}:{(totalKrankMin%60).ToString("D2")}";
+
+                // Ist-Stunden = Netto + Urlaub + Krankheit
+                int istMin = netto + totalUrlaubMin + totalKrankMin;
+                lblIstStunden.Text = $"Ist-Stunden: {istMin/60}:{(istMin%60).ToString("D2")}";
             }
             catch (Exception ex)
             {
@@ -492,6 +613,337 @@ namespace Geldautomat
             _cbMonth.SelectedIndex = next.Month - 1;
             int idxY = -1; for (int i = 0; i < _cbYear.Items.Count; i++) { if ((int)_cbYear.Items[i] == next.Year) { idxY = i; break; } }
             if (idxY >= 0) _cbYear.SelectedIndex = idxY; else { _cbYear.Items.Add(next.Year); _cbYear.SelectedIndex = _cbYear.Items.Count - 1; }
+        }
+
+        private void PrintMonthReport()
+        {
+            try
+            {
+                var table = (_grid.DataSource as DataView)?.Table;
+                if (table == null) return;
+                string text = GenerateReportText(table);
+                string printer = string.Empty;
+                try { printer = IniHelper.ReadValue("UI", "DocumentPrinter", AppSettings.IniPath) ?? string.Empty; } catch { }
+                PrintText(text, printer);
+            }
+            catch (Exception ex) { MessageBox.Show(this, "Drucken fehlgeschlagen:\r\n" + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+        }
+
+        private void EmailMonthReport()
+        {
+            try
+            {
+                var table = (_grid.DataSource as DataView)?.Table;
+                if (table == null) return;
+                string employeeMail = null;
+                try { employeeMail = _personal?.EMail; } catch { }
+                var mailCfg = MailSettings.Load();
+                if (string.IsNullOrWhiteSpace(employeeMail)) { MessageBox.Show(this, "Keine Mitarbeiter-E-Mail hinterlegt.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+                if (mailCfg == null || !mailCfg.IsConfigured) { MessageBox.Show(this, "Maileinstellungen sind nicht konfiguriert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+                if (!ShowMailConsentDialog(employeeMail)) return;
+
+                // generate PDF of the current view and attach
+                string tmpPdf = Path.Combine(Path.GetTempPath(), $"Zeiterfassung_{_personal.PID}_{DateTime.Now.Ticks}.pdf");
+                bool pdfOk = false;
+                try
+                {
+                    string printer = string.Empty; try { printer = IniHelper.ReadValue("UI", "DocumentPrinter", AppSettings.IniPath) ?? string.Empty; } catch { }
+                    // attempt to create PDF
+                    var tryOk = PrintReportToPdf(table, tmpPdf, printer);
+                    // additionally verify that a non-empty file was produced
+                    try
+                    {
+                        if (File.Exists(tmpPdf))
+                        {
+                            var fi = new FileInfo(tmpPdf);
+                            pdfOk = tryOk && fi.Length > 0;
+                            // if PrintReportToPdf returned false but file exists and has content, accept it
+                            if (!pdfOk && fi.Length > 0) pdfOk = true;
+                        }
+                        else
+                        {
+                            pdfOk = false;
+                        }
+                    }
+                    catch { pdfOk = tryOk; }
+                }
+                catch { pdfOk = false; }
+
+                Cursor prev = Cursor.Current; Cursor.Current = Cursors.WaitCursor;
+                try
+                {
+                    if (!pdfOk || !File.Exists(tmpPdf))
+                    {
+                        // try to surface error details from PdfSharp (if available)
+                        try
+                        {
+                            var logPath = Path.ChangeExtension(tmpPdf, ".pdf.err.txt");
+                            if (File.Exists(logPath))
+                            {
+                                var txt = File.ReadAllText(logPath);
+                                // limit length
+                                var show = txt.Length > 2000 ? txt.Substring(0, 2000) + "\r\n... (truncated)" : txt;
+                                MessageBox.Show(this, "PDF-Erzeugung fehlgeschlagen. Details:\r\n\r\n" + show + "\r\n\r\n(ganzer Log: " + logPath + ")\r\nE-Mail wurde nicht gesendet.", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                            else
+                            {
+                                MessageBox.Show(this, "PDF-Erzeugung fehlgeschlagen (keine Logdatei gefunden). E-Mail wurde nicht gesendet.\r\nPfad: " + tmpPdf, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        }
+                        catch
+                        {
+                            MessageBox.Show(this, "PDF-Erzeugung fehlgeschlagen. E-Mail wurde nicht gesendet.", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                        try { File.Delete(tmpPdf); } catch { }
+                        return;
+                    }
+
+                    using (var msg = new System.Net.Mail.MailMessage())
+                    {
+                        var from = new System.Net.Mail.MailAddress(mailCfg.FromAddress, mailCfg.FromDisplayName);
+                        msg.From = from;
+                        msg.To.Add(new System.Net.Mail.MailAddress(employeeMail));
+                        msg.Subject = "Zeiterfassung - Bericht";
+                        msg.Body = "Anbei die angeforderte Zeiterfassung als Anhang.";
+                        msg.IsBodyHtml = false;
+                        var att = new System.Net.Mail.Attachment(tmpPdf);
+                        msg.Attachments.Add(att);
+
+                        using (var client = new System.Net.Mail.SmtpClient(mailCfg.SmtpHost, mailCfg.SmtpPort))
+                        {
+                            client.EnableSsl = mailCfg.EnableSsl;
+                            if (!string.IsNullOrWhiteSpace(mailCfg.Username)) client.Credentials = new System.Net.NetworkCredential(mailCfg.Username, mailCfg.Password);
+                            else client.UseDefaultCredentials = true;
+                            client.Send(msg);
+                        }
+                    }
+                    MessageBox.Show(this, "E-Mail wurde gesendet.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, "E-Mail Versand fehlgeschlagen:\r\n" + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                finally { try { Cursor.Current = prev; } catch { } try { File.Delete(tmpPdf); } catch { } }
+            }
+            catch (Exception ex) { MessageBox.Show(this, "Unerwarteter Fehler:\r\n" + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+        }
+
+        private string GenerateReportText(DataTable table)
+        {
+            try
+            {
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine($"Zeiterfassung für: {_personal?.Vorname} {_personal?.Name}");
+                sb.AppendLine($"Zeitraum: {lblPeriod.Text}");
+                sb.AppendLine(new string('-', 80));
+                sb.AppendLine("Datum;Von;Bis;Dauer;Typ;Zusatz");
+                foreach (DataRow row in table.Rows)
+                {
+                    if (row.Table.Columns.Contains("Datum") && row["Datum"] == DBNull.Value) continue;
+                    string d = ""; try { if (row["Datum"] != DBNull.Value) d = ((DateTime)row["Datum"]).ToString("dd.MM.yyyy"); } catch { }
+                    string zv = (row.Table.Columns.Contains("ZeitVon") && row["ZeitVon"] != DBNull.Value) ? row["ZeitVon"].ToString() : "";
+                    string zb = (row.Table.Columns.Contains("ZeitBis") && row["ZeitBis"] != DBNull.Value) ? row["ZeitBis"].ToString() : "";
+                    string dauer = (row.Table.Columns.Contains("Dauer") && row["Dauer"] != DBNull.Value) ? row["Dauer"].ToString() : "";
+                    string typ = (row.Table.Columns.Contains("TypText") && row["TypText"] != DBNull.Value) ? row["TypText"].ToString() : "";
+                    // consider numeric typ
+                    try { if (string.IsNullOrWhiteSpace(typ) && row.Table.Columns.Contains("Typ") && row["Typ"] != DBNull.Value) typ = row["Typ"].ToString(); } catch { }
+                    string zus = (row.Table.Columns.Contains("Zusatz") && row["Zusatz"] != DBNull.Value) ? row["Zusatz"].ToString() : "";
+                    sb.AppendLine($"{d};{zv};{zb};{dauer};{typ};{zus}");
+                }
+                sb.AppendLine(new string('-', 80));
+                return sb.ToString();
+            }
+            catch { return string.Empty; }
+        }
+
+        private void PrintText(string text, string printerName)
+        {
+            try
+            {
+                var pd = new PrintDocument();
+                if (!string.IsNullOrWhiteSpace(printerName)) pd.PrinterSettings.PrinterName = printerName;
+                pd.DocumentName = "Zeiterfassung";
+                var lines = text?.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
+                int lineIndex = 0;
+                pd.PrintPage += (s, e) =>
+                {
+                    try
+                    {
+                        int left = e.MarginBounds.Left; int top = e.MarginBounds.Top;
+                        var font = new Font("Segoe UI", 10);
+                        float lineHeight = font.GetHeight(e.Graphics) + 2;
+                        while (lineIndex < lines.Length)
+                        {
+                            var toPrint = lines[lineIndex];
+                            e.Graphics.DrawString(toPrint, font, Brushes.Black, new RectangleF(left, top, e.MarginBounds.Width, lineHeight));
+                            top += (int)lineHeight;
+                            lineIndex++;
+                            if (top + lineHeight > e.MarginBounds.Bottom) break;
+                        }
+                        e.HasMorePages = lineIndex < lines.Length;
+                    }
+                    catch { e.HasMorePages = false; }
+                };
+                pd.EndPrint += (s, e) => { try { /* cleanup if needed */ } catch { } };
+                pd.Print();
+            }
+            catch (Exception ex) { MessageBox.Show(this, "Druckfehler:\r\n" + ex.Message, "Drucken", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+        }
+
+        private bool ShowMailConsentDialog(string email)
+        {
+            try
+            {
+                var dlg = new Form { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.CenterParent, Width = 720, Height = 380, BackColor = Color.White };
+                try { dlg.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, dlg.Width, dlg.Height, 16, 16)); } catch { }
+                var header = new Panel { Dock = DockStyle.Top, Height = 60 };
+                header.Paint += (s, e) => { using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(header.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f)) { e.Graphics.FillRectangle(brush, header.ClientRectangle); } };
+                dlg.Controls.Add(header);
+                var title = new Label { Text = "Dokument per E-Mail", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold), ForeColor = Color.White, Dock = DockStyle.Fill, Padding = new Padding(16, 0, 0, 0), BackColor = Color.Transparent };
+                header.Controls.Add(title);
+                // Read optional top offset from INI for easier tweaking so text isn't hidden under header
+                int topOffset = 0;
+                try { var raw = IniHelper.ReadValue("UI", "MailConsentBodyTopOffset", AppSettings.IniPath); int v; if (!string.IsNullOrWhiteSpace(raw) && int.TryParse(raw, out v)) topOffset = Math.Max(0, Math.Min(400, v)); } catch { }
+                var body = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(20, 20 + topOffset, 20, 20) };
+                dlg.Controls.Add(body);
+                var lblMail = new Label { Text = "Empfänger: " + email, AutoSize = true, Font = new Font("Segoe UI", 12.5F), Dock = DockStyle.Top, Padding = new Padding(0, 0, 0, 10) };
+                body.Controls.Add(lblMail);
+                var info = new Label { Text = "Hinweis: Der Versand per E-Mail kann Datenschutzrisiken bergen (Weiterleitung, ungesicherte Postfächer). Ich bin einverstanden, dass mir das Dokument an die oben angezeigte Adresse zugesendet wird.", AutoSize = true, MaximumSize = new Size(640, 0), Font = new Font("Segoe UI", 11.5F), Dock = DockStyle.Top, Padding = new Padding(0, 0, 0, 10) };
+                body.Controls.Add(info);
+                var panelButtons = new Panel { Dock = DockStyle.Bottom, Height = 96, BackColor = Color.White };
+                dlg.Controls.Add(panelButtons);
+                var btnOk = new Button { Text = "Senden", Width = 180, Height = 56, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(76, 175, 80), ForeColor = Color.White, Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold), TabStop = false };
+                btnOk.FlatAppearance.BorderSize = 0; btnOk.Click += (s, e) => { dlg.Tag = true; dlg.Close(); };
+                var btnCancel = new Button { Text = "Abbrechen", Width = 180, Height = 56, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold), TabStop = false };
+                btnCancel.FlatAppearance.BorderSize = 0; btnCancel.Click += (s, e) => { dlg.Tag = false; dlg.Close(); };
+                panelButtons.Resize += (s, e) => { int spacing = 20; int total = btnOk.Width + btnCancel.Width + spacing; int startX = (panelButtons.ClientSize.Width - total) / 2; int y = (panelButtons.ClientSize.Height - btnOk.Height) / 2; btnOk.Location = new Point(Math.Max(10, startX), y); btnCancel.Location = new Point(btnOk.Right + spacing, y); };
+                panelButtons.Controls.Add(btnOk); panelButtons.Controls.Add(btnCancel);
+                bool result = false; try { dlg.ShowDialog(this); } catch { dlg.ShowDialog(); } try { result = (dlg.Tag is bool b) ? b : false; } catch { result = false; } try { dlg.Dispose(); } catch { }
+                return result;
+            }
+            catch { return false; }
+        }
+
+        private string GenerateReportHtml(DataTable table)
+        {
+            try
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine("<!DOCTYPE html><html lang=\"de\"><head><meta charset=\"utf-8\"/><style>body{font-family:Segoe UI,Arial,sans-serif;color:#222;}table{border-collapse:collapse;width:100%;}th,td{border:1px solid #ccc;padding:6px;text-align:left;}th{background:#f0f4f8}</style></head><body>");
+                sb.AppendLine($"<h2>Zeiterfassung für: {_personal?.Vorname} {_personal?.Name}</h2>");
+                sb.AppendLine($"<div>{lblPeriod.Text}</div>");
+                sb.AppendLine("<table>");
+                sb.AppendLine("<tr><th>Tag</th><th>Datum</th><th>Von</th><th>Bis</th><th>Dauer</th><th>Typ</th><th>Fahrzeug</th></tr>");
+                foreach (DataRow row in table.Rows)
+                {
+                    if (row.Table.Columns.Contains("Datum") && row["Datum"] == DBNull.Value) continue;
+                    string wt = row.Table.Columns.Contains("Wt") && row["Wt"] != DBNull.Value ? row["Wt"].ToString() : "";
+                    string d = ""; try { if (row["Datum"] != DBNull.Value) d = ((DateTime)row["Datum"]).ToString("dd.MM.yy"); } catch { }
+                    string zv = row.Table.Columns.Contains("ZeitVon") && row["ZeitVon"] != DBNull.Value ? row["ZeitVon"].ToString() : "";
+                    string zb = row.Table.Columns.Contains("ZeitBis") && row["ZeitBis"] != DBNull.Value ? row["ZeitBis"].ToString() : "";
+                    string dauer = row.Table.Columns.Contains("Dauer") && row["Dauer"] != DBNull.Value ? row["Dauer"].ToString() : "";
+                    string typ = row.Table.Columns.Contains("TypText") && row["TypText"] != DBNull.Value ? row["TypText"].ToString() : (row.Table.Columns.Contains("Typ") && row["Typ"] != DBNull.Value ? row["Typ"].ToString() : "");
+                    string zus = row.Table.Columns.Contains("Zusatz") && row["Zusatz"] != DBNull.Value ? row["Zusatz"].ToString() : "";
+                    sb.AppendLine($"<tr><td>{HtmlEscape(wt)}</td><td>{HtmlEscape(d)}</td><td>{HtmlEscape(zv)}</td><td>{HtmlEscape(zb)}</td><td>{HtmlEscape(dauer)}</td><td>{HtmlEscape(typ)}</td><td>{HtmlEscape(zus)}</td></tr>");
+                }
+                sb.AppendLine("</table>");
+                sb.AppendLine("</body></html>");
+                return sb.ToString();
+            }
+            catch { return string.Empty; }
+        }
+
+        private string HtmlEscape(string s)
+        {
+            return (s ?? string.Empty).Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
+        }
+
+        private bool PrintReportToPdf(DataTable table, string pdfPath, string printerName)
+        {
+            try
+            {
+                var text = GenerateReportText(table) ?? string.Empty;
+                var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+                var doc = new PdfDocument();
+                try { if (GlobalFontSettings.FontResolver == null) GlobalFontSettings.FontResolver = new PdfFontResolver(); } catch { }
+                doc.Info.Title = "Zeiterfassung";
+
+                // choose a font family that exists on the host system; prefer Segoe UI/Arial/Tahoma/Verdana
+                string[] preferred = new[] { "Segoe UI", "Arial", "Tahoma", "Verdana", "Times New Roman", "Helvetica" };
+                string fontFamily = null;
+                try
+                {
+                    var installed = System.Drawing.FontFamily.Families.Select(f => f.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    foreach (var p in preferred)
+                    {
+                        if (installed.Contains(p)) { fontFamily = p; break; }
+                    }
+                    if (string.IsNullOrWhiteSpace(fontFamily)) fontFamily = installed.FirstOrDefault() ?? "Arial";
+                }
+                catch { fontFamily = "Arial"; }
+                const double margin = 40.0;
+
+                XGraphics gfx = null;
+                XFont font = null;
+                XFont headerFont = null;
+                double y = 0;
+                double lineHeight = 0;
+
+                Action StartNewPage = () =>
+                {
+                    var page = doc.AddPage();
+                    page.Size = PdfSharp.PageSize.A4;
+                    gfx = XGraphics.FromPdfPage(page);
+                    // create XFont using a system-installed family determined above
+                    headerFont = new XFont(fontFamily, 14);
+                    font = new XFont(fontFamily, 10);
+                    lineHeight = font.GetHeight() + 4;
+                    y = margin;
+                    // header
+                    gfx.DrawString($"Zeiterfassung für: {_personal?.Vorname} {_personal?.Name}", headerFont, XBrushes.Black, new XRect(margin, y, page.Width - margin * 2, lineHeight), XStringFormats.TopLeft);
+                    y += lineHeight + 6;
+                    gfx.DrawString(lblPeriod.Text, font, XBrushes.Black, new XRect(margin, y, page.Width - margin * 2, lineHeight), XStringFormats.TopLeft);
+                    y += lineHeight + 8;
+                };
+
+                StartNewPage();
+
+                foreach (var line in lines)
+                {
+                    if (y + lineHeight > gfx.PageSize.Height - margin)
+                    {
+                        StartNewPage();
+                    }
+                    gfx.DrawString(line, font, XBrushes.Black, new XRect(margin, y, gfx.PageSize.Width - margin * 2, lineHeight), XStringFormats.TopLeft);
+                    y += lineHeight;
+                }
+
+                try { var dir = Path.GetDirectoryName(pdfPath); if (!string.IsNullOrWhiteSpace(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir); } catch { }
+                doc.Save(pdfPath);
+                doc.Close();
+
+                // Verify file exists and has content
+                try
+                {
+                    var fi = new FileInfo(pdfPath);
+                    return fi.Exists && fi.Length > 0;
+                }
+                catch
+                {
+                    return File.Exists(pdfPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    var logPath = Path.ChangeExtension(pdfPath, ".pdf.err.txt");
+                    File.WriteAllText(logPath, ex.ToString());
+                }
+                catch { }
+                return false;
+            }
         }
     }
 }
