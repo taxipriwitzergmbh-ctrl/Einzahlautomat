@@ -342,9 +342,8 @@ namespace Geldautomat
                         string typText;
                         switch (typ)
                         {
-                            case 0: typText = "Arbeit"; break;
-                            case 1: typText = "Pause"; break;
-                            case 2: typText = "Pause (Abw.)"; break;
+                            case 1: typText = "Arbeit"; break;
+                            case 106: typText = "Pause"; break;
                             default: typText = string.Empty; break;
                         }
                         row["TypText"] = typText;

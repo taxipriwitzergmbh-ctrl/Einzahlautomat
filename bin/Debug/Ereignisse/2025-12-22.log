@@ -1,0 +1,189 @@
+﻿2025-12-22 06:16:00.919 | [Coin2] INI SmartCoin/2: Typ='V1', ComPort='', SSPAddress='16'
+2025-12-22 06:16:00.944 | [Coin2] Connect() auf Gerät 2 initiiert.
+2025-12-22 06:16:00.949 | [Coin2] Watchdog gestartet
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-22 06:16:00.951 | Programmstart
+2025-12-22 06:16:01.062 | NV200/2 verbunden auf COM5
+2025-12-22 06:16:01.794 | Login-Form angezeigt
+2025-12-22 06:16:04.773 | NFC-Login erkannt: Token='1234', PID=1
+2025-12-22 06:16:04.847 | Login OK: Manuel Priwitzer (PID=1), Schicht 122012, Admin=False, Personalguthaben: 0,00 €
+2025-12-22 06:16:04.847 | __________________________________________________________________________
+2025-12-22 06:16:04.854 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 0,00 €
+-- NV200/2 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=2,10€=5,20€=7,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 200,00 €
+Summe Gesamt: 200,00 €
+2025-12-22 06:16:04.855 | Baseline gesetzt: 200,00 € (Anmeldung Manuel Priwitzer)
+2025-12-22 06:16:08.286 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:16:09.009 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:16:09.827 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:16:14.249 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:16:14.995 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:16:15.822 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:16:20.250 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:16:21.008 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:16:21.843 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:16:26.291 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:16:27.041 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:16:27.861 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:16:32.291 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:16:33.052 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:16:33.868 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:16:38.329 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:16:39.089 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:16:39.914 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:16:42.303 | [Coin2] Durch Konfiguration deaktiviert (Watchdog/Reconnect gestoppt)
+2025-12-22 06:16:42.303 | Verzögerter Shutdown gestartet – Geräte werden geschlossen...
+2025-12-22 06:16:43.158 | CoinManager heruntergefahren
+2025-12-22 06:16:43.159 | Coin2Manager heruntergefahren
+2025-12-22 06:16:43.820 | [INFO] Port geschlossen
+2025-12-22 06:16:43.820 | Geräte getrennt – Warte 5 Sekunden vor Prozessende...
+2025-12-22 06:16:48.837 | Beenden jetzt.
+
+
+
+
+
+------------------------------------- END --------------------------------------
+2025-12-22 06:16:48.840 | Logger Shutdown gestartet: DelayedShutdown
+2025-12-22 06:29:42.069 | [Coin2] INI SmartCoin/2: Typ='V1', ComPort='', SSPAddress='16'
+2025-12-22 06:29:42.120 | [Coin2] Connect() auf Gerät 2 initiiert.
+2025-12-22 06:29:42.123 | [Coin2] Watchdog gestartet
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-22 06:29:42.126 | Programmstart
+2025-12-22 06:29:42.226 | NV200/2 verbunden auf COM5
+2025-12-22 06:29:42.735 | Login-Form angezeigt
+2025-12-22 06:29:45.125 | NFC-Login erkannt: Token='1234', PID=1
+2025-12-22 06:29:45.160 | Login OK: Manuel Priwitzer (PID=1), Schicht 122012, Admin=False, Personalguthaben: 0,00 €
+2025-12-22 06:29:45.160 | __________________________________________________________________________
+2025-12-22 06:29:45.166 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 0,00 €
+-- NV200/2 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=2,10€=5,20€=7,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 200,00 €
+Summe Gesamt: 200,00 €
+2025-12-22 06:29:45.166 | Baseline gesetzt: 200,00 € (Anmeldung Manuel Priwitzer)
+2025-12-22 06:29:49.426 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:29:50.180 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:29:51.006 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:29:55.463 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:29:56.206 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:29:57.025 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:30:01.475 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:30:02.233 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:30:03.058 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:30:07.517 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:30:08.273 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:30:09.091 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:30:13.545 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:30:14.299 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:30:15.129 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:30:16.500 | [Coin2] Durch Konfiguration deaktiviert (Watchdog/Reconnect gestoppt)
+2025-12-22 06:30:16.500 | Verzögerter Shutdown gestartet – Geräte werden geschlossen...
+2025-12-22 06:30:17.144 | CoinManager heruntergefahren
+2025-12-22 06:30:17.145 | Coin2Manager heruntergefahren
+2025-12-22 06:30:17.784 | [INFO] Port geschlossen
+2025-12-22 06:30:17.784 | Geräte getrennt – Warte 5 Sekunden vor Prozessende...
+2025-12-22 06:30:22.803 | Beenden jetzt.
+
+
+
+
+
+------------------------------------- END --------------------------------------
+2025-12-22 06:30:22.806 | Logger Shutdown gestartet: DelayedShutdown
+2025-12-22 06:39:13.173 | [Coin2] INI SmartCoin/2: Typ='V1', ComPort='', SSPAddress='16'
+2025-12-22 06:39:13.196 | [Coin2] Connect() auf Gerät 2 initiiert.
+2025-12-22 06:39:13.198 | [Coin2] Watchdog gestartet
+
+
+
+
+
+------------------------------------ START -------------------------------------
+2025-12-22 06:39:13.200 | Programmstart
+2025-12-22 06:39:13.338 | NV200/2 verbunden auf COM5
+2025-12-22 06:39:13.828 | Login-Form angezeigt
+2025-12-22 06:39:14.387 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:39:15.149 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:39:15.976 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:39:16.535 | NFC-Login erkannt: Token='1234', PID=1
+2025-12-22 06:39:16.562 | Login OK: Manuel Priwitzer (PID=1), Schicht 122012, Admin=False, Personalguthaben: 0,00 €
+2025-12-22 06:39:16.562 | __________________________________________________________________________
+2025-12-22 06:39:16.568 | Bestand (kombiniert) |
+-- NV200/1 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Summe NV200/1: 0,00 €
+-- NV200/2 --
+Coins: 1c=?,2c=?,5c=?,10c=?,20c=?,50c=?,1€=?,2€=?
+Payout: 5€=0,10€=0,20€=0,50€=0,100€=0,200€=0,500€=0
+Cashbox: 5€=2,10€=5,20€=7,50€=0,100€=0,200€=0,500€=0
+Summe NV200/2: 200,00 €
+Summe Gesamt: 200,00 €
+2025-12-22 06:39:16.569 | Baseline gesetzt: 200,00 € (Anmeldung Manuel Priwitzer)
+2025-12-22 06:39:20.373 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:39:21.137 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:39:21.957 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:39:26.415 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:39:27.175 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:39:27.990 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:39:32.460 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:39:33.210 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:39:34.034 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:39:38.495 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:39:39.251 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:39:40.082 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:39:44.525 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:39:45.280 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:39:46.110 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:39:50.568 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:39:51.326 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:39:52.154 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:39:56.600 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:39:57.364 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:39:58.189 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:40:02.647 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:40:03.411 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:40:04.236 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:40:08.689 | [Coin2] Auto-Reconnect: HardDisconnect
+2025-12-22 06:40:09.440 | [Coin2] Auto-Reconnect: Connect
+2025-12-22 06:40:10.267 | [Coin2] Auto-Reconnect: Enable
+2025-12-22 06:40:36.262 | [Coin2] Durch Konfiguration deaktiviert (Watchdog/Reconnect gestoppt)
+2025-12-22 06:40:36.262 | Verzögerter Shutdown gestartet – Geräte werden geschlossen...
+2025-12-22 06:40:36.667 | CoinManager heruntergefahren
+2025-12-22 06:40:36.668 | Coin2Manager heruntergefahren
+2025-12-22 06:40:37.321 | [INFO] Port geschlossen
+2025-12-22 06:40:37.321 | Geräte getrennt – Warte 5 Sekunden vor Prozessende...
+2025-12-22 06:40:42.341 | Beenden jetzt.
+
+
+
+
+
+------------------------------------- END --------------------------------------
+2025-12-22 06:40:42.344 | Logger Shutdown gestartet: DelayedShutdown
