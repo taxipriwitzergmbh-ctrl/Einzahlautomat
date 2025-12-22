@@ -733,3 +733,241 @@
 2025-12-22 07:08:49.750 | Status: Getrennt
 2025-12-22 07:08:49.763 | HardDisconnect done
 2025-12-22 07:08:49.880 | Status: konfig deaktiviert
+2025-12-22 07:12:41.721 | Open SSPComPort (COM4) failed
+2025-12-22 07:12:41.721 | Status: Verbinde...
+2025-12-22 07:12:41.728 | Status: Port nicht verfügbar
+2025-12-22 07:12:41.733 | Thread gestartet
+2025-12-22 07:12:42.750 | Open SSPComPort (COM4) failed
+2025-12-22 07:12:43.805 | Open SSPComPort (COM4) failed
+2025-12-22 07:12:44.829 | Open SSPComPort (COM4) failed
+2025-12-22 07:12:45.528 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:12:45.853 | Open SSPComPort (COM4) failed
+2025-12-22 07:12:46.272 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:12:46.280 | REQ Level 1 ct [plain]
+2025-12-22 07:12:46.288 | REQ Level 2 ct [plain]
+2025-12-22 07:12:46.297 | REQ Level 5 ct [plain]
+2025-12-22 07:12:46.304 | REQ Level 10 ct [plain]
+2025-12-22 07:12:46.311 | REQ Level 20 ct [plain]
+2025-12-22 07:12:46.317 | REQ Level 50 ct [plain]
+2025-12-22 07:12:46.324 | REQ Level 100 ct [plain]
+2025-12-22 07:12:46.330 | REQ Level 200 ct [plain]
+2025-12-22 07:12:46.882 | Open SSPComPort (COM4) failed
+2025-12-22 07:12:47.897 | Open SSPComPort (COM4) failed
+2025-12-22 07:12:48.630 | HardDisconnect init
+2025-12-22 07:12:48.919 | Status: Getrennt
+2025-12-22 07:12:48.931 | HardDisconnect done
+2025-12-22 07:12:49.765 | Status: Verbinde...
+2025-12-22 07:12:49.774 | Open SSPComPort (COM4) failed
+2025-12-22 07:12:49.785 | Status: Port nicht verfügbar
+2025-12-22 07:12:49.777 | Thread gestartet
+2025-12-22 07:12:50.621 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:12:50.810 | Open SSPComPort (COM4) failed
+2025-12-22 07:12:51.837 | Open SSPComPort (COM4) failed
+2025-12-22 07:12:52.856 | Open SSPComPort (COM4) failed
+2025-12-22 07:12:53.885 | Open SSPComPort (COM4) failed
+2025-12-22 07:12:54.649 | HardDisconnect init
+2025-12-22 07:12:54.925 | Status: Getrennt
+2025-12-22 07:12:54.937 | HardDisconnect done
+2025-12-22 07:12:55.782 | Status: Verbinde...
+2025-12-22 07:12:55.793 | Open SSPComPort (COM4) failed
+2025-12-22 07:12:55.796 | Thread gestartet
+2025-12-22 07:12:55.805 | Status: Port nicht verfügbar
+2025-12-22 07:12:56.631 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:12:56.836 | Open SSPComPort (COM4) failed
+2025-12-22 07:12:57.861 | Open SSPComPort (COM4) failed
+2025-12-22 07:12:58.885 | Open SSPComPort (COM4) failed
+2025-12-22 07:12:59.913 | Open SSPComPort (COM4) failed
+2025-12-22 07:13:00.675 | HardDisconnect init
+2025-12-22 07:13:00.950 | Status: Getrennt
+2025-12-22 07:13:00.962 | HardDisconnect done
+2025-12-22 07:13:01.802 | Status: Verbinde...
+2025-12-22 07:13:01.816 | Open SSPComPort (COM4) failed
+2025-12-22 07:13:01.819 | Thread gestartet
+2025-12-22 07:13:01.829 | Status: Port nicht verfügbar
+2025-12-22 07:13:02.670 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:13:02.858 | Open SSPComPort (COM4) failed
+2025-12-22 07:13:03.888 | Open SSPComPort (COM4) failed
+2025-12-22 07:13:04.921 | Open SSPComPort (COM4) failed
+2025-12-22 07:13:05.952 | Open SSPComPort (COM4) failed
+2025-12-22 07:13:06.711 | HardDisconnect init
+2025-12-22 07:13:06.982 | Status: Getrennt
+2025-12-22 07:13:06.991 | HardDisconnect done
+2025-12-22 07:13:07.840 | Status: Verbinde...
+2025-12-22 07:13:07.849 | Open SSPComPort (COM4) failed
+2025-12-22 07:13:07.852 | Thread gestartet
+2025-12-22 07:13:07.862 | Status: Port nicht verfügbar
+2025-12-22 07:13:08.608 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:13:08.619 | HardDisconnect init
+2025-12-22 07:13:08.897 | Status: Getrennt
+2025-12-22 07:13:08.909 | HardDisconnect done
+2025-12-22 07:13:09.026 | Status: konfig deaktiviert
+2025-12-22 07:20:31.217 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:31.218 | Status: Verbinde...
+2025-12-22 07:20:31.236 | Status: Port nicht verfügbar
+2025-12-22 07:20:31.241 | Thread gestartet
+2025-12-22 07:20:32.264 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:33.289 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:34.313 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:35.339 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:36.358 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:37.380 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:38.107 | HardDisconnect init
+2025-12-22 07:20:38.412 | Status: Getrennt
+2025-12-22 07:20:38.423 | HardDisconnect done
+2025-12-22 07:20:39.268 | Status: Verbinde...
+2025-12-22 07:20:39.282 | Thread gestartet
+2025-12-22 07:20:39.277 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:39.306 | Status: Port nicht verfügbar
+2025-12-22 07:20:40.109 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:20:40.339 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:41.370 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:42.404 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:43.206 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:20:43.429 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:44.026 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:20:44.036 | REQ Level 1 ct [plain]
+2025-12-22 07:20:44.045 | REQ Level 2 ct [plain]
+2025-12-22 07:20:44.054 | REQ Level 5 ct [plain]
+2025-12-22 07:20:44.061 | REQ Level 10 ct [plain]
+2025-12-22 07:20:44.068 | REQ Level 20 ct [plain]
+2025-12-22 07:20:44.075 | REQ Level 50 ct [plain]
+2025-12-22 07:20:44.081 | REQ Level 100 ct [plain]
+2025-12-22 07:20:44.088 | REQ Level 200 ct [plain]
+2025-12-22 07:20:44.175 | HardDisconnect init
+2025-12-22 07:20:44.470 | Status: Getrennt
+2025-12-22 07:20:44.480 | HardDisconnect done
+2025-12-22 07:20:45.321 | Status: Verbinde...
+2025-12-22 07:20:45.331 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:45.335 | Thread gestartet
+2025-12-22 07:20:45.345 | Status: Port nicht verfügbar
+2025-12-22 07:20:46.161 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:20:46.370 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:47.388 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:48.421 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:49.451 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:50.197 | HardDisconnect init
+2025-12-22 07:20:50.486 | Status: Getrennt
+2025-12-22 07:20:50.499 | HardDisconnect done
+2025-12-22 07:20:51.344 | Status: Verbinde...
+2025-12-22 07:20:51.356 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:51.359 | Thread gestartet
+2025-12-22 07:20:51.371 | Status: Port nicht verfügbar
+2025-12-22 07:20:52.195 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:20:52.413 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:53.438 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:54.465 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:55.495 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:56.227 | HardDisconnect init
+2025-12-22 07:20:56.533 | Status: Getrennt
+2025-12-22 07:20:56.545 | HardDisconnect done
+2025-12-22 07:20:57.387 | Status: Verbinde...
+2025-12-22 07:20:57.400 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:57.403 | Thread gestartet
+2025-12-22 07:20:57.412 | Status: Port nicht verfügbar
+2025-12-22 07:20:58.224 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:20:58.441 | Open SSPComPort (COM4) failed
+2025-12-22 07:20:59.472 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:00.499 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:01.528 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:02.247 | HardDisconnect init
+2025-12-22 07:21:02.554 | Status: Getrennt
+2025-12-22 07:21:02.565 | HardDisconnect done
+2025-12-22 07:21:03.409 | Status: Verbinde...
+2025-12-22 07:21:03.422 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:03.425 | Thread gestartet
+2025-12-22 07:21:03.435 | Status: Port nicht verfügbar
+2025-12-22 07:21:04.261 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:21:04.466 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:05.498 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:06.525 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:07.554 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:08.271 | HardDisconnect init
+2025-12-22 07:21:08.591 | Status: Getrennt
+2025-12-22 07:21:08.604 | HardDisconnect done
+2025-12-22 07:21:09.440 | Status: Verbinde...
+2025-12-22 07:21:09.451 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:09.454 | Thread gestartet
+2025-12-22 07:21:09.465 | Status: Port nicht verfügbar
+2025-12-22 07:21:10.293 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:21:10.497 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:11.532 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:12.560 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:13.589 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:14.294 | HardDisconnect init
+2025-12-22 07:21:14.617 | Status: Getrennt
+2025-12-22 07:21:14.630 | HardDisconnect done
+2025-12-22 07:21:15.475 | Status: Verbinde...
+2025-12-22 07:21:15.483 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:15.487 | Thread gestartet
+2025-12-22 07:21:15.498 | Status: Port nicht verfügbar
+2025-12-22 07:21:16.325 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:21:16.530 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:17.553 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:18.578 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:19.608 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:20.323 | HardDisconnect init
+2025-12-22 07:21:20.643 | Status: Getrennt
+2025-12-22 07:21:20.656 | HardDisconnect done
+2025-12-22 07:21:21.494 | Status: Verbinde...
+2025-12-22 07:21:21.507 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:21.510 | Thread gestartet
+2025-12-22 07:21:21.520 | Status: Port nicht verfügbar
+2025-12-22 07:21:22.347 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:21:22.550 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:23.578 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:24.603 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:25.640 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:26.342 | HardDisconnect init
+2025-12-22 07:21:26.677 | Status: Getrennt
+2025-12-22 07:21:26.688 | HardDisconnect done
+2025-12-22 07:21:27.530 | Status: Verbinde...
+2025-12-22 07:21:27.540 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:27.542 | Thread gestartet
+2025-12-22 07:21:27.551 | Status: Port nicht verfügbar
+2025-12-22 07:21:28.374 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:21:28.577 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:29.605 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:30.633 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:31.657 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:32.687 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:33.713 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:34.739 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:35.763 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:36.794 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:37.817 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:38.841 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:39.874 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:40.902 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:41.932 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:42.955 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:43.985 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:45.016 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:46.045 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:47.075 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:48.102 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:49.133 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:50.157 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:51.186 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:52.214 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:53.238 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:54.263 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:55.292 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:56.327 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:57.356 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:58.390 | Open SSPComPort (COM4) failed
+2025-12-22 07:21:59.419 | Open SSPComPort (COM4) failed
+2025-12-22 07:22:00.451 | Open SSPComPort (COM4) failed
+2025-12-22 07:22:01.482 | Open SSPComPort (COM4) failed
+2025-12-22 07:22:02.513 | Open SSPComPort (COM4) failed
+2025-12-22 07:22:03.544 | Open SSPComPort (COM4) failed
+2025-12-22 07:22:04.575 | Open SSPComPort (COM4) failed
+2025-12-22 07:22:05.604 | Open SSPComPort (COM4) failed
+2025-12-22 07:22:06.631 | Open SSPComPort (COM4) failed
+2025-12-22 07:22:07.668 | Open SSPComPort (COM4) failed
+2025-12-22 07:22:08.701 | Open SSPComPort (COM4) failed
+2025-12-22 07:22:09.730 | Open SSPComPort (COM4) failed
+2025-12-22 07:22:09.967 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 07:22:09.979 | HardDisconnect init
+2025-12-22 07:22:10.758 | Status: Getrennt
+2025-12-22 07:22:10.770 | HardDisconnect done
+2025-12-22 07:22:10.890 | Status: konfig deaktiviert

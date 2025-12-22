@@ -3,6 +3,7 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using System.Reflection;
 
 namespace Geldautomat
 {
@@ -42,6 +43,10 @@ namespace Geldautomat
             ClientSize = new Size(1280, 1024);
 
             _header = new Panel { Dock = DockStyle.Top, Height = 72 };
+            // enable double buffering on the panel to avoid rendering artifacts
+            try { typeof(Panel).GetProperty("DoubleBuffered", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_header, true, null); } catch { }
+            // provide a base BackColor so the gradient has a fallback (prevents small white artifacts)
+            _header.BackColor = Color.FromArgb(33, 150, 243);
             _header.Paint += (s, e) =>
             {
                 using (var br = new System.Drawing.Drawing2D.LinearGradientBrush(_header.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
@@ -52,6 +57,7 @@ namespace Geldautomat
             Controls.Add(_header);
 
             _title = new Label { Text = "Zeiterfassung", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(16, 0), Size = new Size(350, 72) };
+            _title.BackColor = Color.Transparent;
             _header.Controls.Add(_title);
 
             _btnClose = new Button { Text = "Schließen", AutoSize = false, Size = new Size(160, 48), BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Location = new Point(ClientSize.Width - 176, 12), Anchor = AnchorStyles.Top | AnchorStyles.Right };
@@ -80,10 +86,12 @@ namespace Geldautomat
             _header.Controls.Add(_btnHelp);
 
             _lblInfo = new Label { Text = $"Mitarbeiter: {_personal?.Vorname} {_personal?.Name}", AutoSize = false, Location = new Point(16, _header.Bottom + 10), Size = new Size(520, 32), Font = new Font("Segoe UI", 14F, FontStyle.Bold) };
+            _lblInfo.BackColor = Color.Transparent;
             Controls.Add(_lblInfo);
 
             // period label (month/year) to the right of employee label
             lblPeriod = new Label { Text = "", AutoSize = true, Location = new Point(16 + 540, _header.Bottom + 10), Font = new Font("Segoe UI", 14F, FontStyle.Regular) };
+            lblPeriod.BackColor = Color.Transparent;
             Controls.Add(lblPeriod);
 
             // Summary panel above the grid
@@ -94,7 +102,8 @@ namespace Geldautomat
             _summaryPanel.Controls.Add(lblSumArbeit);
             lblSumPause = new Label { Text = "Pause: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(180, 8), AutoSize = true };
             _summaryPanel.Controls.Add(lblSumPause);
-            lblSumShortPause = new Label { Text = "Kurzpause: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(340, 8), AutoSize = true };
+            // changed label text to "Pause <15 min" as requested
+            lblSumShortPause = new Label { Text = "Pause <15 min: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(340, 8), AutoSize = true };
             _summaryPanel.Controls.Add(lblSumShortPause);
             lblNetto = new Label { Text = "Nettoarbeitszeit: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(520, 8), AutoSize = true };
             _summaryPanel.Controls.Add(lblNetto);
@@ -309,6 +318,10 @@ namespace Geldautomat
                     string typText = string.Empty;
                     try { if (r.Cells["TypText"].Value != null && r.Cells["TypText"].Value != DBNull.Value) typText = r.Cells["TypText"].Value.ToString(); } catch { }
 
+                    // determine numeric typ code if present (11=Urlaub, 21=Krank)
+                    int typCode = -1;
+                    try { if (_grid.Columns.Contains("Typ") && r.Cells["Typ"].Value != null && r.Cells["Typ"].Value != DBNull.Value) int.TryParse(r.Cells["Typ"].Value.ToString(), out typCode); } catch { }
+
                     // compute duration in minutes: prefer ZeitVon/ZeitBis
                     int rowMinutes = 0;
                     try
@@ -346,6 +359,20 @@ namespace Geldautomat
                                 // regular pause: hide day label to group with the work row
                                 if (_grid.Columns.Contains("Wt")) r.Cells["Wt"].Value = string.Empty;
                             }
+                        }
+                    }
+                    catch { }
+
+                    // apply type-based coloring (Urlaub = typ 11 -> light yellow, Krank = typ 21 -> light red)
+                    try
+                    {
+                        if (typCode == 11)
+                        {
+                            bg = Color.FromArgb(255, 255, 250, 205); // light yellow
+                        }
+                        else if (typCode == 21)
+                        {
+                            bg = Color.FromArgb(255, 255, 200, 200); // light red
                         }
                     }
                     catch { }
@@ -392,18 +419,22 @@ namespace Geldautomat
                     string typText = string.Empty;
                     if (row.Table.Columns.Contains("TypText") && row["TypText"] != DBNull.Value) typText = row["TypText"].ToString().ToLowerInvariant();
 
+                    // also consider numeric type codes: 11 = Urlaub, 21 = Krank
+                    int typCode = -1;
+                    try { if (row.Table.Columns.Contains("Typ") && row["Typ"] != DBNull.Value) int.TryParse(row["Typ"].ToString(), out typCode); } catch { }
+
                     if (typText.Contains("arbeit")) totalArbeitMin += minutes;
                     else if (typText.Contains("pause"))
                     {
                         if (minutes > 0 && minutes < 15) totalNichtGewertetMin += minutes; else totalPauseMin += minutes;
                     }
-                    else if (typText.Contains("urlaub")) totalUrlaubMin += minutes;
-                    else if (typText.Contains("krank")) totalKrankMin += minutes;
+                    else if (typText.Contains("urlaub") || typCode == 11) totalUrlaubMin += minutes;
+                    else if (typText.Contains("krank") || typCode == 21) totalKrankMin += minutes;
                 }
 
                 lblSumArbeit.Text = $"Arbeitszeit: {totalArbeitMin/60}:{(totalArbeitMin%60).ToString("D2")}";
                 lblSumPause.Text = $"Pause: {totalPauseMin/60}:{(totalPauseMin%60).ToString("D2")}";
-                lblSumShortPause.Text = $"Nicht gewertete Pausen: {totalNichtGewertetMin/60}:{(totalNichtGewertetMin%60).ToString("D2")}";
+                lblSumShortPause.Text = $"Pause <15 min: {totalNichtGewertetMin/60}:{(totalNichtGewertetMin%60).ToString("D2")}";
                 int netto = totalArbeitMin - totalPauseMin; if (netto < 0) netto = 0;
                 lblNetto.Text = $"Nettoarbeitszeit: {netto/60}:{(netto%60).ToString("D2")}";
                 lblSumUrlaub.Text = $"Urlaub: {totalUrlaubMin/60}:{(totalUrlaubMin%60).ToString("D2")}";
