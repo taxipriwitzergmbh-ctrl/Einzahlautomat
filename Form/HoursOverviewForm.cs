@@ -259,48 +259,72 @@ namespace Geldautomat
             SetDisplayIndex("TypText", order++);
             SetDisplayIndex("Zusatz", order++);
 
-            _grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 251, 255);
+            // alternating row color
+            var altColor = Color.FromArgb(248, 251, 255);
+            _grid.AlternatingRowsDefaultCellStyle.BackColor = altColor;
 
-            // Sundays highlight
-            foreach (DataGridViewRow r in _grid.Rows)
+            // Hide internal columns early
+            HideCol("AutoID"); HideCol("PID"); HideCol("Typ"); HideCol("FID"); HideCol("Bemerkung"); HideCol("ZeitAnlage"); HideCol("UserAnlage"); HideCol("ZeitBearbeitet"); HideCol("UserBearbeitet"); HideCol("Kennzeichen");
+
+            // Per-row adjustments: short pause highlight, Sunday highlight and hide Wt for pauses
+            bool hasTypCol = _grid.Columns.Contains("Typ");
+            for (int i = 0; i < _grid.Rows.Count; i++)
             {
+                var r = _grid.Rows[i];
                 try
                 {
-                    var datumObj = r.Cells["Datum"].Value;
-                    DateTime d;
-                    if (datumObj != null && datumObj != DBNull.Value && DateTime.TryParse(datumObj.ToString(), out d))
+                    // base background: respect alternating rows
+                    Color bg = (i % 2 == 0) ? Color.White : altColor;
+
+                    // determine date
+                    DateTime d = DateTime.MinValue;
+                    try { var dobj = _grid.Columns.Contains("Datum") ? r.Cells["Datum"].Value : null; if (dobj != null && dobj != DBNull.Value) DateTime.TryParse(dobj.ToString(), out d); } catch { }
+
+                    // determine typ and times
+                    string typText = null;
+                    try { if (_grid.Columns.Contains("TypText") && r.Cells["TypText"].Value != null && r.Cells["TypText"].Value != DBNull.Value) typText = r.Cells["TypText"].Value.ToString(); else if (_grid.Columns.Contains("Typ") && r.Cells["Typ"].Value != null && r.Cells["Typ"].Value != DBNull.Value) typText = r.Cells["Typ"].Value.ToString(); } catch { }
+                    DateTime vonVal = DateTime.MinValue, bisVal = DateTime.MinValue;
+                    try { if (_grid.Columns.Contains("ZeitVon") && r.Cells["ZeitVon"].Value != null && r.Cells["ZeitVon"].Value != DBNull.Value) DateTime.TryParse(r.Cells["ZeitVon"].Value.ToString(), out vonVal); } catch { }
+                    try { if (_grid.Columns.Contains("ZeitBis") && r.Cells["ZeitBis"].Value != null && r.Cells["ZeitBis"].Value != DBNull.Value) DateTime.TryParse(r.Cells["ZeitBis"].Value.ToString(), out bisVal); } catch { }
+
+                    // short pause highlight (Typ==106 and duration <20min)
+                    try
                     {
-                        if (d.DayOfWeek == DayOfWeek.Sunday)
+                        int typ = 0;
+                        if (hasTypCol && _grid.Columns.Contains("Typ") && r.Cells["Typ"].Value != null && r.Cells["Typ"].Value != DBNull.Value)
+                            int.TryParse(r.Cells["Typ"].Value.ToString(), out typ);
+                        if (bisVal > vonVal)
                         {
-                            r.DefaultCellStyle.BackColor = Color.FromArgb(40, 255, 128, 128);
+                            var diff = bisVal - vonVal;
+                            if (typ == 106 && diff.TotalMinutes < 20)
+                            {
+                                bg = Color.FromArgb(235, 242, 255); // light blue
+                            }
                         }
                     }
-                }
-                catch { }
-            }
+                    catch { }
 
-            HideCol("AutoID"); // remove AutoID as requested
-            HideCol("PID");    // remove PID as requested
-            HideCol("Typ"); HideCol("FID"); HideCol("Bemerkung"); HideCol("ZeitAnlage"); HideCol("UserAnlage"); HideCol("ZeitBearbeitet"); HideCol("UserBearbeitet"); HideCol("Kennzeichen");
-
-            // Short pause highlight (Typ==106 and <20 min)
-            bool hasTypCol = _grid.Columns.Contains("Typ");
-            foreach (DataGridViewRow r in _grid.Rows)
-            {
-                try
-                {
-                    int typ = 0;
-                    if (hasTypCol && r.Cells["Typ"].Value != null && r.Cells["Typ"].Value != DBNull.Value)
-                        try { typ = Convert.ToInt32(r.Cells["Typ"].Value); } catch { typ = 0; }
-                    DateTime vonVal = DateTime.MinValue, bisVal = DateTime.MinValue;
-                    if (r.Cells["ZeitVon"].Value != null && r.Cells["ZeitVon"].Value != DBNull.Value) try { vonVal = Convert.ToDateTime(r.Cells["ZeitVon"].Value); } catch { }
-                    if (r.Cells["ZeitBis"].Value != null && r.Cells["ZeitBis"].Value != DBNull.Value) try { bisVal = Convert.ToDateTime(r.Cells["ZeitBis"].Value); } catch { }
-                    if (bisVal > vonVal)
+                    // Sunday highlight overrides other backgrounds
+                    try
                     {
-                        var diff = bisVal - vonVal;
-                        if (typ == 106 && diff.TotalMinutes < 20)
-                            r.DefaultCellStyle.BackColor = Color.FromArgb(235, 242, 255);
+                        if (d != DateTime.MinValue && d.DayOfWeek == DayOfWeek.Sunday)
+                        {
+                            bg = Color.FromArgb(255, 255, 220, 220); // subtle red
+                        }
                     }
+                    catch { }
+
+                    r.DefaultCellStyle.BackColor = bg;
+
+                    // hide Wt for Pause rows so pauses visually belong to previous Arbeit row
+                    try
+                    {
+                        if (!string.IsNullOrWhiteSpace(typText) && typText.ToLowerInvariant().Contains("pause"))
+                        {
+                            if (_grid.Columns.Contains("Wt")) r.Cells["Wt"].Value = string.Empty;
+                        }
+                    }
+                    catch { }
                 }
                 catch { }
             }
