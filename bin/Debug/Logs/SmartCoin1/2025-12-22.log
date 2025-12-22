@@ -2072,3 +2072,43 @@
 2025-12-22 13:05:34.246 | Status: Getrennt
 2025-12-22 13:05:34.255 | HardDisconnect done
 2025-12-22 13:05:34.375 | Status: getrennt
+2025-12-22 14:54:37.960 | Status: Verbinde...
+2025-12-22 14:54:37.971 | Thread gestartet
+2025-12-22 14:54:37.983 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:37.990 | Status: Port nicht verfügbar
+2025-12-22 14:54:39.054 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:40.120 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:41.149 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:42.170 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:42.607 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 14:54:43.187 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:43.306 | REQ Level 1 ct [plain]
+2025-12-22 14:54:43.315 | REQ Level 2 ct [plain]
+2025-12-22 14:54:43.323 | REQ Level 5 ct [plain]
+2025-12-22 14:54:43.330 | REQ Level 10 ct [plain]
+2025-12-22 14:54:43.338 | REQ Level 20 ct [plain]
+2025-12-22 14:54:43.344 | REQ Level 50 ct [plain]
+2025-12-22 14:54:43.350 | REQ Level 100 ct [plain]
+2025-12-22 14:54:43.357 | REQ Level 200 ct [plain]
+2025-12-22 14:54:43.364 | Enable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 14:54:44.203 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:45.217 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:46.246 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:47.265 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:48.300 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:49.322 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:50.345 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:51.372 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:52.389 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:53.412 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:54.433 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:55.451 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:56.469 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:57.498 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:58.516 | Open SSPComPort (COM3) failed
+2025-12-22 14:54:59.471 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 14:54:59.484 | Disable vorgemerkt (wird nach Handshake ausgeführt)
+2025-12-22 14:54:59.496 | HardDisconnect init
+2025-12-22 14:54:59.548 | Status: Getrennt
+2025-12-22 14:54:59.559 | HardDisconnect done
+2025-12-22 14:54:59.680 | Status: getrennt

@@ -196,24 +196,24 @@ namespace Geldautomat
             lblPeriod.BackColor = Color.Transparent;
             Controls.Add(lblPeriod);
 
-            // Summary panel above the grid
-            _summaryPanel = new Panel { Location = new Point(16, _lblInfo.Bottom + 8), Size = new Size(ClientSize.Width - 32, 72), BackColor = Color.FromArgb(248, 250, 255), BorderStyle = BorderStyle.FixedSingle };
+            // Summary panel directly under period: gray bar with sums listed, then table below
+            _summaryPanel = new Panel { Location = new Point(16, _lblInfo.Bottom + 8), Size = new Size(ClientSize.Width - 32, 96), BackColor = Color.FromArgb(240, 240, 240), BorderStyle = BorderStyle.None };
             Controls.Add(_summaryPanel);
 
-            lblSumArbeit = new Label { Text = "Arbeitszeit: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(8, 8), AutoSize = true };
+            lblSumArbeit = new Label { Text = "Arbeitszeit: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(12, 10), AutoSize = true, ForeColor = Color.FromArgb(33,37,41), BackColor = Color.Transparent };
             _summaryPanel.Controls.Add(lblSumArbeit);
-            lblSumPause = new Label { Text = "Pause: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(180, 8), AutoSize = true };
+            lblSumPause = new Label { Text = "Pause: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(240, 10), AutoSize = true, ForeColor = Color.FromArgb(33,37,41), BackColor = Color.Transparent };
             _summaryPanel.Controls.Add(lblSumPause);
             // changed label text to "Pause <15 min" as requested
-            lblSumShortPause = new Label { Text = "Pause <15 min: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(340, 8), AutoSize = true };
+            lblSumShortPause = new Label { Text = "Pause <15 min: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(420, 10), AutoSize = true, ForeColor = Color.FromArgb(33,37,41), BackColor = Color.Transparent };
             _summaryPanel.Controls.Add(lblSumShortPause);
-            lblNetto = new Label { Text = "Nettoarbeitszeit: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(520, 8), AutoSize = true };
+            lblNetto = new Label { Text = "Nettoarbeitszeit: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(640, 10), AutoSize = true, ForeColor = Color.FromArgb(33,37,41), BackColor = Color.Transparent };
             _summaryPanel.Controls.Add(lblNetto);
-            lblSumUrlaub = new Label { Text = "Urlaub: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(8, 36), AutoSize = true };
+            lblSumUrlaub = new Label { Text = "Urlaub: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(12, 44), AutoSize = true, ForeColor = Color.FromArgb(33,37,41), BackColor = Color.Transparent };
             _summaryPanel.Controls.Add(lblSumUrlaub);
-            lblSumKrank = new Label { Text = "Krankheit: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(180, 36), AutoSize = true };
+            lblSumKrank = new Label { Text = "Krankheit: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(240, 44), AutoSize = true, ForeColor = Color.FromArgb(33,37,41), BackColor = Color.Transparent };
             _summaryPanel.Controls.Add(lblSumKrank);
-            lblIstStunden = new Label { Text = "Ist-Stunden: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(760, 8), AutoSize = true };
+            lblIstStunden = new Label { Text = "Ist-Stunden: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(640, 44), AutoSize = true, ForeColor = Color.FromArgb(33,37,41), BackColor = Color.Transparent };
             _summaryPanel.Controls.Add(lblIstStunden);
 
             _grid = new DataGridView
@@ -599,7 +599,7 @@ namespace Geldautomat
             else c.DefaultCellStyle.Format = showTimeOnly ? "HH:mm" : "dd.MM.yy HH:mm";
         }
 
-        private void HideCol(string name)
+        private void HideCol(String name)
         {
             if (_grid.Columns.Contains(name)) _grid.Columns[name].Visible = false;
         }
@@ -853,11 +853,6 @@ namespace Geldautomat
             catch { return string.Empty; }
         }
 
-        private string HtmlEscape(string s)
-        {
-            return (s ?? string.Empty).Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
-        }
-
         private bool PrintReportToPdf(DataTable table, string pdfPath, string printerName)
         {
             try
@@ -890,24 +885,25 @@ namespace Geldautomat
                 gfx.DrawString(lblPeriod.Text, headerFont, XBrushes.Black, new XRect(margin, y, contentWidth, 22), XStringFormats.TopLeft);
                 y += 22 + 12;
 
-                // draw separator
-                gfx.DrawLine(XPens.Gray, margin, y, pageWidth - margin, y);
-                y += 8;
-
-                // table columns (points)
-                double colTag = 50;
-                double colDatum = 90;
-                double colVon = 70;
-                double colBis = 70;
-                double colDauer = 60;
-                double colTyp = 140;
-                double colZusatz = contentWidth - (colTag + colDatum + colVon + colBis + colDauer + colTyp);
-                if (colZusatz < 80) { colZusatz = 80; colTyp = Math.Max(60, contentWidth - (colTag + colDatum + colVon + colBis + colDauer + colZusatz)); }
+                // draw separator (gray bar under month/year)
+                gfx.DrawRectangle(new XSolidBrush(XColor.FromArgb(240, 240, 240)), margin, y, contentWidth, 28);
+                y += 28 + 6;
 
                 // header row
                 double rowHeight = Math.Max(18, font.GetHeight() + 6);
                 var penBorder = new XPen(XColors.LightGray, 0.5);
                 double x = margin;
+
+                // define column widths (matching UI)
+                double colTag = 70;
+                double colDatum = 180;
+                double colVon = 110;
+                double colBis = 110;
+                double colDauer = 120;
+                double colTyp = 160;
+                double colZusatz = contentWidth - (colTag + colDatum + colVon + colBis + colDauer + colTyp);
+                if (colZusatz < 80) { colZusatz = 80; colTyp = Math.Max(60, contentWidth - (colTag + colDatum + colVon + colBis + colDauer + colZusatz)); }
+
                 // draw header background
                 gfx.DrawRectangle(XBrushes.WhiteSmoke, x, y, contentWidth, rowHeight);
 
@@ -967,25 +963,22 @@ namespace Geldautomat
                     catch { }
                 }
 
-                // draw summary band (yellow)
+                // draw summary lines (no yellow band) under the gray bar
                 try
                 {
                     int netto = totalArbeitMin - totalPauseMin; if (netto < 0) netto = 0;
                     int istMin = netto + totalUrlaubMin + totalKrankMin;
-                    double bandHeight = 48;
-                    var bandBrush = new XSolidBrush(XColor.FromArgb(255, 255, 250, 205));
-                    gfx.DrawRectangle(bandBrush, margin, y, contentWidth, bandHeight);
-                    double sx = margin + 8; double sy = y + 8;
+                    double sx = margin + 8; double sy = y;
                     var boldFont = new XFont(font.FontFamily.Name, 11);
-                    gfx.DrawString($"Arbeitszeit: {totalArbeitMin/60}:{(totalArbeitMin%60).ToString("D2")}", boldFont, XBrushes.Black, new XRect(sx, sy, 220, 16), XStringFormats.TopLeft);
-                    gfx.DrawString($"Pause: {totalPauseMin/60}:{(totalPauseMin%60).ToString("D2")}", boldFont, XBrushes.Black, new XRect(sx + 220, sy, 180, 16), XStringFormats.TopLeft);
-                    gfx.DrawString($"Pause <15 min: {totalNichtGewertetMin/60}:{(totalNichtGewertetMin%60).ToString("D2")}", boldFont, XBrushes.Black, new XRect(sx + 400, sy, 220, 16), XStringFormats.TopLeft);
-                    gfx.DrawString($"Nettoarbeitszeit: {netto/60}:{(netto%60).ToString("D2")}", boldFont, XBrushes.Black, new XRect(sx + 640, sy, 220, 16), XStringFormats.TopLeft);
-                    gfx.DrawString($"Ist-Stunden: {istMin/60}:{(istMin%60).ToString("D2")}", boldFont, XBrushes.Black, new XRect(sx + 900, sy, 220, 16), XStringFormats.TopLeft);
+                    gfx.DrawString($"Arbeitszeit: {totalArbeitMin/60}:{(totalArbeitMin%60).ToString("D2")}", boldFont, XBrushes.Black, new XRect(sx, sy, 240, 16), XStringFormats.TopLeft);
+                    gfx.DrawString($"Pause: {totalPauseMin/60}:{(totalPauseMin%60).ToString("D2")}", boldFont, XBrushes.Black, new XRect(sx + 260, sy, 200, 16), XStringFormats.TopLeft);
+                    gfx.DrawString($"Pause <15 min: {totalNichtGewertetMin/60}:{(totalNichtGewertetMin%60).ToString("D2")}", boldFont, XBrushes.Black, new XRect(sx + 460, sy, 240, 16), XStringFormats.TopLeft);
+                    gfx.DrawString($"Nettoarbeitszeit: {netto/60}:{(netto%60).ToString("D2")}", boldFont, XBrushes.Black, new XRect(sx + 740, sy, 260, 16), XStringFormats.TopLeft);
                     // second line
-                    gfx.DrawString($"Urlaub: {totalUrlaubMin/60}:{(totalUrlaubMin%60).ToString("D2")}", font, XBrushes.Black, new XRect(sx, sy + 20, 220, 16), XStringFormats.TopLeft);
-                    gfx.DrawString($"Krankheit: {totalKrankMin/60}:{(totalKrankMin%60).ToString("D2")}", font, XBrushes.Black, new XRect(sx + 220, sy + 20, 220, 16), XStringFormats.TopLeft);
-                    y += bandHeight + 8;
+                    gfx.DrawString($"Urlaub: {totalUrlaubMin/60}:{(totalUrlaubMin%60).ToString("D2")}", font, XBrushes.Black, new XRect(sx, sy + 18, 220, 16), XStringFormats.TopLeft);
+                    gfx.DrawString($"Krankheit: {totalKrankMin/60}:{(totalKrankMin%60).ToString("D2")}", font, XBrushes.Black, new XRect(sx + 260, sy + 18, 220, 16), XStringFormats.TopLeft);
+                    gfx.DrawString($"Ist-Stunden: {istMin/60}:{(istMin%60).ToString("D2")}", font, XBrushes.Black, new XRect(sx + 740, sy + 18, 220, 16), XStringFormats.TopLeft);
+                    y += 36;
                 }
                 catch { }
 
@@ -1083,8 +1076,8 @@ namespace Geldautomat
                             y += 30 + 6;
                             gfx.DrawString(lblPeriod.Text, headerFont, XBrushes.Black, new XRect(margin, y, contentWidth, 22), XStringFormats.TopLeft);
                             y += 22 + 12;
-                            gfx.DrawLine(XPens.Gray, margin, y, pageWidth - margin, y);
-                            y += 8;
+                            gfx.DrawRectangle(new XSolidBrush(XColor.FromArgb(240,240,240)), margin, y, contentWidth, 28);
+                            y += 28 + 6;
 
                             // header row
                             x = margin;
@@ -1146,6 +1139,11 @@ namespace Geldautomat
                 try { var logPath = Path.ChangeExtension(pdfPath, ".pdf.err.txt"); File.WriteAllText(logPath, ex.ToString()); } catch { }
                 return false;
             }
+        }
+
+        private string HtmlEscape(string s)
+        {
+            return (s ?? string.Empty).Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
         }
     }
 }
