@@ -1,0 +1,12 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Target Name="MovePdfSharpAssemblies" AfterTargets="Build">
+    <ItemGroup>
+      <!-- include binaries, symbols and XML docs -->
+      <PdfSharpToMove Include="$(TargetDir)PdfSharp*.dll" />
+      <PdfSharpToMove Include="$(TargetDir)PdfSharp*.pdb" />
+      <PdfSharpToMove Include="$(TargetDir)PdfSharp*.xml" />
+    </ItemGroup>
+    <MakeDir Directories="$(TargetDir)PDFsharp" Condition=" '@(PdfSharpToMove)' != '' " />
+    <Move SourceFiles="@(PdfSharpToMove)" DestinationFolder="$(TargetDir)PDFsharp" Condition=" '@(PdfSharpToMove)' != '' " />
+  </Target>
+</Project>
