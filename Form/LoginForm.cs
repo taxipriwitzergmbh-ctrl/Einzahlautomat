@@ -570,7 +570,7 @@ namespace Geldautomat
                 // Direkt als Admin anmelden – kein Wartungsmodus
                 CloseMaintenanceUnlockPanel();
                 _maintPwdBuffer = string.Empty;
-                PerformAdminLogin("Admin-Backdoor (numerisch) erkannt – öffne Abrechnung als Admin.");
+                PerformAdminLogin("Admin-Backdoor (numerisch) erkannt – öffne Abrechnung als Admin.", false);
             }
             else
             {
@@ -701,7 +701,7 @@ namespace Geldautomat
             }
             if (IsAdminBackdoor(token))
             {
-                PerformAdminLogin("Admin-Backdoor Login erkannt – öffne Abrechnung als Admin.");
+                PerformAdminLogin("Admin-Backdoor Login erkannt – öffne Abrechnung als Admin.", true);
                 return;
             }
 
@@ -943,10 +943,15 @@ namespace Geldautomat
         private bool IsAdminBackdoor(string input) => string.Equals(input, AdminBackdoorToken, StringComparison.OrdinalIgnoreCase);
         private bool IsIgnoredNfcToken(string input) => string.Equals(input, "640001000100", StringComparison.OrdinalIgnoreCase);
 
-        private void PerformAdminLogin(string logMessage)
+        private void PerformAdminLogin(string logMessage, bool developerAdmin)
         {
             try { AppLogger.Log(logMessage); } catch { }
-            var personal = new PersonalInfo { PID = 0, Vorname = "Admin", Name = "Backdoor" };
+            try
+            {
+                IniHelper.WriteValue("Session", "DeveloperAdmin", developerAdmin ? "1" : "0", AppSettings.IniPath);
+            }
+            catch { }
+            var personal = new PersonalInfo { PID = 0, Vorname = "Admin", Name = developerAdmin ? "Developer" : "Backdoor" };
             var details = new ShiftDetails { PersId = 0, PersName = "Admin", SchichtId = 0, StartZeit = DateTime.Now };
             try { _ssp.MitarbeiterEingeloggt = true; } catch { }
             OpenAbrechnung(personal, details, true);

@@ -17,9 +17,9 @@ namespace Geldautomat
         private TextBox txtPassword;
         private Button btnSave;
         private Button btnCancel;
-        private Button btnTest; // NEU: Verbindung prüfen
-        private TextBox txtAlertEmail; // NEU: Ziel für Fehlermeldungen
-        private CheckBox chkDisableSupport; // NEU: Support-Mail unterbinden
+        private Button btnTest;
+        private TextBox txtAlertEmail;
+        private CheckBox chkDisableSupport; // nur sichtbar bei Entwickler-Admin (mpr)
 
         public MailSettingsForm()
         {
@@ -48,10 +48,10 @@ namespace Geldautomat
             var lblPass = new Label { Text = "Passwort", Location = new Point(20, 260), Size = new Size(200, 24) };
             txtPassword = new TextBox { Location = new Point(230, 260), Size = new Size(260, 24), UseSystemPasswordChar = true };
 
-            var lblAlert = new Label { Text = "Fehler-Mail an", Location = new Point(20, 300), Size = new Size(200, 24) }; // NEU
-            txtAlertEmail = new TextBox { Location = new Point(230, 300), Size = new Size(260, 24) }; // NEU
+            var lblAlert = new Label { Text = "Fehler-Mail an", Location = new Point(20, 300), Size = new Size(200, 24) };
+            txtAlertEmail = new TextBox { Location = new Point(230, 300), Size = new Size(260, 24) };
 
-            chkDisableSupport = new CheckBox { Text = "Mailversand an Support unterbinden", Location = new Point(20, 330), Size = new Size(470, 24) }; // NEU
+            chkDisableSupport = new CheckBox { Text = "Mailversand an Support unterbinden", Location = new Point(20, 330), Size = new Size(470, 24) };
 
             btnTest = new Button { Text = "Verbindung prüfen", Location = new Point(20, 370), Size = new Size(180, 30) };
             btnSave = new Button { Text = "Speichern", Location = new Point(230, 370), Size = new Size(120, 30) };
@@ -64,6 +64,15 @@ namespace Geldautomat
             Controls.AddRange(new Control[] { lblFrom, txtFrom, lblDisplay, txtDisplayName, lblHost, txtHost, lblPort, nudPort, chkSsl, lblUser, txtUser, lblPass, txtPassword, lblAlert, txtAlertEmail, chkDisableSupport, btnTest, btnSave, btnCancel });
 
             LoadSettings();
+
+            // Sichtbarkeit nur bei Entwickler-Admin (mpr)
+            try
+            {
+                var flag = IniHelper.ReadValue("Session", "DeveloperAdmin", AppSettings.IniPath);
+                bool isDev = !string.IsNullOrWhiteSpace(flag) && (flag == "1" || flag.Equals("true", StringComparison.OrdinalIgnoreCase));
+                chkDisableSupport.Visible = isDev;
+            }
+            catch { chkDisableSupport.Visible = false; }
         }
 
         private void LoadSettings()
@@ -98,7 +107,9 @@ namespace Geldautomat
                 IniHelper.WriteValue("Mail", "Username", txtUser.Text?.Trim() ?? string.Empty, ini);
                 IniHelper.WriteValue("Mail", "Password", txtPassword.Text ?? string.Empty, ini);
                 IniHelper.WriteValue("Mail", "AlertEmail", txtAlertEmail.Text?.Trim() ?? string.Empty, ini);
-                IniHelper.WriteValue("Mail", "DisableSupportMail", chkDisableSupport.Checked ? "True" : "False", ini);
+                // nur persistieren, wenn Checkbox sichtbar (Entwickler-Admin), sonst unverändert lassen
+                if (chkDisableSupport.Visible)
+                    IniHelper.WriteValue("Mail", "DisableSupportMail", chkDisableSupport.Checked ? "True" : "False", ini);
                 MessageBox.Show(this, "Maileinstellungen gespeichert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Close();
             }
