@@ -9,6 +9,14 @@ namespace Geldautomat
 {
     public static class EmailReceiptService
     {
+        private static readonly DateTime AppStartupUtc = DateTime.UtcNow; // Startup-Zeitpunkt für Suppression-Fenster
+        private static readonly TimeSpan StartupSuppressWindow = TimeSpan.FromMinutes(2);
+
+        private static bool IsInStartupSuppressWindow()
+        {
+            try { return (DateTime.UtcNow - AppStartupUtc) < StartupSuppressWindow; } catch { return false; }
+        }
+
         public static void SendReceiptToEmployee(PersonalInfo personal, string subjectPrefix, string body)
         {
             if (personal == null) throw new ArgumentNullException(nameof(personal));
@@ -71,6 +79,13 @@ namespace Geldautomat
             var cfg = MailSettings.Load();
             if (!cfg.IsConfigured) return;
 
+            // Startup-Suppress: während der ersten 2 Minuten keine Fehlermails senden
+            if (IsInStartupSuppressWindow())
+            {
+                try { AppLogger.Log("Support-Fehlermail unterdrückt: Startphase (<2min)"); } catch { }
+                return;
+            }
+
             string device = (AppSettings.AutomatenName ?? string.Empty).Trim();
             string subject = string.IsNullOrWhiteSpace(device) ? $"Automat – Meldung {subjectSuffix}" : $"{device} – Meldung {subjectSuffix}";
             string body = (message ?? string.Empty);
@@ -91,6 +106,12 @@ namespace Geldautomat
             if (!cfg.DisableSupportMail)
             {
                 try { mail.To.Add("support@priwitzer-dienstleistungsgmbh.de"); toLog.Add("support@priwitzer-dienstleistungsgmbh.de"); } catch { }
+            }
+
+            if (mail.To.Count == 0)
+            {
+                try { AppLogger.Log("Support-Fehlermail übersprungen: keine Empfänger konfiguriert"); } catch { }
+                return;
             }
 
             mail.Subject = subject;
