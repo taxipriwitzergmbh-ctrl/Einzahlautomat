@@ -67,6 +67,7 @@ namespace Geldautomat
         private DateTime _lastSupportAlertUtc = DateTime.MinValue; // NEU: E-Mail Debounce
         private string _lastSupportAlertCodes = string.Empty;      // NEU: letzte Codes
         private static readonly TimeSpan SupportAlertMinInterval = TimeSpan.FromMinutes(5); // NEU: Mindestabstand
+        private bool _serviceFaultActive = false; // Merker: ob aktuell ein Fehlerzustand aktiv ist
 
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
@@ -645,9 +646,9 @@ namespace Geldautomat
                 // Kassendifferenz
                 try
                 {
-                    var diff = KassenSummary.Difference; if (diff.HasValue && diff.Value != 0m)
+                    var diff = KassenSummary.Difference;
+                    if (diff.HasValue && diff.Value != 0m)
                     {
-                        // Statt Betrag jetzt nur Kennung 'DIF'
                         codes.Add("DIF");
                     }
                 }
@@ -658,35 +659,48 @@ namespace Geldautomat
                 // SmartCoin Fehler
                 try { var sc1 = Coins.CoinManager.Instance as Coins.SmartCoinV1; if (IsSmartCoinFault(sc1)) codes.Add("SC1"); } catch { }
                 try { var sc2 = Coins.Coin2Manager.Instance as Coins.SmartCoinV1; if (IsSmartCoinFault(sc2)) codes.Add("SC2"); } catch { }
+
                 bool needService = codes.Count > 0;
+                string summary = string.Join(" ", codes.ToArray());
+
                 if (_lblService != null)
                 {
-                    if (needService)
-                    {
-                        _lblService.Text = "SERVICE: " + string.Join(" ", codes.ToArray());
-                    }
+                    if (needService) _lblService.Text = "SERVICE: " + summary;
                     _lblService.Visible = needService;
                 }
 
-                // NEU: Support-E-Mail auslösen
+                // Versand nur wenn LoginForm offen ist (diese Methode läuft nur in LoginForm) und nur beim ersten Auftreten,
+                // danach erst wieder wenn der Zustand zwischenzeitlich OK war.
                 if (needService)
                 {
-                    string summary = string.Join(" ", codes.ToArray());
                     var nowUtc = DateTime.UtcNow;
+                    bool firstOccurrence = !_serviceFaultActive; // bisher kein Fehler aktiv
                     bool codesChanged = !string.Equals(summary, _lastSupportAlertCodes, StringComparison.OrdinalIgnoreCase);
-                    bool intervalOk = (nowUtc - _lastSupportAlertUtc) >= SupportAlertMinInterval;
-                    if (codesChanged || intervalOk)
+
+                    if (firstOccurrence || codesChanged)
                     {
-                        _lastSupportAlertCodes = summary;
-                        _lastSupportAlertUtc = nowUtc;
-                        try
+                        // Debounce gegen zu häufige Wiederholungen bei identischem Zustand
+                        bool intervalOk = (nowUtc - _lastSupportAlertUtc) >= SupportAlertMinInterval;
+                        if (firstOccurrence || intervalOk || codesChanged)
                         {
-                            string device = (AppSettings.AutomatenName ?? string.Empty).Trim();
-                            string msg = "Gerät: " + device + "\r\nCodes: " + summary + "\r\nZeit: " + DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
-                            EmailReceiptService.SendSupportAlert(summary, msg);
+                            _serviceFaultActive = true;
+                            _lastSupportAlertCodes = summary;
+                            _lastSupportAlertUtc = nowUtc;
+                            try
+                            {
+                                string device = (AppSettings.AutomatenName ?? string.Empty).Trim();
+                                string msg = "Gerät: " + device + "\r\nCodes: " + summary + "\r\nZeit: " + DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
+                                EmailReceiptService.SendSupportAlert(summary, msg);
+                            }
+                            catch { }
                         }
-                        catch { }
                     }
+                }
+                else
+                {
+                    // Fehlerzustand beendet -> erneuter Versand erst bei nächstem Auftreten erlaubt
+                    _serviceFaultActive = false;
+                    _lastSupportAlertCodes = string.Empty;
                 }
             }
             catch { }
