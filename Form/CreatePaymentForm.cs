@@ -45,6 +45,7 @@ namespace Geldautomat
             FormBorderStyle = FormBorderStyle.None;
             DoubleBuffered = true;
             MaximizeBox = false;
+            TopMost = true;
 
             // Header
             headerPanel = new Panel
@@ -54,8 +55,6 @@ namespace Geldautomat
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             headerPanel.Paint += HeaderPanel_Paint;
-            headerPanel.MouseDown += HeaderPanel_MouseDown;
-            headerPanel.MouseMove += HeaderPanel_MouseMove;
             Controls.Add(headerPanel);
 
             lblTitle = new Label
@@ -337,6 +336,12 @@ namespace Geldautomat
                 }
                 catch { }
             };
+
+            // Fenster im Vordergrund halten, falls Fokus verloren geht
+            this.Deactivate += (s, e) =>
+            {
+                try { TopMost = true; Activate(); BringToFront(); } catch { }
+            };
         }
 
         private System.Collections.Generic.List<int> ParseAllowedManIds()
@@ -442,20 +447,6 @@ namespace Geldautomat
                        Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
             {
                 e.Graphics.FillRectangle(b, headerPanel.ClientRectangle);
-            }
-        }
-
-        private void HeaderPanel_MouseDown(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left) _mouseDownLocation = e.Location;
-        }
-
-        private void HeaderPanel_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left)
-            {
-                Left += e.X - _mouseDownLocation.X;
-                Top += e.Y - _mouseDownLocation.Y;
             }
         }
 

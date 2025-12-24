@@ -58,6 +58,18 @@ namespace Geldautomat
             _tip = new ToolTip();
             BuildModernLayout();
             LoadKassenAsync();
+
+            // Sicherstellen, dass das Fenster im Vordergrund bleibt
+            this.Deactivate += (s, e) =>
+            {
+                try
+                {
+                    TopMost = true;
+                    Activate();
+                    BringToFront();
+                }
+                catch { }
+            };
         }
 
         private void BuildModernLayout()
