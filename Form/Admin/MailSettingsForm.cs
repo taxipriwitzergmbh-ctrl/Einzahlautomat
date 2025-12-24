@@ -18,12 +18,13 @@ namespace Geldautomat
         private Button btnSave;
         private Button btnCancel;
         private Button btnTest; // NEU: Verbindung prüfen
+        private TextBox txtAlertEmail; // NEU: Ziel für Fehlermeldungen
 
         public MailSettingsForm()
         {
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(520, 360);
+            ClientSize = new Size(520, 400);
             Text = "Maileinstellungen";
 
             var lblFrom = new Label { Text = "Absender-Adresse", Location = new Point(20, 20), Size = new Size(200, 24) };
@@ -46,15 +47,18 @@ namespace Geldautomat
             var lblPass = new Label { Text = "Passwort", Location = new Point(20, 260), Size = new Size(200, 24) };
             txtPassword = new TextBox { Location = new Point(230, 260), Size = new Size(260, 24), UseSystemPasswordChar = true };
 
-            btnTest = new Button { Text = "Verbindung prüfen", Location = new Point(20, 300), Size = new Size(180, 30) };
-            btnSave = new Button { Text = "Speichern", Location = new Point(230, 300), Size = new Size(120, 30) };
-            btnCancel = new Button { Text = "Abbrechen", Location = new Point(370, 300), Size = new Size(120, 30) };
+            var lblAlert = new Label { Text = "Fehler-Mail an", Location = new Point(20, 300), Size = new Size(200, 24) }; // NEU
+            txtAlertEmail = new TextBox { Location = new Point(230, 300), Size = new Size(260, 24) }; // NEU
+
+            btnTest = new Button { Text = "Verbindung prüfen", Location = new Point(20, 340), Size = new Size(180, 30) };
+            btnSave = new Button { Text = "Speichern", Location = new Point(230, 340), Size = new Size(120, 30) };
+            btnCancel = new Button { Text = "Abbrechen", Location = new Point(370, 340), Size = new Size(120, 30) };
 
             btnTest.Click += (s, e) => TestConnection();
             btnSave.Click += (s, e) => SaveSettings();
             btnCancel.Click += (s, e) => Close();
 
-            Controls.AddRange(new Control[] { lblFrom, txtFrom, lblDisplay, txtDisplayName, lblHost, txtHost, lblPort, nudPort, chkSsl, lblUser, txtUser, lblPass, txtPassword, btnTest, btnSave, btnCancel });
+            Controls.AddRange(new Control[] { lblFrom, txtFrom, lblDisplay, txtDisplayName, lblHost, txtHost, lblPort, nudPort, chkSsl, lblUser, txtUser, lblPass, txtPassword, lblAlert, txtAlertEmail, btnTest, btnSave, btnCancel });
 
             LoadSettings();
         }
@@ -63,14 +67,15 @@ namespace Geldautomat
         {
             try
             {
-                var s = MailSettings.Load();
-                txtFrom.Text = s.FromAddress ?? string.Empty;
-                txtDisplayName.Text = s.FromDisplayName ?? string.Empty;
-                txtHost.Text = s.SmtpHost ?? string.Empty;
-                nudPort.Value = s.SmtpPort > 0 ? s.SmtpPort : 587;
-                chkSsl.Checked = s.EnableSsl;
-                txtUser.Text = s.Username ?? string.Empty;
-                txtPassword.Text = s.Password ?? string.Empty;
+                string ini = AppSettings.IniPath;
+                txtFrom.Text = IniHelper.ReadValue("Mail", "FromAddress", ini) ?? string.Empty;
+                txtDisplayName.Text = IniHelper.ReadValue("Mail", "FromDisplayName", ini) ?? string.Empty;
+                txtHost.Text = IniHelper.ReadValue("Mail", "SmtpHost", ini) ?? string.Empty;
+                int port; txtAlertEmail.Text = IniHelper.ReadValue("Mail", "AlertEmail", ini) ?? string.Empty;
+                if (int.TryParse(IniHelper.ReadValue("Mail", "SmtpPort", ini), out port)) nudPort.Value = Math.Max(1, Math.Min(65535, port)); else nudPort.Value = 587;
+                bool ssl; chkSsl.Checked = bool.TryParse(IniHelper.ReadValue("Mail", "EnableSsl", ini), out ssl) ? ssl : true;
+                txtUser.Text = IniHelper.ReadValue("Mail", "Username", ini) ?? string.Empty;
+                txtPassword.Text = IniHelper.ReadValue("Mail", "Password", ini) ?? string.Empty;
             }
             catch { }
         }
@@ -79,17 +84,15 @@ namespace Geldautomat
         {
             try
             {
-                var s = new MailSettings
-                {
-                    FromAddress = txtFrom.Text?.Trim(),
-                    FromDisplayName = txtDisplayName.Text?.Trim(),
-                    SmtpHost = txtHost.Text?.Trim(),
-                    SmtpPort = (int)nudPort.Value,
-                    EnableSsl = chkSsl.Checked,
-                    Username = txtUser.Text?.Trim(),
-                    Password = txtPassword.Text
-                };
-                s.Save();
+                string ini = AppSettings.IniPath;
+                IniHelper.WriteValue("Mail", "FromAddress", txtFrom.Text?.Trim() ?? string.Empty, ini);
+                IniHelper.WriteValue("Mail", "FromDisplayName", txtDisplayName.Text?.Trim() ?? string.Empty, ini);
+                IniHelper.WriteValue("Mail", "SmtpHost", txtHost.Text?.Trim() ?? string.Empty, ini);
+                IniHelper.WriteValue("Mail", "SmtpPort", ((int)nudPort.Value).ToString(), ini);
+                IniHelper.WriteValue("Mail", "EnableSsl", chkSsl.Checked ? "True" : "False", ini);
+                IniHelper.WriteValue("Mail", "Username", txtUser.Text?.Trim() ?? string.Empty, ini);
+                IniHelper.WriteValue("Mail", "Password", txtPassword.Text ?? string.Empty, ini);
+                IniHelper.WriteValue("Mail", "AlertEmail", txtAlertEmail.Text?.Trim() ?? string.Empty, ini);
                 MessageBox.Show(this, "Maileinstellungen gespeichert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Close();
             }
@@ -121,7 +124,6 @@ namespace Geldautomat
                     return;
                 }
 
-                // Hinweis: Es wird eine Testmail gesendet
                 var ask = MessageBox.Show(this, "Es wird eine Testmail an die Absender-Adresse gesendet. Fortfahren?", "Verbindung prüfen", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                 if (ask != DialogResult.Yes) return;
 
@@ -135,7 +137,8 @@ namespace Geldautomat
                     using (var msg = new MailMessage(from, to))
                     {
                         msg.Subject = "Testverbindung Geldautomat";
-                        msg.Body = "Dies ist eine Testnachricht zur Überprüfung der SMTP-Verbindung.\r\nZeit: " + DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
+                        string device = (AppSettings.AutomatenName ?? string.Empty).Trim();
+                        msg.Body = "Dies ist eine Testnachricht zur Überprüfung der SMTP-Verbindung.\r\nGerät: " + device + "\r\nZeit: " + DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
                         using (var client = new SmtpClient(host, port))
                         {
                             client.EnableSsl = ssl;

@@ -64,6 +64,9 @@ namespace Geldautomat
         // SERVICE Indikator
         private Label _lblService; // SERVICE Hinweis
         private Timer _serviceTimer; // zyklische Prüfung
+        private DateTime _lastSupportAlertUtc = DateTime.MinValue; // NEU: E-Mail Debounce
+        private string _lastSupportAlertCodes = string.Empty;      // NEU: letzte Codes
+        private static readonly TimeSpan SupportAlertMinInterval = TimeSpan.FromMinutes(5); // NEU: Mindestabstand
 
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
@@ -663,6 +666,27 @@ namespace Geldautomat
                         _lblService.Text = "SERVICE: " + string.Join(" ", codes.ToArray());
                     }
                     _lblService.Visible = needService;
+                }
+
+                // NEU: Support-E-Mail auslösen
+                if (needService)
+                {
+                    string summary = string.Join(" ", codes.ToArray());
+                    var nowUtc = DateTime.UtcNow;
+                    bool codesChanged = !string.Equals(summary, _lastSupportAlertCodes, StringComparison.OrdinalIgnoreCase);
+                    bool intervalOk = (nowUtc - _lastSupportAlertUtc) >= SupportAlertMinInterval;
+                    if (codesChanged || intervalOk)
+                    {
+                        _lastSupportAlertCodes = summary;
+                        _lastSupportAlertUtc = nowUtc;
+                        try
+                        {
+                            string device = (AppSettings.AutomatenName ?? string.Empty).Trim();
+                            string msg = "Gerät: " + device + "\r\nCodes: " + summary + "\r\nZeit: " + DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
+                            EmailReceiptService.SendSupportAlert(summary, msg);
+                        }
+                        catch { }
+                    }
                 }
             }
             catch { }
