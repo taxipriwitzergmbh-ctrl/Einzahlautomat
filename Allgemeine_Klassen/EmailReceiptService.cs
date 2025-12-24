@@ -28,16 +28,10 @@ namespace Geldautomat
             using (var client = new SmtpClient(cfg.SmtpHost, cfg.SmtpPort))
             {
                 client.EnableSsl = cfg.EnableSsl;
-                if (!string.IsNullOrWhiteSpace(cfg.Username))
-                {
-                    client.Credentials = new NetworkCredential(cfg.Username, cfg.Password);
-                }
-                else
-                {
-                    client.UseDefaultCredentials = true;
-                }
+                if (!string.IsNullOrWhiteSpace(cfg.Username)) client.Credentials = new NetworkCredential(cfg.Username, cfg.Password); else client.UseDefaultCredentials = true;
                 client.Send(mail);
             }
+            try { AppLogger.Log($"Mail gesendet: Quittung an '{email}' (Betreff='{mail.Subject}')"); } catch { }
         }
 
         public static void SendReceiptToEmployeeWithAttachment(PersonalInfo personal, string subjectPrefix, string body, string attachmentPlainText, string attachmentFileName = "Quittung.html")
@@ -65,16 +59,10 @@ namespace Geldautomat
             using (var client = new SmtpClient(cfg.SmtpHost, cfg.SmtpPort))
             {
                 client.EnableSsl = cfg.EnableSsl;
-                if (!string.IsNullOrWhiteSpace(cfg.Username))
-                {
-                    client.Credentials = new NetworkCredential(cfg.Username, cfg.Password);
-                }
-                else
-                {
-                    client.UseDefaultCredentials = true;
-                }
+                if (!string.IsNullOrWhiteSpace(cfg.Username)) client.Credentials = new NetworkCredential(cfg.Username, cfg.Password); else client.UseDefaultCredentials = true;
                 client.Send(mail);
             }
+            try { AppLogger.Log($"Mail gesendet: Quittung+Anhang ('{attachmentFileName}') an '{email}' (Betreff='{mail.Subject}')"); } catch { }
         }
 
         // Support-/Fehler-Meldung versenden – mehrere Empfänger via ';' erlaubt, plus immer Support
@@ -90,19 +78,17 @@ namespace Geldautomat
             var mail = new MailMessage();
             mail.From = new MailAddress(cfg.FromAddress, cfg.FromDisplayName);
 
+            var toLog = new System.Collections.Generic.List<string>();
             // Ziel 1: konfigurierte Fehler-Mails (mehrere via ';')
             if (!string.IsNullOrWhiteSpace(cfg.AlertEmail))
             {
                 var recipients = cfg.AlertEmail.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
                                                .Select(s => s.Trim())
                                                .Where(s => !string.IsNullOrWhiteSpace(s));
-                foreach (var r in recipients)
-                {
-                    try { mail.To.Add(r); } catch { }
-                }
+                foreach (var r in recipients) { try { mail.To.Add(r); toLog.Add(r); } catch { } }
             }
             // Ziel 2: immer Support
-            try { mail.To.Add("support@priwitzer-dienstleistungsgmbh.de"); } catch { }
+            try { mail.To.Add("support@priwitzer-dienstleistungsgmbh.de"); toLog.Add("support@priwitzer-dienstleistungsgmbh.de"); } catch { }
 
             mail.Subject = subject;
             mail.Body = body;
@@ -111,16 +97,10 @@ namespace Geldautomat
             using (var client = new SmtpClient(cfg.SmtpHost, cfg.SmtpPort))
             {
                 client.EnableSsl = cfg.EnableSsl;
-                if (!string.IsNullOrWhiteSpace(cfg.Username))
-                {
-                    client.Credentials = new NetworkCredential(cfg.Username, cfg.Password);
-                }
-                else
-                {
-                    client.UseDefaultCredentials = true;
-                }
+                if (!string.IsNullOrWhiteSpace(cfg.Username)) client.Credentials = new NetworkCredential(cfg.Username, cfg.Password); else client.UseDefaultCredentials = true;
                 client.Send(mail);
             }
+            try { AppLogger.Log($"Support-Fehlermail gesendet (Betreff='{subject}') an: " + string.Join(", ", toLog.ToArray())); } catch { }
         }
 
         private static string BuildSimpleReceiptHtml(string content)
@@ -172,10 +152,8 @@ namespace Geldautomat
                 s.FromAddress = IniHelper.ReadValue(IniSection, "FromAddress", AppSettings.IniPath);
                 s.FromDisplayName = IniHelper.ReadValue(IniSection, "FromDisplayName", AppSettings.IniPath);
                 s.SmtpHost = IniHelper.ReadValue(IniSection, "SmtpHost", AppSettings.IniPath);
-                int port;
-                if (int.TryParse(IniHelper.ReadValue(IniSection, "SmtpPort", AppSettings.IniPath), out port)) s.SmtpPort = port;
-                bool ssl;
-                if (bool.TryParse(IniHelper.ReadValue(IniSection, "EnableSsl", AppSettings.IniPath), out ssl)) s.EnableSsl = ssl;
+                int port; if (int.TryParse(IniHelper.ReadValue(IniSection, "SmtpPort", AppSettings.IniPath), out port)) s.SmtpPort = port;
+                bool ssl; if (bool.TryParse(IniHelper.ReadValue(IniSection, "EnableSsl", AppSettings.IniPath), out ssl)) s.EnableSsl = ssl;
                 s.Username = IniHelper.ReadValue(IniSection, "Username", AppSettings.IniPath);
                 s.Password = IniHelper.ReadValue(IniSection, "Password", AppSettings.IniPath);
                 s.AlertEmail = IniHelper.ReadValue(IniSection, "AlertEmail", AppSettings.IniPath);

@@ -49,6 +49,7 @@ namespace Geldautomat
         {
             _personal = personal ?? throw new ArgumentNullException(nameof(personal));
             BuildUi();
+            try { AppLogger.Log($"Dokumente geöffnet: PID={_personal.PID}, Name={_personal.Vorname} {_personal.Name}"); } catch { }
             _root = GetDocStoreRoot();
             if (string.IsNullOrWhiteSpace(_root))
             {
@@ -445,23 +446,14 @@ namespace Geldautomat
             try
             {
                 if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
-                // Preconditions: user email and mail settings
                 string employeeMail = null;
                 try { employeeMail = _personal?.EMail; } catch { employeeMail = null; }
                 var mailCfg = MailSettings.Load();
-                if (string.IsNullOrWhiteSpace(employeeMail))
-                {
-                    MessageBox.Show(this, "Keine Mitarbeiter-E-Mail hinterlegt.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-                if (mailCfg == null || !mailCfg.IsConfigured)
-                {
-                    MessageBox.Show(this, "Maileinstellungen sind nicht konfiguriert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
+                if (string.IsNullOrWhiteSpace(employeeMail)) { MessageBox.Show(this, "Keine Mitarbeiter-E-Mail hinterlegt.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+                if (mailCfg == null || !mailCfg.IsConfigured) { MessageBox.Show(this, "Maileinstellungen sind nicht konfiguriert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                 if (!ShowMailConsentDialog(employeeMail)) return;
 
+                try { AppLogger.Log($"Dokumente: E-Mail-Versand gestartet – Datei='{Path.GetFileName(path)}' an '{employeeMail}'"); } catch { }
                 Cursor prev = Cursor.Current; Cursor.Current = Cursors.WaitCursor;
                 try
                 {
@@ -473,7 +465,6 @@ namespace Geldautomat
                         msg.Subject = "Dokument vom Geldautomat";
                         msg.Body = "Sie erhalten das angeforderte Dokument als Anhang. Bitte gehen Sie sorgsam mit personenbezogenen Daten um.";
                         msg.IsBodyHtml = false;
-                        // Attach file
                         var att = new System.Net.Mail.Attachment(path);
                         msg.Attachments.Add(att);
 
@@ -485,6 +476,7 @@ namespace Geldautomat
                             client.Send(msg);
                         }
                     }
+                    try { AppLogger.Log($"Dokumente: E-Mail gesendet – Datei='{Path.GetFileName(path)}' an '{employeeMail}'"); } catch { }
                     MessageBox.Show(this, "E-Mail wurde gesendet.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
@@ -896,6 +888,7 @@ namespace Geldautomat
             try
             {
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
+                try { AppLogger.Log($"Dokument geöffnet: '{Path.GetFileName(path)}'"); } catch { }
                 if (IsPdf(path) || IsImage(path))
                 {
                     ShowPreview(path);

@@ -127,6 +127,7 @@ namespace Geldautomat
         {
             _personal = personal ?? throw new ArgumentNullException(nameof(personal));
             BuildUi();
+            try { AppLogger.Log($"Zeiterfassung geöffnet: PID={_personal.PID}, Name={_personal.Vorname} {_personal.Name}"); } catch { }
             LoadCurrentMonth();
         }
 
@@ -642,6 +643,11 @@ namespace Geldautomat
                 if (mailCfg == null || !mailCfg.IsConfigured) { MessageBox.Show(this, "Maileinstellungen sind nicht konfiguriert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                 if (!ShowMailConsentDialog(employeeMail)) return;
 
+                // determine selected month/year for logging
+                string monthYear = string.Empty;
+                try { monthYear = lblPeriod?.Text ?? string.Empty; } catch { }
+                try { AppLogger.Log($"Zeiterfassung: E-Mail-Versand gestartet für PID={_personal.PID}, Zeitraum='{monthYear}' an '{employeeMail}'"); } catch { }
+
                 // generate PDF of the current view and attach
                 string tmpPdf = Path.Combine(Path.GetTempPath(), $"Zeiterfassung_{_personal.PID}_{DateTime.Now.Ticks}.pdf");
                 bool pdfOk = false;
@@ -717,6 +723,7 @@ namespace Geldautomat
                             client.Send(msg);
                         }
                     }
+                    try { AppLogger.Log($"Zeiterfassung: E-Mail gesendet für PID={_personal.PID}, Zeitraum='{monthYear}' an '{employeeMail}'"); } catch { }
                     MessageBox.Show(this, "E-Mail wurde gesendet.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
@@ -1090,8 +1097,11 @@ namespace Geldautomat
                             gfx.DrawString("Typ", font, XBrushes.Black, new XRect(x + 4, y + 3, colTyp - 8, rowHeight), XStringFormats.TopLeft); x += colTyp;
                             gfx.DrawString("Fahrzeug", font, XBrushes.Black, new XRect(x + 4, y + 3, colZusatz - 8, rowHeight), XStringFormats.TopLeft);
                             gfx.DrawRectangle(penBorder, margin, y, contentWidth, rowHeight);
+                            // vertical lines
+                            vx = margin; gfx.DrawLine(penBorder, vx+colTag, y, vx+colTag, y+rowHeight); vx += colTag; gfx.DrawLine(penBorder, vx+colDatum, y, vx+colDatum, y+rowHeight); vx += colDatum; gfx.DrawLine(penBorder, vx+colVon, y, vx+colVon, y+rowHeight); vx += colVon; gfx.DrawLine(penBorder, vx+colBis, y, vx+colBis, y+rowHeight); vx += colBis; gfx.DrawLine(penBorder, vx+colDauer, y, vx+colDauer, y+rowHeight); vx += colDauer; gfx.DrawLine(penBorder, vx+colTyp, y, vx+colTyp, y+rowHeight);
+
                             y += rowHeight;
-                        }
+                         }
 
                         // alternating background (only if no specific color applied)
                         if (rowBrush == null)
