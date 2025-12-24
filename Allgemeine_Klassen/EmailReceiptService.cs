@@ -65,7 +65,7 @@ namespace Geldautomat
             try { AppLogger.Log($"Mail gesendet: Quittung+Anhang ('{attachmentFileName}') an '{email}' (Betreff='{mail.Subject}')"); } catch { }
         }
 
-        // Support-/Fehler-Meldung versenden – mehrere Empfänger via ';' erlaubt, plus immer Support
+        // Support-/Fehler-Meldung versenden – mehrere Empfänger via ';' erlaubt; Support kann per INI deaktiviert werden
         public static void SendSupportAlert(string subjectSuffix, string message)
         {
             var cfg = MailSettings.Load();
@@ -87,8 +87,11 @@ namespace Geldautomat
                                                .Where(s => !string.IsNullOrWhiteSpace(s));
                 foreach (var r in recipients) { try { mail.To.Add(r); toLog.Add(r); } catch { } }
             }
-            // Ziel 2: immer Support
-            try { mail.To.Add("support@priwitzer-dienstleistungsgmbh.de"); toLog.Add("support@priwitzer-dienstleistungsgmbh.de"); } catch { }
+            // Ziel 2: optional Support, falls nicht deaktiviert
+            if (!cfg.DisableSupportMail)
+            {
+                try { mail.To.Add("support@priwitzer-dienstleistungsgmbh.de"); toLog.Add("support@priwitzer-dienstleistungsgmbh.de"); } catch { }
+            }
 
             mail.Subject = subject;
             mail.Body = body;
@@ -139,6 +142,7 @@ namespace Geldautomat
         public string Username { get; set; }
         public string Password { get; set; }
         public string AlertEmail { get; set; } // mehrere Empfänger per ';'
+        public bool DisableSupportMail { get; set; } // NEU: Support-Mail unterdrücken
 
         public bool IsConfigured => !string.IsNullOrWhiteSpace(FromAddress) && !string.IsNullOrWhiteSpace(SmtpHost);
 
@@ -157,6 +161,7 @@ namespace Geldautomat
                 s.Username = IniHelper.ReadValue(IniSection, "Username", AppSettings.IniPath);
                 s.Password = IniHelper.ReadValue(IniSection, "Password", AppSettings.IniPath);
                 s.AlertEmail = IniHelper.ReadValue(IniSection, "AlertEmail", AppSettings.IniPath);
+                bool disableSupport; s.DisableSupportMail = bool.TryParse(IniHelper.ReadValue(IniSection, "DisableSupportMail", AppSettings.IniPath), out disableSupport) ? disableSupport : false;
             }
             catch { }
             return s;
@@ -172,6 +177,7 @@ namespace Geldautomat
             try { IniHelper.WriteValue(IniSection, "Username", Username ?? string.Empty, AppSettings.IniPath); } catch { }
             try { IniHelper.WriteValue(IniSection, "Password", Password ?? string.Empty, AppSettings.IniPath); } catch { }
             try { IniHelper.WriteValue(IniSection, "AlertEmail", AlertEmail ?? string.Empty, AppSettings.IniPath); } catch { }
+            try { IniHelper.WriteValue(IniSection, "DisableSupportMail", DisableSupportMail ? "True" : "False", AppSettings.IniPath); } catch { }
         }
     }
 }

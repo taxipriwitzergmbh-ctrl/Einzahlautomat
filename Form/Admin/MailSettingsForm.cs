@@ -19,12 +19,13 @@ namespace Geldautomat
         private Button btnCancel;
         private Button btnTest; // NEU: Verbindung prüfen
         private TextBox txtAlertEmail; // NEU: Ziel für Fehlermeldungen
+        private CheckBox chkDisableSupport; // NEU: Support-Mail unterbinden
 
         public MailSettingsForm()
         {
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(520, 400);
+            ClientSize = new Size(520, 440);
             Text = "Maileinstellungen";
 
             var lblFrom = new Label { Text = "Absender-Adresse", Location = new Point(20, 20), Size = new Size(200, 24) };
@@ -50,15 +51,17 @@ namespace Geldautomat
             var lblAlert = new Label { Text = "Fehler-Mail an", Location = new Point(20, 300), Size = new Size(200, 24) }; // NEU
             txtAlertEmail = new TextBox { Location = new Point(230, 300), Size = new Size(260, 24) }; // NEU
 
-            btnTest = new Button { Text = "Verbindung prüfen", Location = new Point(20, 340), Size = new Size(180, 30) };
-            btnSave = new Button { Text = "Speichern", Location = new Point(230, 340), Size = new Size(120, 30) };
-            btnCancel = new Button { Text = "Abbrechen", Location = new Point(370, 340), Size = new Size(120, 30) };
+            chkDisableSupport = new CheckBox { Text = "Mailversand an Support unterbinden", Location = new Point(20, 330), Size = new Size(470, 24) }; // NEU
+
+            btnTest = new Button { Text = "Verbindung prüfen", Location = new Point(20, 370), Size = new Size(180, 30) };
+            btnSave = new Button { Text = "Speichern", Location = new Point(230, 370), Size = new Size(120, 30) };
+            btnCancel = new Button { Text = "Abbrechen", Location = new Point(370, 370), Size = new Size(120, 30) };
 
             btnTest.Click += (s, e) => TestConnection();
             btnSave.Click += (s, e) => SaveSettings();
             btnCancel.Click += (s, e) => Close();
 
-            Controls.AddRange(new Control[] { lblFrom, txtFrom, lblDisplay, txtDisplayName, lblHost, txtHost, lblPort, nudPort, chkSsl, lblUser, txtUser, lblPass, txtPassword, lblAlert, txtAlertEmail, btnTest, btnSave, btnCancel });
+            Controls.AddRange(new Control[] { lblFrom, txtFrom, lblDisplay, txtDisplayName, lblHost, txtHost, lblPort, nudPort, chkSsl, lblUser, txtUser, lblPass, txtPassword, lblAlert, txtAlertEmail, chkDisableSupport, btnTest, btnSave, btnCancel });
 
             LoadSettings();
         }
@@ -76,6 +79,8 @@ namespace Geldautomat
                 bool ssl; chkSsl.Checked = bool.TryParse(IniHelper.ReadValue("Mail", "EnableSsl", ini), out ssl) ? ssl : true;
                 txtUser.Text = IniHelper.ReadValue("Mail", "Username", ini) ?? string.Empty;
                 txtPassword.Text = IniHelper.ReadValue("Mail", "Password", ini) ?? string.Empty;
+                bool disableSupport;
+                chkDisableSupport.Checked = bool.TryParse(IniHelper.ReadValue("Mail", "DisableSupportMail", ini), out disableSupport) ? disableSupport : false;
             }
             catch { }
         }
@@ -93,6 +98,7 @@ namespace Geldautomat
                 IniHelper.WriteValue("Mail", "Username", txtUser.Text?.Trim() ?? string.Empty, ini);
                 IniHelper.WriteValue("Mail", "Password", txtPassword.Text ?? string.Empty, ini);
                 IniHelper.WriteValue("Mail", "AlertEmail", txtAlertEmail.Text?.Trim() ?? string.Empty, ini);
+                IniHelper.WriteValue("Mail", "DisableSupportMail", chkDisableSupport.Checked ? "True" : "False", ini);
                 MessageBox.Show(this, "Maileinstellungen gespeichert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Close();
             }
