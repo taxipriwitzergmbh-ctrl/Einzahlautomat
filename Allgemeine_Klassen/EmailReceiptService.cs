@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Mail;
 using System.Text;
 using System.IO;
+using System.Linq;
 
 namespace Geldautomat
 {
@@ -76,7 +77,7 @@ namespace Geldautomat
             }
         }
 
-        // NEU: Support-/Fehler-Meldung versenden (immer auch an Support-Adresse), mit Gerätenamen im Betreff
+        // Support-/Fehler-Meldung versenden – mehrere Empfänger via ';' erlaubt, plus immer Support
         public static void SendSupportAlert(string subjectSuffix, string message)
         {
             var cfg = MailSettings.Load();
@@ -88,10 +89,21 @@ namespace Geldautomat
 
             var mail = new MailMessage();
             mail.From = new MailAddress(cfg.FromAddress, cfg.FromDisplayName);
-            // Ziel 1: konfigurierte Fehler-Mail (falls gesetzt)
-            if (!string.IsNullOrWhiteSpace(cfg.AlertEmail)) mail.To.Add(cfg.AlertEmail.Trim());
+
+            // Ziel 1: konfigurierte Fehler-Mails (mehrere via ';')
+            if (!string.IsNullOrWhiteSpace(cfg.AlertEmail))
+            {
+                var recipients = cfg.AlertEmail.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                               .Select(s => s.Trim())
+                                               .Where(s => !string.IsNullOrWhiteSpace(s));
+                foreach (var r in recipients)
+                {
+                    try { mail.To.Add(r); } catch { }
+                }
+            }
             // Ziel 2: immer Support
-            mail.To.Add("support@priwitzer-dienstleistungsgmbh.de");
+            try { mail.To.Add("support@priwitzer-dienstleistungsgmbh.de"); } catch { }
+
             mail.Subject = subject;
             mail.Body = body;
             mail.IsBodyHtml = false;
@@ -146,7 +158,7 @@ namespace Geldautomat
         public bool EnableSsl { get; set; } = true;
         public string Username { get; set; }
         public string Password { get; set; }
-        public string AlertEmail { get; set; } // NEU: Fehler-/Supportziel
+        public string AlertEmail { get; set; } // mehrere Empfänger per ';'
 
         public bool IsConfigured => !string.IsNullOrWhiteSpace(FromAddress) && !string.IsNullOrWhiteSpace(SmtpHost);
 
