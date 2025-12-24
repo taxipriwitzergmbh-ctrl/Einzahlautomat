@@ -677,37 +677,17 @@ namespace Geldautomat
 
                 var nowUtc = DateTime.UtcNow;
 
-                // UI-Update mit 10s Stabilitätsfenster: kurze Fehler ignorieren
-                if (!needService)
+                // UI-Update: sofort anzeigen, sobald Codes vorhanden sind
+                if (_lblService != null)
                 {
-                    if (_lblService != null) _lblService.Visible = false;
-                    _uiFaultCodes = string.Empty;
-                    _uiFaultFirstSeenUtc = DateTime.MinValue;
-                }
-                else
-                {
-                    if (!string.Equals(_uiFaultCodes, summary, StringComparison.OrdinalIgnoreCase))
+                    if (needService)
                     {
-                        _uiFaultCodes = summary;
-                        _uiFaultFirstSeenUtc = nowUtc;
-                        if (_lblService != null) _lblService.Visible = false; // bis stabil
+                        _lblService.Text = "SERVICE: " + summary;
+                        _lblService.Visible = true;
                     }
                     else
                     {
-                        if (_uiFaultFirstSeenUtc == DateTime.MinValue) _uiFaultFirstSeenUtc = nowUtc;
-                        bool uiStable = (nowUtc - _uiFaultFirstSeenUtc) >= FaultStableWindow;
-                        if (_lblService != null)
-                        {
-                            if (uiStable)
-                            {
-                                _lblService.Text = "SERVICE: " + summary;
-                                _lblService.Visible = true;
-                            }
-                            else
-                            {
-                                _lblService.Visible = false; // noch nicht stabil -> ignorieren
-                            }
-                        }
+                        _lblService.Visible = false;
                     }
                 }
 
@@ -738,7 +718,7 @@ namespace Geldautomat
                     if (sinceLogout < LogoutSuppressWindow) return;
                 }
 
-                // Stabilitätsfenster: Fehlercodes müssen 10s unverändert anliegen
+                // Stabilitätsfenster: Fehlercodes müssen 10s unverändert anliegen (nur für Mail)
                 if (!string.Equals(_faultCandidateCodes, summary, StringComparison.OrdinalIgnoreCase))
                 {
                     _faultCandidateCodes = summary;
@@ -748,7 +728,7 @@ namespace Geldautomat
 
                 if (_faultCandidateFirstSeenUtc == DateTime.MinValue) _faultCandidateFirstSeenUtc = nowUtc;
                 bool stable = (nowUtc - _faultCandidateFirstSeenUtc) >= FaultStableWindow;
-                if (!stable) return;
+                if (!stable) return; // Mail erst nach Stabilität
 
                 // Einmaliger Versand pro Zustand, mit Mindestintervall
                 bool firstOccurrence = !_serviceFaultActive;
