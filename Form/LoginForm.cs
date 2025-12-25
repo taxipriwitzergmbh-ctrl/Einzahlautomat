@@ -730,11 +730,11 @@ namespace Geldautomat
                 bool stable = (nowUtc - _faultCandidateFirstSeenUtc) >= FaultStableWindow;
                 if (!stable) return; // Mail erst nach Stabilität
 
-                // Einmaliger Versand pro Zustand, mit Mindestintervall
+                // Einmaliger Versand pro Zustand: nur einmal pro stabilem Fehler, erneut nur bei Codeänderung oder nach Fehlerende
                 bool firstOccurrence = !_serviceFaultActive;
                 bool codesChanged = !string.Equals(summary, _lastSupportAlertCodes, StringComparison.OrdinalIgnoreCase);
-                bool intervalOk = (nowUtc - _lastSupportAlertUtc) >= SupportAlertMinInterval;
-                if (firstOccurrence || codesChanged || intervalOk)
+                // Entfernt: intervallbasierter Wiederholversand
+                if (firstOccurrence || codesChanged)
                 {
                     _serviceFaultActive = true;
                     _lastSupportAlertCodes = summary;
