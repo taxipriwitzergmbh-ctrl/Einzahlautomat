@@ -662,6 +662,12 @@ namespace Geldautomat
                     _lastLoggedInState = currentLogged;
                 }
 
+                // Bestände vor Auswertung möglichst aktualisieren (stale Werte vermeiden)
+                try { Program.NV200Instance?.Payout_angleichen(); } catch { }
+                try { Program.NV2002Instance?.Payout_angleichen(); } catch { }
+                try { var c1 = Coins.CoinManager.Instance as Coins.SmartCoinV1; c1?.RequestCoinLevels(); } catch { }
+                try { var c2 = Coins.Coin2Manager.Instance as Coins.SmartCoinV1; c2?.RequestCoinLevels(); } catch { }
+
                 var codes = new System.Collections.Generic.List<string>();
                 // Kassendifferenz
                 try { var diff = KassenSummary.Difference; if (diff.HasValue && diff.Value != 0m) codes.Add("DIF"); } catch { }
