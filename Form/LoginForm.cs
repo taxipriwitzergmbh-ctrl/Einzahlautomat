@@ -950,8 +950,54 @@ namespace Geldautomat
 
         private async void btnLogin_Click(object sender, EventArgs e)
         {
-            // Fallback-Stub: falls die eigentliche Methode versehentlich überschrieben wurde
-            try { await System.Threading.Tasks.Task.CompletedTask; } catch { }
+            try
+            {
+                // Wartungsmodus: Nur Personalnummer erforderlich, direkter Login ohne Passwort
+                if (_maintenanceMode)
+                {
+                    lblError.Text = string.Empty;
+                    int pid;
+                    if (!int.TryParse(txtPersId.Text ?? string.Empty, out pid) || pid <= 0)
+                    {
+                        lblError.Text = "Bitte gültige Personalnummer eingeben.";
+                        return;
+                    }
+                    using (var db = new DatabaseHelper())
+                    {
+                        try
+                        {
+                            var ctx = await db.GetLoginContextAsync(pid);
+                            var personal = ctx?.Personal;
+                            if (personal == null)
+                            {
+                                lblError.Text = "Personalnummer nicht gefunden.";
+                                return;
+                            }
+                            // Status prüfen wie beim NFC-Flow
+                            var status = await db.GetPersonalStatusAsync(personal.PID);
+                            if (status == null) { lblError.Text = "Status nicht gefunden."; return; }
+                            if (status.Gesperrt) { lblError.Text = "Zugang gesperrt."; return; }
+                            var now = DateTime.Now; DateTime defExit = new DateTime(1899, 12, 30);
+                            if (status.EintrittAm.HasValue && status.EintrittAm.Value > now) { lblError.Text = "Eintrittsdatum liegt in der Zukunft."; return; }
+                            if (status.AustrittAm.HasValue && status.AustrittAm.Value != defExit && status.AustrittAm.Value < now) { lblError.Text = "Austrittsdatum abgelaufen."; return; }
+
+                            _pendingPid = personal.PID;
+                            _pendingPersonalInfo = personal;
+                            await ProceedOpenAsync(db);
+                            return;
+                        }
+                        catch (Exception ex)
+                        {
+                            lblError.Text = "Fehler: " + ex.Message;
+                            return;
+                        }
+                    }
+                }
+
+                // Nicht-Wartungsmodus: bestehende Logik beibehalten (kein Passwort-Flow hier definiert)
+                await System.Threading.Tasks.Task.CompletedTask;
+            }
+            catch { }
         }
 
         private async void HandleNfcAsync(string token)
