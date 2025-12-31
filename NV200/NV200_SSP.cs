@@ -639,7 +639,7 @@ namespace Geldautomat
                     else
                     {
                         // Fix: Zugriff auf CommandStructure.ComPort statt fehlerhaftem Member
-                        state = AppendState(state, $";Open SSPComPort ({CommandStructure.ComPort}) failed");
+                        state = AppendState(state, ";Open SSPComPort (" + CommandStructure.ComPort + ") failed");
                         Ereignis_adden(state);
                     }
                     Thread.Sleep(1000);
@@ -821,7 +821,7 @@ namespace Geldautomat
                 {
                     if (CommandStructure.ResponseDataLength == 1)
                     {
-                        // Idle � ggf. Animation beenden falls keine Note mehr aktiv
+                        // Idle – ggf. Animation beenden falls keine Note mehr aktiv
                         if (_noteDepositAnimActive && (DateTime.UtcNow - _lastNoteDepositUtc).TotalMilliseconds > 2500)
                         {
                             _noteDepositAnimActive = false;
@@ -831,6 +831,18 @@ namespace Geldautomat
                         if (_isDisabled) { state = "Disabled"; SyncCoinFeederByIdle(false); }
                         else { state = "Idle"; SyncCoinFeederByIdle(true); }
                         try { LastResponseNotOkUtc = DateTime.MinValue; } catch { }
+
+                        // Nach einem SmartEmpty/EmptyAll: Bestände konsolidieren
+                        try
+                        {
+                            if (_emptyingActive)
+                            {
+                                TransferPayoutToCashbox();
+                                _emptyingActive = false;
+                            }
+                        }
+                        catch { }
+
                         return;
                     }
 
@@ -1686,13 +1698,14 @@ namespace Geldautomat
         public void SmartEmptyToCashbox()
         {
             // nicht während Auszahlung starten
-            if (_isDispensing) { try { Ereignis_adden("Skip SmartEmpty: dispensing active"); } catch { } return; }
+            if (_isDispensing) { try { Ereignis_adden("Skip SMART_EMPTY: dispensing active"); } catch { } return; }
             var element = new List<byte>();
             element.Add(1); // Encryption
             element.Add(1); // Data length
             element.Add(CCommands.SSP_CMD_SMART_EMPTY);
             Sendeliste.Add(element);
             try { Ereignis_adden("SMART_EMPTY angefordert (Payout -> Cashbox)"); } catch { }
+            _emptyingActive = true; // mark emptying cycle active
         }
 
         // Optional: EMPTY_ALL (klassisch), falls Firmware unterstützt
@@ -1705,6 +1718,7 @@ namespace Geldautomat
             element.Add(CCommands.SSP_CMD_EMPTY_ALL);
             Sendeliste.Add(element);
             try { Ereignis_adden("EMPTY_ALL angefordert (Payout -> Cashbox)"); } catch { }
+            _emptyingActive = true; // mark emptying cycle active
         }
 
         // Thread-sicheres Logging: Feld hinzuf�gen
@@ -1737,6 +1751,50 @@ namespace Geldautomat
         private void TurnOffCoinFeederBoth()
         {
             // Keine direkten CoinFeeder-Kommandos mehr aus dem NV200-Treiber senden.
+        }
+
+        private void TransferPayoutToCashbox()
+        {
+            // Move all payout counts into cashbox counts and clear payout, then persist snapshot
+            try
+            {
+                int moved5 = Payout_5_euro;
+                int moved10 = Payout_10_euro;
+                int moved20 = Payout_20_euro;
+                int moved50 = Payout_50_euro;
+                int moved100 = Payout_100_euro;
+                int moved200 = Payout_200_euro;
+                int moved500 = Payout_500_euro;
+
+                if (moved5 + moved10 + moved20 + moved50 + moved100 + moved200 + moved500 == 0)
+                {
+                    Ereignis_adden("SMART_EMPTY abgeschlossen: Keine Payout-Scheine zu übertragen.");
+                    return;
+                }
+
+                Cashbox_5_euro   = Math.Max(0, Cashbox_5_euro)   + Math.Max(0, moved5);
+                Cashbox_10_euro  = Math.Max(0, Cashbox_10_euro)  + Math.Max(0, moved10);
+                Cashbox_20_euro  = Math.Max(0, Cashbox_20_euro)  + Math.Max(0, moved20);
+                Cashbox_50_euro  = Math.Max(0, Cashbox_50_euro)  + Math.Max(0, moved50);
+                Cashbox_100_euro = Math.Max(0, Cashbox_100_euro) + Math.Max(0, moved100);
+                Cashbox_200_euro = Math.Max(0, Cashbox_200_euro) + Math.Max(0, moved200);
+                Cashbox_500_euro = Math.Max(0, Cashbox_500_euro) + Math.Max(0, moved500);
+
+                Payout_5_euro = 0;
+                Payout_10_euro = 0;
+                Payout_20_euro = 0;
+                Payout_50_euro = 0;
+                Payout_100_euro = 0;
+                Payout_200_euro = 0;
+                Payout_500_euro = 0;
+
+                SaveCashboxSnapshot();
+                Ereignis_adden($"SMART_EMPTY abgeschlossen: Cashbox-Bestand aktualisiert (neu: {GetCashboxSumCent()/100.0:0.00} €)");
+            }
+            catch (Exception ex)
+            {
+                try { Ereignis_adden("TransferPayoutToCashbox Fehler: " + ex.Message); } catch { }
+            }
         }
 
         // Persistenz (Registry) f�r Cashbox-Z�hler
