@@ -1772,6 +1772,25 @@ namespace Geldautomat
                     return;
                 }
 
+                // Detailed log per note moved
+                try
+                {
+                    string section = DetermineNvSection();
+                    string ts() => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                    void logMove(decimal eur)
+                    {
+                        AppLogger.Log($"{ts()} | ({section}) Payout ---> Cashbox Schein {eur:0.00} €");
+                    }
+                    for (int i = 0; i < moved5; i++)   logMove(5m);
+                    for (int i = 0; i < moved10; i++)  logMove(10m);
+                    for (int i = 0; i < moved20; i++)  logMove(20m);
+                    for (int i = 0; i < moved50; i++)  logMove(50m);
+                    for (int i = 0; i < moved100; i++) logMove(100m);
+                    for (int i = 0; i < moved200; i++) logMove(200m);
+                    for (int i = 0; i < moved500; i++) logMove(500m);
+                }
+                catch { }
+
                 Cashbox_5_euro   = Math.Max(0, Cashbox_5_euro)   + Math.Max(0, moved5);
                 Cashbox_10_euro  = Math.Max(0, Cashbox_10_euro)  + Math.Max(0, moved10);
                 Cashbox_20_euro  = Math.Max(0, Cashbox_20_euro)  + Math.Max(0, moved20);
