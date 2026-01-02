@@ -5,6 +5,8 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace Geldautomat
 {
@@ -806,6 +808,28 @@ namespace Geldautomat
                 StartZeit = DateTime.Now
             };
 
+            // NEW: Filter preloaded shift by AllowedManIds to avoid passing disallowed shifts
+            try
+            {
+                var raw = AppSettings.AllowedManIdsRaw; // same source used in AbrechnungForm
+                List<int> allowed = null;
+                if (!string.IsNullOrWhiteSpace(raw))
+                {
+                    allowed = raw.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                 .Select(p => { int v; return int.TryParse(p.Trim(), out v) ? v : 0; })
+                                 .Where(v => v > 0)
+                                 .ToList();
+                }
+                if (details != null && allowed != null && allowed.Count > 0)
+                {
+                    if (!allowed.Contains(details.ManId))
+                    {
+                        // Ignore disallowed shift
+                        details = null;
+                    }
+                }
+            }
+            catch { }
 
             AppLogger.Log($"Login OK: {personal?.Vorname} {personal?.Name} (PID={_pendingPid}), Schicht {(details?.SchichtId ?? 0)}, Admin={isAdmin}, Personalguthaben: {guthaben:0.00} €");
             AppLogger.Log(new string('_', 74)); LogBestandSnapshot($"Anmeldung {personal?.Vorname} {personal?.Name}".Trim());

@@ -235,6 +235,20 @@ namespace Geldautomat
             ResumeLayout(true);
             EnableDoubleBufferingRecursive(this);
 
+            // NEW: If preloaded details do not match AllowedManIds, ignore them to avoid showing disallowed shift values
+            try
+            {
+                var allowed = ParseAllowedManIds();
+                if (_details != null && allowed != null && allowed.Count > 0)
+                {
+                    if (!allowed.Contains(_details.ManId))
+                    {
+                        _details = null;
+                    }
+                }
+            }
+            catch { }
+
             try
             {
                 var bu = IniHelper.ReadValue("UI", "BusyUnlockTimeoutSec", AppSettings.IniPath);
@@ -777,23 +791,29 @@ namespace Geldautomat
             y += 80;
 
             y += 60;
-            lblB19 = new Label { Text = $"19%: {_details.Betrag19:C2}", Font = new Font("Segoe UI Variable", 20F), Location = new Point(40, y), Size = new Size(250, 44) };
+            var b19Init = _details != null ? _details.Betrag19 : 0m;
+            var b7Init = _details != null ? _details.Betrag7 : 0m;
+            var b0Init = _details != null ? _details.Betrag0 : 0m;
+            lblB19 = new Label { Text = $"19%: {b19Init:C2}", Font = new Font("Segoe UI Variable", 20F), Location = new Point(40, y), Size = new Size(250, 44) };
             tabAbrechnen.Controls.Add(lblB19);
-            lblB7 = new Label { Text = $"7%: {_details.Betrag7:C2}", Font = new Font("Segoe UI Variable", 20F), Location = new Point(320, y), Size = new Size(250, 44) };
+            lblB7 = new Label { Text = $"7%: {b7Init:C2}", Font = new Font("Segoe UI Variable", 20F), Location = new Point(320, y), Size = new Size(250, 44) };
             tabAbrechnen.Controls.Add(lblB7);
-            lblB0 = new Label { Text = $"0%: {_details.Betrag0:C2}", Font = new Font("Segoe UI Variable", 20F), Location = new Point(600, y), Size = new Size(250, 44) };
+            lblB0 = new Label { Text = $"0%: {b0Init:C2}", Font = new Font("Segoe UI Variable", 20F), Location = new Point(600, y), Size = new Size(250, 44) };
             tabAbrechnen.Controls.Add(lblB0);
 
             y += 60;
-            lblSumme = new Label { Text = $"Summe: {_details.SummeZuZahlen:C2}", Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold), Location = new Point(40, y), Size = new Size(400, 48) };
+            var sumInit = (_details != null ? _details.SummeZuZahlen : 0m);
+            lblSumme = new Label { Text = $"Summe: {sumInit:C2}", Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold), Location = new Point(40, y), Size = new Size(400, 48) };
             tabAbrechnen.Controls.Add(lblSumme);
 
             y += 86;
-            lblEingezahlt = new Label { Text = "Eingezahlt: 0,00 €", Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold), Location = new Point(40, y), Size = new Size(400, 48) };
+            lblEingezahlt = new Label { Text = $"Eingezahlt: {_eingezahltSession:C2}", Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold), Location = new Point(40, y), Size = new Size(400, 48) };
             tabAbrechnen.Controls.Add(lblEingezahlt);
-            lblNoch = new Label { Text = $"Noch zu zahlen: {_details.SummeZuZahlen:C2}", Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold), Location = new Point(500, y), Size = new Size(400, 48) };
+            var nochInit = Math.Max(0m, sumInit - _eingezahltSession);
+            nochInit = Math.Max(0m, nochInit - _personalGuthaben);
+            lblNoch = new Label { Text = $"Noch zu zahlen: {nochInit:C2}", Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold), Location = new Point(500, y), Size = new Size(400, 48) };
             tabAbrechnen.Controls.Add(lblNoch);
-            try { lblNoch.ForeColor = (_details.SummeZuZahlen > 0m) ? Color.Red : Color.Green; } catch { }
+            try { lblNoch.ForeColor = (nochInit > 0m) ? Color.Red : Color.Green; } catch { }
 
             y += 80;
             btnAbrechnen = new Button
@@ -1497,7 +1517,7 @@ namespace Geldautomat
 
         private void OnCoin2LevelsUpdated(int[] levels)
         {
-            if (levels == null || levels.Length < 8) return;
+    if (levels == null || levels.Length < 8) return;
             try
             {
                 BeginInvoke((Action)(() =>
