@@ -20,6 +20,46 @@ namespace Geldautomat.Printing
         {
             var list = new List<string>();
 
+            // Automatenname
+            try
+            {
+                var autoName = (AppSettings.AutomatenName ?? string.Empty).Trim();
+                if (!string.IsNullOrWhiteSpace(autoName)) list.Add("Automat: " + autoName);
+            }
+            catch { }
+
+            // Mandantenname aus Meta oder AppSettings
+            try
+            {
+                string mandant = null;
+                if (!string.IsNullOrWhiteSpace(buchungstext) && buchungstext.StartsWith("::SCHMETA|", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        int end = buchungstext.IndexOf("::", 2);
+                        if (end > 0)
+                        {
+                            var header = buchungstext.Substring(2, end - 2);
+                            foreach (var part in header.Split('|'))
+                            {
+                                if (part.StartsWith("MAN=", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    mandant = part.Substring(4).Trim();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+                if (string.IsNullOrWhiteSpace(mandant))
+                {
+                    try { mandant = (AppSettings.MandantenName ?? string.Empty).Trim(); } catch { mandant = null; }
+                }
+                if (!string.IsNullOrWhiteSpace(mandant)) list.Add("Mandant: " + mandant);
+            }
+            catch { }
+
             if (!string.IsNullOrWhiteSpace(mitarbeiter))
                 list.Add("Mitarbeiter: " + mitarbeiter);
 
