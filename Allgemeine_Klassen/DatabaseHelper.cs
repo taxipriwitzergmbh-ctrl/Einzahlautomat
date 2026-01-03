@@ -200,12 +200,13 @@ namespace Geldautomat
             await EnsureOpenAsync().ConfigureAwait(false);
             using (var cmd = _connection.CreateCommand())
             {
-                cmd.CommandText = @"SELECT SchichtId,PersId,PersName,FhzId,ManID,StartZeit,ISNULL(EinnahmenBar1,0)-ISNULL(EinzahlungFahrer1,0) AS Betrag19,ISNULL(EinnahmenBar2,0)-ISNULL(EinzahlungFahrer2,0) AS Betrag7,ISNULL(EinnahmenBar3,0)-ISNULL(EinzahlungFahrer3,0) AS Betrag0,ISNULL(EinzahlungFahrer,0) AS EinzahlungBisher FROM TSchichten WITH (NOLOCK) WHERE SchichtId=@SchichtId;";
+                // Minimal-invasiv: EndZeit zusätzlich laden, rest unverändert
+                cmd.CommandText = @"SELECT SchichtId,PersId,PersName,FhzId,ManID,StartZeit,EndZeit,ISNULL(EinnahmenBar1,0)-ISNULL(EinzahlungFahrer1,0) AS Betrag19,ISNULL(EinnahmenBar2,0)-ISNULL(EinzahlungFahrer2,0) AS Betrag7,ISNULL(EinnahmenBar3,0)-ISNULL(EinzahlungFahrer3,0) AS Betrag0,ISNULL(EinzahlungFahrer,0) AS EinzahlungBisher FROM TSchichten WITH (NOLOCK) WHERE SchichtId=@SchichtId;";
                 cmd.Parameters.AddWithValue("@SchichtId", schichtId);
                 using (var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleRow).ConfigureAwait(false))
                 {
                     if (!reader.Read()) return null;
-                    return new ShiftDetails
+                    var details = new ShiftDetails
                     {
                         SchichtId = reader.GetInt32(reader.GetOrdinal("SchichtId")),
                         PersId = reader.GetInt32(reader.GetOrdinal("PersId")),
@@ -218,6 +219,9 @@ namespace Geldautomat
                         Betrag0 = reader.GetDecimal(reader.GetOrdinal("Betrag0")),
                         EinzahlungBisher = reader.GetDecimal(reader.GetOrdinal("EinzahlungBisher"))
                     };
+                    // Falls ShiftDetails eine EndZeit-Property besitzt, setze sie (ohne API zu ändern)
+                    try { int ord = reader.GetOrdinal("EndZeit"); if (ord >= 0 && !reader.IsDBNull(ord)) { var p = details.GetType().GetProperty("EndZeit"); if (p != null && p.CanWrite) p.SetValue(details, reader.GetDateTime(ord)); } } catch { }
+                    return details;
                 }
             }
         }
@@ -478,7 +482,7 @@ namespace Geldautomat
 
             using (var cmd = _connection.CreateCommand())
             {
-                cmd.CommandText = @";WITH lastPg AS (SELECT TOP 1 SaldoPersonalguthaben FROM TKassenbuch WITH (NOLOCK) WHERE PersId=@PID AND Typ=5 AND DeviceID=@DID ORDER BY ErfasstAm DESC), lastShift AS (SELECT TOP 1 s.SchichtId,s.PersId,s.PersName,s.FhzId,s.ManID,s.StartZeit,ISNULL(s.EinnahmenBar1,0)-ISNULL(s.EinzahlungFahrer1,0) AS Betrag19,ISNULL(s.EinnahmenBar2,0)-ISNULL(s.EinzahlungFahrer2,0) AS Betrag7,ISNULL(s.EinnahmenBar3,0)-ISNULL(s.EinzahlungFahrer3,0) AS Betrag0,ISNULL(s.EinzahlungFahrer,0) AS EinzahlungBisher FROM TSchichten s WITH (NOLOCK) WHERE (s.Flags & 1)=0 AND (s.Flags & 4)=0 AND s.PersId=@PID ORDER BY s.StartZeit DESC) SELECT p.PID,p.Name,p.Vorname,p.NFCTagUID,p.Fahrercode,p.Gesperrt,p.EintrittAm,p.AustrittAm,p.AppRechte,p.EMail,(SELECT SaldoPersonalguthaben FROM lastPg) AS Guthaben,ls.SchichtId,ls.PersId AS ShiftPersId,ls.PersName,ls.FhzId,ls.ManID,ls.StartZeit,ls.Betrag19,ls.Betrag7,ls.Betrag0,ls.EinzahlungBisher FROM TPersonal p WITH (NOLOCK) LEFT JOIN lastShift ls ON ls.PersId=p.PID WHERE p.PID=@PID;";
+                cmd.CommandText = @";WITH lastPg AS (SELECT TOP 1 SaldoPersonalguthaben FROM TKassenbuch WITH (NOLOCK) WHERE PersId=@PID AND Typ=5 AND DeviceID=@DID ORDER BY ErfasstAm DESC), lastShift AS (SELECT TOP 1 s.SchichtId,s.PersId,s.PersName,s.FhzId,s.ManID,s.StartZeit,s.EndZeit,ISNULL(s.EinnahmenBar1,0)-ISNULL(s.EinzahlungFahrer1,0) AS Betrag19,ISNULL(s.EinnahmenBar2,0)-ISNULL(s.EinzahlungFahrer2,0) AS Betrag7,ISNULL(s.EinnahmenBar3,0)-ISNULL(s.EinzahlungFahrer3,0) AS Betrag0,ISNULL(s.EinzahlungFahrer,0) AS EinzahlungBisher FROM TSchichten s WITH (NOLOCK) WHERE (s.Flags & 1)=0 AND (s.Flags & 4)=0 AND s.PersId=@PID ORDER BY s.StartZeit DESC) SELECT p.PID,p.Name,p.Vorname,p.NFCTagUID,p.Fahrercode,p.Gesperrt,p.EintrittAm,p.AustrittAm,p.AppRechte,p.EMail,(SELECT SaldoPersonalguthaben FROM lastPg) AS Guthaben,ls.SchichtId,ls.PersId AS ShiftPersId,ls.PersName,ls.FhzId,ls.ManID,ls.StartZeit,ls.EndZeit,ls.Betrag19,ls.Betrag7,ls.Betrag0,ls.EinzahlungBisher FROM TPersonal p WITH (NOLOCK) LEFT JOIN lastShift ls ON ls.PersId=p.PID WHERE p.PID=@PID;";
                 cmd.Parameters.AddWithValue("@PID", persId); 
                 cmd.Parameters.AddWithValue("@DID", CurrentDeviceId);
 
@@ -522,6 +526,8 @@ namespace Geldautomat
                                 Betrag0 = rdr.IsDBNull(rdr.GetOrdinal("Betrag0")) ? 0m : rdr.GetDecimal(rdr.GetOrdinal("Betrag0")),
                                 EinzahlungBisher = rdr.IsDBNull(rdr.GetOrdinal("EinzahlungBisher")) ? 0m : rdr.GetDecimal(rdr.GetOrdinal("EinzahlungBisher"))
                             };
+                            // Minimal-invasiv: EndZeit an ShiftDetails setzen, falls Property existiert
+                            try { var ordEnd = rdr.GetOrdinal("EndZeit"); if (ordEnd >= 0 && !rdr.IsDBNull(ordEnd)) { var p = ctx.Shift.GetType().GetProperty("EndZeit"); if (p != null && p.CanWrite) p.SetValue(ctx.Shift, rdr.GetDateTime(ordEnd)); } } catch { }
                         }
                     }
                 }

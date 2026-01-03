@@ -28,11 +28,14 @@ namespace Geldautomat.Printing
             }
             catch { }
 
-            // Mandantenname aus Meta oder freiem Text
+            // Mandantenname und Schichtzeiten
+            DateTime? arbeitsBeginn = null;
+            DateTime? arbeitsEnde = null;
             try
             {
                 string mandant = null;
                 string kenFromMeta = null;
+                string schichtId = null;
                 if (!string.IsNullOrWhiteSpace(buchungstext) && buchungstext.StartsWith("::SCHMETA|", StringComparison.OrdinalIgnoreCase))
                 {
                     try
@@ -45,32 +48,47 @@ namespace Geldautomat.Printing
                             {
                                 if (part.StartsWith("MAN=", StringComparison.OrdinalIgnoreCase)) mandant = part.Substring(4).Trim();
                                 if (part.StartsWith("KEN=", StringComparison.OrdinalIgnoreCase)) kenFromMeta = part.Substring(4).Trim();
+                                if (part.StartsWith("ID=", StringComparison.OrdinalIgnoreCase)) schichtId = part.Substring(3).Trim();
                             }
                         }
                     }
                     catch { }
                 }
-                if (string.IsNullOrWhiteSpace(mandant)) mandant = kenFromMeta; // Fallback auf Kennzeichen aus Meta
+                if (string.IsNullOrWhiteSpace(mandant)) mandant = kenFromMeta; // Fallback nur Kennzeichen, wird unten nicht mehr gedruckt wenn Name fehlt
                 if (string.IsNullOrWhiteSpace(mandant))
                 {
-                    // Letzter Fallback: aus freiem Text den Kennzeichen-Teil extrahieren
                     try
                     {
                         var rx = new Regex(@"Schicht\s+(\d+),\s+(.+?)\s+vo[mn]\s+(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2})\s+eingezahlt", RegexOptions.IgnoreCase);
                         var m = rx.Match(buchungstext ?? string.Empty);
-                        if (m.Success) mandant = m.Groups[2].Value.Trim();
+                        if (m.Success) { mandant = m.Groups[2].Value.Trim(); if (string.IsNullOrWhiteSpace(schichtId)) schichtId = m.Groups[1].Value.Trim(); }
                     }
                     catch { }
                 }
 
-                // Wenn MAN= numerisch ist, auf TMandanten.ManName auflösen
+                // Mandant per ManID -> ManName
                 try
                 {
-                    string display = mandant;
-                    int manId;
-                    if (!string.IsNullOrWhiteSpace(mandant) && int.TryParse(mandant, out manId))
+                    string display = null;
+                    int manId = -1;
+                    int sidTmp;
+                    if (!string.IsNullOrWhiteSpace(schichtId) && int.TryParse(schichtId, out sidTmp))
                     {
-                        // ID -> Name aus TMandanten
+                        using (var db = new Geldautomat.DatabaseHelper())
+                        {
+                            var det = db.GetShiftDetailsAsync(sidTmp).GetAwaiter().GetResult();
+                            if (det != null)
+                            {
+                                // Zeiten merken, aber erst NACH "vom ..." drucken
+                                arbeitsBeginn = det.StartZeit;
+                                try { var p = det.GetType().GetProperty("EndZeit"); if (p != null) { var ev = p.GetValue(det); if (ev is DateTime dt && dt != DateTime.MinValue) arbeitsEnde = dt; } } catch { }
+                                if (det.ManId >= 0) manId = det.ManId;
+                            }
+                        }
+                    }
+                    if (manId < 0 && !string.IsNullOrWhiteSpace(mandant) && int.TryParse(mandant, out var mid)) manId = mid;
+                    if (manId >= 0)
+                    {
                         using (var db = new Geldautomat.DatabaseHelper())
                         {
                             var dt = db.GetMandantenAsync(true).GetAwaiter().GetResult();
@@ -78,12 +96,7 @@ namespace Geldautomat.Printing
                             {
                                 try
                                 {
-                                    if (Convert.ToInt32(r["ManID"]) == manId)
-                                    {
-                                        var name = Convert.ToString(r["ManName"]);
-                                        if (!string.IsNullOrWhiteSpace(name)) display = name;
-                                        break;
-                                    }
+                                    if (Convert.ToInt32(r["ManID"]) == manId) { var name = Convert.ToString(r["ManName"]); if (!string.IsNullOrWhiteSpace(name)) { display = name; break; } }
                                 }
                                 catch { }
                             }
@@ -91,34 +104,41 @@ namespace Geldautomat.Printing
                     }
                     if (!string.IsNullOrWhiteSpace(display)) list.Add("Mandant: " + display);
                 }
-                catch { if (!string.IsNullOrWhiteSpace(mandant)) list.Add("Mandant: " + mandant); }
-            }
-            catch { }
+                catch { }
 
-            if (!string.IsNullOrWhiteSpace(mitarbeiter))
-                list.Add("Mitarbeiter: " + mitarbeiter);
+                if (!string.IsNullOrWhiteSpace(mitarbeiter))
+                    list.Add("Mitarbeiter: " + mitarbeiter);
 
-            bool isSchicht = IsSchichtTitle(title);
+                bool isSchicht = IsSchichtTitle(title);
 
-            if (isSchicht)
-            {
-                // Versuche strukturierten Meta-Header (::SCHMETA|ID=...|DAT=...|KEN=...::)
-                if (!TryAddFromMetaHeader(buchungstext, list))
+                if (isSchicht)
                 {
-                    // Regex-Fallback aus freiem Text
-                    if (!TryAddFromFreeText(buchungstext, list))
+                    // Meta (::SCHMETA|...) hinzufügen und direkt DANACH Arbeitsbeginn/-ende einfügen
+                    int beforeCount = list.Count;
+                    if (!TryAddFromMetaHeader(buchungstext, list))
                     {
-                        // Letzter Fallback: falls nichts erkannt – zeige den Text roh
-                        if (!string.IsNullOrWhiteSpace(buchungstext))
-                            list.Add(buchungstext.Trim());
+                        if (!TryAddFromFreeText(buchungstext, list))
+                        {
+                            if (!string.IsNullOrWhiteSpace(buchungstext)) list.Add(buchungstext.Trim());
+                        }
                     }
+                    // Nach den beiden "Schicht"/"vom" Zeilen die Zeiten einfügen
+                    try
+                    {
+                        if (arbeitsBeginn.HasValue)
+                            list.Add("Arbeitsbeginn: " + arbeitsBeginn.Value.ToString("HH:mm", De));
+                        if (arbeitsEnde.HasValue)
+                            list.Add("Arbeitsende : " + arbeitsEnde.Value.ToString("HH:mm", De));
+                    }
+                    catch { }
+                }
+                else
+                {
+                    if (!string.IsNullOrWhiteSpace(buchungstext))
+                        list.Add("Text: " + buchungstext.Trim());
                 }
             }
-            else
-            {
-                if (!string.IsNullOrWhiteSpace(buchungstext))
-                    list.Add("Text: " + buchungstext.Trim());
-            }
+            catch { }
 
             if (withVatLines)
             {
@@ -133,18 +153,24 @@ namespace Geldautomat.Printing
 
         private string FormatVatLine(string mwst, decimal betrag)
         {
-            const int amountColumn = 16;
-            string label = (mwst.Length == 1 ? "  " : "") + mwst + "%:";
-            string value = betrag.ToString("0.00", De) + "€";
-            int spaces = Math.Max(1, amountColumn - label.Length);
+            // Einheitliche Spalten: Label links, Beträge rechtsbündig, € exakt ausgerichtet
+            const int labelWidth = 6;    // "19%:" oder "7%:" etc.
+            const int valueColumn = 28;  // Spalte, an der das €-Zeichen stehen soll
+            string label = (mwst + "%:").PadLeft(labelWidth);
+            string amount = betrag.ToString("0.00", De);
+            string value = amount + " €"; // immer gleich formatiert
+            int spaces = Math.Max(1, valueColumn - label.Length - value.Length);
             return label + new string(' ', spaces) + value;
         }
 
         private string FormatSumLine(string label, decimal betrag)
         {
-            const int spaces = 5;
-            string value = betrag.ToString("0.00", De) + "€";
-            return label + new string(' ', spaces) + value;
+            const int valueColumn = 28;
+            string left = label;
+            string amount = betrag.ToString("0.00", De);
+            string value = amount + " €";
+            int spaces = Math.Max(1, valueColumn - left.Length - value.Length);
+            return left + new string(' ', spaces) + value;
         }
 
         private bool TryAddFromMetaHeader(string text, List<string> list)
@@ -175,36 +201,33 @@ namespace Geldautomat.Printing
                 if (string.IsNullOrWhiteSpace(dat))
                     return false;
 
-                var line1 = "Schicht: " + (string.IsNullOrWhiteSpace(id) ? "unbekannt" : id) +
-                            (string.IsNullOrWhiteSpace(ken) ? "" : ", " + ken);
-                var line2 = "vom " + dat + " eingezahlt";
+                string datumOnly = dat;
+                try { var parts = dat.Split(' '); if (parts.Length > 0) datumOnly = parts[0]; } catch { }
+
+                var line1 = "Schicht: " + (string.IsNullOrWhiteSpace(id) ? "unbekannt" : id) + (string.IsNullOrWhiteSpace(ken) ? "" : ", " + ken);
+                var line2 = "vom " + datumOnly + " eingezahlt";
                 list.Add(line1);
                 list.Add(line2);
                 return true;
             }
-            catch
-            {
-                return false;
-            }
+            catch { return false; }
         }
 
         private bool TryAddFromFreeText(string text, List<string> list)
         {
             if (string.IsNullOrWhiteSpace(text)) return false;
-
             try
             {
-                var rx = new Regex(@"Schicht\s+(\d+),\s+(.+?)\s+vo[mn]\s+(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2})\s+eingezahlt",
-                    RegexOptions.IgnoreCase);
+                var rx = new Regex(@"Schicht\s+(\d+),\s+(.+?)\s+vo[mn]\s+(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2})\s+eingezahlt", RegexOptions.IgnoreCase);
                 var m = rx.Match(text);
                 if (m.Success)
                 {
                     string id = m.Groups[1].Value.Trim();
                     string ken = m.Groups[2].Value.Trim();
                     string dat = m.Groups[3].Value.Trim();
-
+                    string datumOnly = dat; try { var parts = dat.Split(' '); if (parts.Length > 0) datumOnly = parts[0]; } catch { }
                     list.Add("Schicht: " + id + ", " + ken);
-                    list.Add("vom " + dat + " eingezahlt");
+                    list.Add("vom " + datumOnly + " eingezahlt");
                     return true;
                 }
             }
