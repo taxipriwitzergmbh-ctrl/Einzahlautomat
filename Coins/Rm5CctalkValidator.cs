@@ -271,6 +271,7 @@ namespace Geldautomat.Coins
         {
             _stop = true;
             try { _thread?.Join(400); } catch { }
+            try { PersistLevels(); } catch { }
             try { _sp?.Close(); } catch { }
             try { _sp?.Dispose(); } catch { }
             _sp = null; lock (_queueLock) _sendQueue.Clear(); Connected = false; Log("Getrennt");
@@ -790,7 +791,8 @@ namespace Geldautomat.Coins
                 _coinLevels[idx]++;
             }
             try { CoinLevelsUpdated?.Invoke(GetCoinAvailability()); } catch { }
-            SaveLevelsThrottled();
+            // Persist immediately to avoid missing last change when no further events occur
+            try { PersistLevels(); } catch { }
         }
         private void SaveLevelsThrottled()
         {
@@ -811,6 +813,7 @@ namespace Geldautomat.Coins
         {
             for (int h = 0; h < MAX_HOPPERS; h++) if (_hoppers[h].ToPayout > 0) return;
             try { BusyAnimationManager.End("RM5 fertig"); } catch { }
+            try { PersistLevels(); } catch { }
             try { CoinDispenseComplete?.Invoke(); } catch { }
         }
         private void InitHoppersDefault() { int[] defaultAddr = { 3, 7, 4, 5, 6 }; for (int i = 0; i < MAX_HOPPERS; i++) _hoppers[i] = new HopperState { Address = defaultAddr[i] }; }

@@ -28,10 +28,11 @@ namespace Geldautomat.Printing
             }
             catch { }
 
-            // Mandantenname aus Meta oder AppSettings
+            // Mandantenname aus Meta oder freiem Text
             try
             {
                 string mandant = null;
+                string kenFromMeta = null;
                 if (!string.IsNullOrWhiteSpace(buchungstext) && buchungstext.StartsWith("::SCHMETA|", StringComparison.OrdinalIgnoreCase))
                 {
                     try
@@ -42,19 +43,24 @@ namespace Geldautomat.Printing
                             var header = buchungstext.Substring(2, end - 2);
                             foreach (var part in header.Split('|'))
                             {
-                                if (part.StartsWith("MAN=", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    mandant = part.Substring(4).Trim();
-                                    break;
-                                }
+                                if (part.StartsWith("MAN=", StringComparison.OrdinalIgnoreCase)) mandant = part.Substring(4).Trim();
+                                if (part.StartsWith("KEN=", StringComparison.OrdinalIgnoreCase)) kenFromMeta = part.Substring(4).Trim();
                             }
                         }
                     }
                     catch { }
                 }
+                if (string.IsNullOrWhiteSpace(mandant)) mandant = kenFromMeta; // Fallback auf Kennzeichen aus Meta
                 if (string.IsNullOrWhiteSpace(mandant))
                 {
-                    try { mandant = (AppSettings.MandantenName ?? string.Empty).Trim(); } catch { mandant = null; }
+                    // Letzter Fallback: aus freiem Text den Kennzeichen-Teil extrahieren
+                    try
+                    {
+                        var rx = new Regex(@"Schicht\s+(\d+),\s+(.+?)\s+vo[mn]\s+(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2})\s+eingezahlt", RegexOptions.IgnoreCase);
+                        var m = rx.Match(buchungstext ?? string.Empty);
+                        if (m.Success) mandant = m.Groups[2].Value.Trim();
+                    }
+                    catch { }
                 }
                 if (!string.IsNullOrWhiteSpace(mandant)) list.Add("Mandant: " + mandant);
             }
@@ -98,14 +104,8 @@ namespace Geldautomat.Printing
 
         private string FormatVatLine(string mwst, decimal betrag)
         {
-            // Ziel gemäß Beispiel:
-            // 19%:            0,00€
-            //   7%:          50,00€
-            //   0%:            0,00€
-            // - Betrag ohne Leerzeichen vor €
-            // - Betrag an fixer Spalte (Spalte 16, 1-basiert)
-            const int amountColumn = 16; // Startposition (1-basiert) des Betrags (erste Ziffer oder 0)
-            string label = (mwst.Length == 1 ? "  " : "") + mwst + "%:"; // für 7% / 0% zwei führende Spaces
+            const int amountColumn = 16;
+            string label = (mwst.Length == 1 ? "  " : "") + mwst + "%:";
             string value = betrag.ToString("0.00", De) + "€";
             int spaces = Math.Max(1, amountColumn - label.Length);
             return label + new string(' ', spaces) + value;
@@ -113,9 +113,6 @@ namespace Geldautomat.Printing
 
         private string FormatSumLine(string label, decimal betrag)
         {
-            // Beispielvorgabe:
-            // Summe:     50,00€
-            // Hier wirkt die Einrückung kürzer (in Beispiel 5 Spaces). Wir lassen sie konfigurierbar.
             const int spaces = 5;
             string value = betrag.ToString("0.00", De) + "€";
             return label + new string(' ', spaces) + value;
@@ -130,7 +127,7 @@ namespace Geldautomat.Printing
             {
                 int end = text.IndexOf("::", 2);
                 if (end <= 0) return false;
-                var header = text.Substring(2, end - 2); // ohne führende ::
+                var header = text.Substring(2, end - 2);
 
                 string id = null;
                 string dat = null;
@@ -149,9 +146,6 @@ namespace Geldautomat.Printing
                 if (string.IsNullOrWhiteSpace(dat))
                     return false;
 
-                // Gewünschtes Format:
-                // Schicht: 118089, WIL CM 5656
-                // vom 22.08.2025 12:13 eingezahlt
                 var line1 = "Schicht: " + (string.IsNullOrWhiteSpace(id) ? "unbekannt" : id) +
                             (string.IsNullOrWhiteSpace(ken) ? "" : ", " + ken);
                 var line2 = "vom " + dat + " eingezahlt";
@@ -169,11 +163,6 @@ namespace Geldautomat.Printing
         {
             if (string.IsNullOrWhiteSpace(text)) return false;
 
-            // Erwartete freie Muster (flexibel):
-            // ... Schicht 118089, WIL CM 5656 von 22.08.2025 12:13 eingezahlt
-            // oder
-            // ... Schicht 118089, WIL CM 5656 vom 22.08.2025 12:13 eingezahlt
-            // Kennzeichen kann Leerzeichen enthalten, endet vor 'von' / 'vom'
             try
             {
                 var rx = new Regex(@"Schicht\s+(\d+),\s+(.+?)\s+vo[mn]\s+(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2})\s+eingezahlt",
