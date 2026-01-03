@@ -62,7 +62,36 @@ namespace Geldautomat.Printing
                     }
                     catch { }
                 }
-                if (!string.IsNullOrWhiteSpace(mandant)) list.Add("Mandant: " + mandant);
+
+                // Wenn MAN= numerisch ist, auf TMandanten.ManName auflösen
+                try
+                {
+                    string display = mandant;
+                    int manId;
+                    if (!string.IsNullOrWhiteSpace(mandant) && int.TryParse(mandant, out manId))
+                    {
+                        // ID -> Name aus TMandanten
+                        using (var db = new Geldautomat.DatabaseHelper())
+                        {
+                            var dt = db.GetMandantenAsync(true).GetAwaiter().GetResult();
+                            foreach (System.Data.DataRow r in dt.Rows)
+                            {
+                                try
+                                {
+                                    if (Convert.ToInt32(r["ManID"]) == manId)
+                                    {
+                                        var name = Convert.ToString(r["ManName"]);
+                                        if (!string.IsNullOrWhiteSpace(name)) display = name;
+                                        break;
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+                    }
+                    if (!string.IsNullOrWhiteSpace(display)) list.Add("Mandant: " + display);
+                }
+                catch { if (!string.IsNullOrWhiteSpace(mandant)) list.Add("Mandant: " + mandant); }
             }
             catch { }
 
