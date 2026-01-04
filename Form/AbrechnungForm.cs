@@ -1779,6 +1779,23 @@ namespace Geldautomat
                     int[] lv1 = null; int[] lv2 = null;
                     try { if (_coin is SmartCoinV1 sc1) lv1 = sc1.GetCoinAvailability(); else if (_coin is Rm5CctalkValidator rm5a) lv1 = rm5a.GetCoinAvailability(); } catch { }
                     try { if (_coin2 == null) { try { Coin2Manager.InitFromIni(AppSettings.IniPath); } catch { } _coin2 = Coin2Manager.Instance; } if (_coin2 is SmartCoinV1 sc2) lv2 = sc2.GetCoinAvailability(); else if (_coin2 is Rm5CctalkValidator rm5b) lv2 = rm5b.GetCoinAvailability(); } catch { }
+
+                    // Persist RM5 levels explicitly on logout to avoid losing last payouts
+                    try
+                    {
+                        if (_coin is Rm5CctalkValidator rm5Main)
+                        {
+                            var cur = lv1 ?? rm5Main.GetCoinAvailability();
+                            if (cur != null && cur.Length >= 8) rm5Main.SetAllCoinLevels(cur, true);
+                        }
+                        if (_coin2 is Rm5CctalkValidator rm5Second)
+                        {
+                            var cur2 = lv2 ?? rm5Second.GetCoinAvailability();
+                            if (cur2 != null && cur2.Length >= 8) rm5Second.SetAllCoinLevels(cur2, true);
+                        }
+                    }
+                    catch { }
+
                     try { AppLogger.LogKassenbestandSnapshotCombined(nv1, lv1, nv2, lv2, false, "Abmeldung"); } catch { }
                     decimal automatSum = 0m; try { automatSum += AppLogger.ComputeKassenbestandEuro(nv1, lv1); } catch { }
                     try { automatSum += AppLogger.ComputeKassenbestandEuro(nv2, lv2); } catch { }
@@ -2260,7 +2277,7 @@ namespace Geldautomat
                     return take1 >= 0 && take2 >= 0 && take1 <= avail1 && take2 <= avail2 && take1 + take2 == need;
                 }
 
-                private void AbrechnungForm_KeyDown(object sender, KeyEventArgs e)
+                private AbrechnungForm_KeyDown(object sender, KeyEventArgs e)
                 {
                     try
                     {
