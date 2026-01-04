@@ -534,5 +534,18 @@ namespace Geldautomat
             }
             return ctx.Personal == null ? null : ctx;
         }
+
+        public async Task<DateTime?> GetShiftEndZeitAsync(int schichtId)
+        {
+            await EnsureOpenAsync().ConfigureAwait(false);
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = "SELECT EndZeit FROM TSchichten WITH (NOLOCK) WHERE SchichtId=@SchichtId";
+                cmd.Parameters.AddWithValue("@SchichtId", schichtId);
+                var o = await cmd.ExecuteScalarAsync().ConfigureAwait(false);
+                if (o == null || o == DBNull.Value) return null;
+                try { return Convert.ToDateTime(o); } catch { return null; }
+            }
+        }
     }
 }

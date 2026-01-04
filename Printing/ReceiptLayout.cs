@@ -49,12 +49,17 @@ namespace Geldautomat.Printing
                                 if (part.StartsWith("MAN=", StringComparison.OrdinalIgnoreCase)) mandant = part.Substring(4).Trim();
                                 if (part.StartsWith("KEN=", StringComparison.OrdinalIgnoreCase)) kenFromMeta = part.Substring(4).Trim();
                                 if (part.StartsWith("ID=", StringComparison.OrdinalIgnoreCase)) schichtId = part.Substring(3).Trim();
+                                if (part.StartsWith("END=", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    DateTime dt;
+                                    if (DateTime.TryParse(part.Substring(4).Trim(), out dt)) arbeitsEnde = dt;
+                                }
                             }
                         }
                     }
                     catch { }
                 }
-                if (string.IsNullOrWhiteSpace(mandant)) mandant = kenFromMeta; // Fallback nur Kennzeichen, wird unten nicht mehr gedruckt wenn Name fehlt
+                if (string.IsNullOrWhiteSpace(mandant)) mandant = kenFromMeta; // Fallback nur Kennzeichen
                 if (string.IsNullOrWhiteSpace(mandant))
                 {
                     try
@@ -66,7 +71,7 @@ namespace Geldautomat.Printing
                     catch { }
                 }
 
-                // Mandant per ManID -> ManName
+                // Mandant per ManID -> ManName und Schichtzeiten laden
                 try
                 {
                     string display = null;
@@ -79,10 +84,25 @@ namespace Geldautomat.Printing
                             var det = db.GetShiftDetailsAsync(sidTmp).GetAwaiter().GetResult();
                             if (det != null)
                             {
-                                // Zeiten merken, aber erst NACH "vom ..." drucken
                                 arbeitsBeginn = det.StartZeit;
-                                try { var p = det.GetType().GetProperty("EndZeit"); if (p != null) { var ev = p.GetValue(det); if (ev is DateTime dt && dt != DateTime.MinValue) arbeitsEnde = dt; } } catch { }
+                                // EndZeit aus Modell (falls Property vorhanden)
+                                try
+                                {
+                                    var p = det.GetType().GetProperty("EndZeit");
+                                    if (p != null)
+                                    {
+                                        var ev = p.GetValue(det);
+                                        if (ev is DateTime dt && dt != DateTime.MinValue) arbeitsEnde = dt;
+                                    }
+                                }
+                                catch { }
                                 if (det.ManId >= 0) manId = det.ManId;
+                            }
+                            // Fallback: direkt aus DB laden, falls noch nicht vorhanden
+                            if (!arbeitsEnde.HasValue)
+                            {
+                                var end = db.GetShiftEndZeitAsync(sidTmp).GetAwaiter().GetResult();
+                                if (end.HasValue) arbeitsEnde = end.Value;
                             }
                         }
                     }
@@ -114,7 +134,6 @@ namespace Geldautomat.Printing
                 if (isSchicht)
                 {
                     // Meta (::SCHMETA|...) hinzufügen und direkt DANACH Arbeitsbeginn/-ende einfügen
-                    int beforeCount = list.Count;
                     if (!TryAddFromMetaHeader(buchungstext, list))
                     {
                         if (!TryAddFromFreeText(buchungstext, list))
@@ -153,12 +172,11 @@ namespace Geldautomat.Printing
 
         private string FormatVatLine(string mwst, decimal betrag)
         {
-            // Einheitliche Spalten: Label links, Beträge rechtsbündig, € exakt ausgerichtet
-            const int labelWidth = 6;    // "19%:" oder "7%:" etc.
-            const int valueColumn = 28;  // Spalte, an der das €-Zeichen stehen soll
+            const int labelWidth = 6;
+            const int valueColumn = 28;
             string label = (mwst + "%:").PadLeft(labelWidth);
             string amount = betrag.ToString("0.00", De);
-            string value = amount + " €"; // immer gleich formatiert
+            string value = amount + " €";
             int spaces = Math.Max(1, valueColumn - label.Length - value.Length);
             return label + new string(' ', spaces) + value;
         }
