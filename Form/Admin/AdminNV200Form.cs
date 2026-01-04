@@ -1,12 +1,12 @@
-using System;
+ï»¿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
-using System.IO.Ports; // NEU für COM-Port Auflistung
-using System.Globalization; // NEU für Formatierung
+using System.IO.Ports; // NEU f?r COM-Port Auflistung
+using System.Globalization; // NEU f?r Formatierung
 
 namespace Geldautomat
 {
@@ -34,7 +34,7 @@ namespace Geldautomat
         private Button _btnDetectPort; // NEU: Erkennung
         private string[] _lastPorts; // NEU: letzte Ports
         private bool _detectingPort; // NEU: Erkennungsmodus aktiv
-        private string[] _detectBasePorts; // Basisliste für Erkennung
+        private string[] _detectBasePorts; // Basisliste f?r Erkennung
         private Form _detectDialog; // Hinweisfenster
         private Timer _detectTimer; // Polling Timer
         private Button btnVerbinden;
@@ -60,12 +60,11 @@ namespace Geldautomat
 
         // Event-Verwaltung / Besitz der Instanz
         private bool _eventsAttached = false;
-        private bool _ownsSsp = false; // false: Instanz kommt vom Programmstart und bleibt bestehen
 
         private string _tempStateText = null;
         //private bool _showingBezelNote = false;
 
-        // NEU: Button zum Öffnen der MaxConfig und Checkbox für manuelles Routing
+        // NEU: Button zum ?ffnen der MaxConfig und Checkbox f?r manuelles Routing
         
         private CheckBox _chkRouteAllPayout;
        // private bool _loadingRouteUi = false;
@@ -78,7 +77,7 @@ namespace Geldautomat
         public static bool DeviceDisabled = false; // true = keine Verbindungs-/Eventversuche
         
         private Label[] _lblCashboxAnz = new Label[7];
-        private bool _initialPortApplied = false; // hinzugefügt für EnsureSelectedPort
+        private bool _initialPortApplied = false; // hinzugef?gt f?r EnsureSelectedPort
 
         public AdminNV200Form(NV200_SSP ssp)
         {
@@ -128,7 +127,7 @@ namespace Geldautomat
             };
             headerPanel.Controls.Add(lblTitle);
 
-            // Schließen-Button
+            // Schlieï¿½en-Button
             btnClose = new Button
             {
                 Text = "\u2715",
@@ -148,7 +147,7 @@ namespace Geldautomat
             // Minimieren-Button
             btnMinimize = new Button
             {
-                Text = "—",
+                Text = "ï¿½",
                 Font = new Font("Segoe UI", 16F, FontStyle.Bold),
                 ForeColor = Color.White,
                 BackColor = Color.Transparent,
@@ -176,7 +175,7 @@ namespace Geldautomat
             // Bestand-Timer
             StartBestandTimer(true);
 
-            // Events aus globaler Session anhängen (ohne Start/Stop)
+            // Events aus globaler Session anhï¿½ngen (ohne Start/Stop)
             AttachSspEvents();
 
             // Anfangswerte setzen
@@ -220,7 +219,7 @@ namespace Geldautomat
         {
             int yStart = 70; // Abstand unterhalb des Headers
 
-            // --- Verbindungsbereich (nur Events anhängen/lösen, keine zweite Session) ---
+            // --- Verbindungsbereich (nur Events anhï¿½ngen/lï¿½sen, keine zweite Session) ---
             var lblComPort = new Label
             {
                 Text = "COM-Port:",
@@ -254,7 +253,7 @@ namespace Geldautomat
             {
                 Location = new Point(320, yStart - 4),
                 Size = new Size(140, 24),
-                Text = "Events anhängen"
+                Text = "Events anhï¿½ngen"
             };
             btnVerbinden.Click += btnVerbinden_Click;
             Controls.Add(btnVerbinden);
@@ -380,7 +379,7 @@ namespace Geldautomat
             _lblPort = new Label { Text = "-", Location = new Point(140, 68), AutoSize = true, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
             _panelStatus.Controls.Add(_lblPort);
 
-            var lLast = new Label { Text = "Letzte Aktivität:", Location = new Point(20, 96), AutoSize = true, Font = new Font("Segoe UI Variable", 11F) };
+            var lLast = new Label { Text = "Letzte Aktivitï¿½t:", Location = new Point(20, 96), AutoSize = true, Font = new Font("Segoe UI Variable", 11F) };
             _panelStatus.Controls.Add(lLast);
             _lblLastEvt = new Label { Text = "-", Location = new Point(140, 94), AutoSize = true, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
             _panelStatus.Controls.Add(_lblLastEvt);
@@ -433,7 +432,7 @@ namespace Geldautomat
             {
                 var ldenom = new Label
                 {
-                    Text = $"{werte[i],3} €:",
+                    Text = $"{werte[i],3} ï¿½:",
                     Location = new Point(30, 50 + i * 38),
                     AutoSize = true,
                     Font = new Font("Segoe UI Variable", 12F)
@@ -485,7 +484,7 @@ namespace Geldautomat
             // Payout Summe
             _lblBestandSum = new Label
             {
-                Text = "0,00 €",
+                Text = "0,00 ï¿½",
                 Location = new Point(110, baseSumY),
                 Size = new Size(110, 24),
                 Font = new Font("Segoe UI Variable", 13F, FontStyle.Bold),
@@ -496,7 +495,7 @@ namespace Geldautomat
             // Cashbox Summe
             _lblCashboxSumNew = new Label
             {
-                Text = "0,00 €",
+                Text = "0,00 ï¿½",
                 Location = new Point(250, baseSumY),
                 Size = new Size(130, 24),
                 Font = new Font("Segoe UI Variable", 13F, FontStyle.Bold),
@@ -507,7 +506,7 @@ namespace Geldautomat
             // Gesamt (zentriert zwischen beiden Spalten)
             _lblGesamtSum = new Label
             {
-                Text = "Gesamt: 0,00 €",
+                Text = "Gesamt: 0,00 ï¿½",
                 Location = new Point((_panelBestand.Width - 200) / 2, baseSumY + 30),
                 Size = new Size(200, 24),
                 Font = new Font("Segoe UI Variable", 12.5F, FontStyle.Bold),
@@ -533,10 +532,10 @@ namespace Geldautomat
             string iniCom = IniHelper.ReadValue("NV200/1", "ComPort", iniPath);
             LoadComPorts();
             EnsureSelectedPort(_ssp?.ComPort ?? iniCom, initial: true);
-            // NEU: Button "Payout Stückelung" als Feld anlegen und Click-Handler zuweisen
+            // NEU: Button "Payout Stï¿½ckelung" als Feld anlegen und Click-Handler zuweisen
             btnPayoutStueckelung = new Button
             {
-                Text = "Payout Stückelung",
+                Text = "Payout Stï¿½ckelung",
                 Location = new Point(850, yStart + 610),
                 Size = new Size(220, 32),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
@@ -544,7 +543,7 @@ namespace Geldautomat
             btnPayoutStueckelung.Click += (s, e) => ToggleMaxConfigPanel();
             Controls.Add(btnPayoutStueckelung);
 
-            // NEU: Checkbox für manuelles Routing – deaktiviert
+            // NEU: Checkbox fï¿½r manuelles Routing ï¿½ deaktiviert
             _chkRouteAllPayout = new CheckBox
             {
                 Text = "Manuelles Routing deaktiviert (automatisch)",
@@ -581,16 +580,16 @@ namespace Geldautomat
                 {
                     _panelMaxConfig.BringToFront();
                     ScrollControlIntoView(_panelMaxConfig);
-                    btnPayoutStueckelung.Text = "Payout Stückelung ausblenden";
+                    btnPayoutStueckelung.Text = "Payout Stï¿½ckelung ausblenden";
                 }
                 else
                 {
-                    btnPayoutStueckelung.Text = "Payout Stückelung";
+                    btnPayoutStueckelung.Text = "Payout Stï¿½ckelung";
                 }
             }
             catch (Exception ex)
             {
-                AppendLog("MaxConfig konnte nicht geöffnet/geschlossen werden: " + ex.Message);
+                AppendLog("MaxConfig konnte nicht geï¿½ffnet/geschlossen werden: " + ex.Message);
             }
         }
 
@@ -602,12 +601,12 @@ namespace Geldautomat
             for (int i = 0; i < counts.Length && i < _lblBestandAnz.Length; i++) _lblBestandAnz[i].Text = counts[i].ToString();
             decimal sumEuro = 5m*counts[0] + 10m*counts[1] + 20m*counts[2] + 50m*counts[3] + 100m*counts[4] + 200m*counts[5] + 500m*counts[6];
             var de = CultureInfo.GetCultureInfo("de-DE");
-            _lblBestandSum.Text = sumEuro.ToString("N2", de) + " €";
+            _lblBestandSum.Text = sumEuro.ToString("N2", de) + " ï¿½";
             int[] cbox = { _ssp.Cashbox_5_euro, _ssp.Cashbox_10_euro, _ssp.Cashbox_20_euro, _ssp.Cashbox_50_euro, _ssp.Cashbox_100_euro, _ssp.Cashbox_200_euro, _ssp.Cashbox_500_euro };
             for (int i = 0; i < cbox.Length && i < _lblCashboxAnz.Length; i++) _lblCashboxAnz[i].Text = cbox[i].ToString();
             decimal sumCbox = 5m*cbox[0] + 10m*cbox[1] + 20m*cbox[2] + 50m*cbox[3] + 100m*cbox[4] + 200m*cbox[5] + 500m*cbox[6];
-            _lblCashboxSumNew.Text = sumCbox.ToString("N2", de) + " €";
-            if (_lblGesamtSum != null) _lblGesamtSum.Text = "Gesamt: " + (sumEuro + sumCbox).ToString("N2", de) + " €";
+            _lblCashboxSumNew.Text = sumCbox.ToString("N2", de) + " ï¿½";
+            if (_lblGesamtSum != null) _lblGesamtSum.Text = "Gesamt: " + (sumEuro + sumCbox).ToString("N2", de) + " ï¿½";
         }
 
         // --- Fehlende Hilfsmethoden (stubs / einfache Implementierungen) ---
@@ -656,7 +655,7 @@ namespace Geldautomat
                 _detectingPort = true;
                 _btnDetectPort.Text = "Stop";
                 _detectDialog = new Form { Text = "COM-Port Erkennung", Size = new Size(420,140), FormBorderStyle = FormBorderStyle.FixedDialog, StartPosition = FormStartPosition.CenterParent, ControlBox = false, TopMost = true };
-                var lbl = new Label { Text = "Bitte jetzt gewünschten USB / COM Adapter einstecken...\r\nFenster schließt automatisch bei Erkennung.", AutoSize = false, Location = new Point(12,12), Size = new Size(380,56) };
+                var lbl = new Label { Text = "Bitte jetzt gewï¿½nschten USB / COM Adapter einstecken...\r\nFenster schlieï¿½t automatisch bei Erkennung.", AutoSize = false, Location = new Point(12,12), Size = new Size(380,56) };
                 _detectDialog.Controls.Add(lbl);
                 var btnCancel = new Button { Text = "Abbrechen", Location = new Point(300,80), Size = new Size(90,28) };
                 btnCancel.Click += (s,e)=> StopDetectPortMode(true);
@@ -709,18 +708,18 @@ namespace Geldautomat
         }
         private void btnVerbinden_Click(object sender, EventArgs e)
         {
-            if (_ssp == null) { AppendLog("Keine NV200-Instanz verfügbar."); return; }
-            if (_eventsAttached) { DetachSspEvents(); AppendLog("Events gelöst."); } else { AttachSspEvents(); AppendLog("Events angehängt."); }
+            if (_ssp == null) { AppendLog("Keine NV200-Instanz verfï¿½gbar."); return; }
+            if (_eventsAttached) { DetachSspEvents(); AppendLog("Events gelï¿½st."); } else { AttachSspEvents(); AppendLog("Events angehï¿½ngt."); }
             UpdateStatusUi();
         }
         private void BtnComPortSpeichern_Click(object sender, EventArgs e)
         {
-            var sel = txtComPort.SelectedItem as string; if (string.IsNullOrWhiteSpace(sel)) { MessageBox.Show("Kein Port ausgewählt."); return; }
+            var sel = txtComPort.SelectedItem as string; if (string.IsNullOrWhiteSpace(sel)) { MessageBox.Show("Kein Port ausgewï¿½hlt."); return; }
             IniHelper.WriteValue("NV200/1", "ComPort", sel, iniPath); AppendLog("COM-Port gespeichert: " + sel); MessageBox.Show("COM-Port gespeichert.");
         }
         private void BtnEnableToggle_Click(object sender, EventArgs e)
         {
-            if (_ssp == null) { AppendLog("Keine NV200-Instanz verfügbar."); return; }
+            if (_ssp == null) { AppendLog("Keine NV200-Instanz verfï¿½gbar."); return; }
             _enabledRequested = !_enabledRequested;
             try
             {
@@ -766,9 +765,9 @@ namespace Geldautomat
                     _lblConn.Text = "Deaktiviert"; _lblConn.ForeColor = Color.Gray; _lblPort.Text = "-"; _lblLastEvt.Text = "-"; _lblState.Text = "disabled"; _lblState.ForeColor = Color.Gray; return;
                 }
                 bool commAlive = false; if (_ssp != null) { var diff = DateTime.Now - _ssp.Last_Communicationtime; commAlive = diff.TotalSeconds < 3.0; }
-                _lblConn.Text = commAlive ? "Verbunden" : "Keine Aktivität"; _lblConn.ForeColor = commAlive ? Color.FromArgb(0,128,0) : Color.FromArgb(183,28,28);
+                _lblConn.Text = commAlive ? "Verbunden" : "Keine Aktivitï¿½t"; _lblConn.ForeColor = commAlive ? Color.FromArgb(0,128,0) : Color.FromArgb(183,28,28);
                 _lblPort.Text = $"{(_ssp?.ComPort ?? "-")}, Addr {(_ssp!=null ? _ssp.SSPAdress.ToString() : "-")}"; EnsureSelectedPort(_ssp?.ComPort,false);
-                if (_lastEvtUtc == DateTime.MinValue) _lblLastEvt.Text = "—"; else { var ago = DateTime.UtcNow - _lastEvtUtc; _lblLastEvt.Text = $"{_lastEvtUtc.ToLocalTime():HH:mm:ss} ({Math.Max(0,(int)ago.TotalSeconds)} s)"; }
+                if (_lastEvtUtc == DateTime.MinValue) _lblLastEvt.Text = "ï¿½"; else { var ago = DateTime.UtcNow - _lastEvtUtc; _lblLastEvt.Text = $"{_lastEvtUtc.ToLocalTime():HH:mm:ss} ({Math.Max(0,(int)ago.TotalSeconds)} s)"; }
                 var s = _tempStateText ?? (_ssp?.states ?? "-"); _lblState.Text = s; var t = (s??"").ToLowerInvariant(); Color c = Color.SteelBlue; if (t.Contains("idle")||t.Contains("bereit")||t.Contains("started")||t.Contains("connected")||t.Contains("synchron")) c=Color.FromArgb(0,128,0); else if (t.Contains("dispens")||t.Contains("stack")||t.Contains("reading")||t.Contains("read note")) c=Color.FromArgb(255,140,0); else if (t.Contains("disabled")||t.Contains("jammed")||t.Contains("halted")||t.Contains("failed")||t.Contains("timeout")||t.Contains("open sspcomport")||t.Contains("neustart")) c=Color.FromArgb(183,28,28); _lblState.ForeColor = c;
             }
             catch { }
@@ -779,7 +778,7 @@ namespace Geldautomat
             string hex = (txtSendHex?.Text ?? "").Trim().Replace(" ", ""); if (hex.Length==0){ AppendLog("Kein Hex-String."); return; }
             try
             {
-                if (hex.Length %2!=0) throw new FormatException("Ungerade Hex-Länge");
+                if (hex.Length %2!=0) throw new FormatException("Ungerade Hex-Lï¿½nge");
                 byte[] data = new byte[hex.Length/2]; for(int i=0;i<data.Length;i++) data[i]=Convert.ToByte(hex.Substring(i*2,2),16);
                 _ssp.SendRaw(data); AppendLog("TX: "+ NV200SerialPort.ToHex(data));
             }
@@ -788,8 +787,8 @@ namespace Geldautomat
         private void chkAutoSenden_CheckedChanged(object sender, EventArgs e){ if (tmrAutoSend!=null && chkAutoSenden!=null){ tmrAutoSend.Enabled = chkAutoSenden.Checked; AppendLog("AutoSenden: "+(chkAutoSenden.Checked?"aktiv":"inaktiv")); }}
         private void tmrAutoSend_Tick(object sender, EventArgs e){ btnSenden_Click(sender,e); }
         private void StartBestandTimer(bool start){ if (_tmrBestand==null) return; _tmrBestand.Enabled = start; if (start) RefreshBestand(); }
-        private void AttachSspEvents(){ if (_ssp==null||_eventsAttached) return; _ssp.Ereignis += SspOnEreignis; _eventsAttached = true; if (btnVerbinden!=null) btnVerbinden.Text="Events lösen"; }
-        private void DetachSspEvents(){ if (_ssp==null||!_eventsAttached) return; try{ _ssp.Ereignis -= SspOnEreignis; }catch{} _eventsAttached=false; if (btnVerbinden!=null) btnVerbinden.Text="Events anhängen"; }
+        private void AttachSspEvents(){ if (_ssp==null||_eventsAttached) return; _ssp.Ereignis += SspOnEreignis; _eventsAttached = true; if (btnVerbinden!=null) btnVerbinden.Text="Events lï¿½sen"; }
+        private void DetachSspEvents(){ if (_ssp==null||!_eventsAttached) return; try{ _ssp.Ereignis -= SspOnEreignis; }catch{} _eventsAttached=false; if (btnVerbinden!=null) btnVerbinden.Text="Events anhï¿½ngen"; }
         private void SspOnEreignis(string x){ _lastEvtUtc = DateTime.UtcNow; AppendLog(x); }
         private void AppendLog(string text)
         {
@@ -821,7 +820,7 @@ namespace Geldautomat
         {
             base.OnShown(e);
             try { LoadInitialNvLog(); } catch { }
-            try { _ssp?.StartLiveFrameLogging(); AppendLog("Live-Frame-Logging aktiv (Form geöffnet)"); } catch { }
+            try { _ssp?.StartLiveFrameLogging(); AppendLog("Live-Frame-Logging aktiv (Form geï¿½ffnet)"); } catch { }
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)

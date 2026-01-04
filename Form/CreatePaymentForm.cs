@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
@@ -16,7 +16,7 @@ namespace Geldautomat
         private Button btnClose;
         private Button btnMinimize;
         private Label lblTitle;
-        private Point _mouseDownLocation;
+    
 
         private ComboBox cboFelder;
         private Button btnPickFeld;
@@ -88,7 +88,7 @@ namespace Geldautomat
 
             btnMinimize = new Button
             {
-                Text = "–",
+                Text = "ï¿½",
                 Font = new Font("Segoe UI", 16F, FontStyle.Bold),
                 ForeColor = Color.White,
                 BackColor = Color.Transparent,
@@ -110,13 +110,13 @@ namespace Geldautomat
             _layoutTop = top;
             var lblFeld = new Label { Text = "Zahlungsfeld:", Location = new Point(24, top), AutoSize = true, Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold) };
             cboFelder = new ComboBox { Location = new Point(260, top - 6), Width = 480, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 14F), IntegralHeight = false, Visible = false };
-            btnPickFeld = new Button { Text = "Feld wählen", Location = new Point(260, top - 10), Size = new Size(220, 48), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(33,150,243), ForeColor = Color.White, Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold) };
+            btnPickFeld = new Button { Text = "Feld wï¿½hlen", Location = new Point(260, top - 10), Size = new Size(220, 48), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(33,150,243), ForeColor = Color.White, Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold) };
             btnPickFeld.FlatAppearance.BorderSize = 0;
             lblPickedFeld = new Label { Text = "Bitte Auswahl treffen", Location = new Point(btnPickFeld.Right + 12, top - 2), AutoSize = false, Size = new Size(240, 34), Font = new Font("Segoe UI", 12F, FontStyle.Regular), ForeColor = Color.DimGray, Visible = false };
 
             var data = PaymentSettingsStore.Load();
             var felder = data.Felder.ToList();
-            // Platzhalter für Zahlungsfeld hinzufügen
+            // Platzhalter fï¿½r Zahlungsfeld hinzufï¿½gen
             try
             {
                 felder.Insert(0, new PaymentFieldSetting { Bezeichnung = "Bitte Auswahl treffen", MaxBetrag = 0m, Typ = 2, MwSt = MwStType.Mwst0 });
@@ -133,11 +133,11 @@ namespace Geldautomat
 
             var lblFirma = new Label { Text = "Firma:", Location = new Point(24, top + 120), AutoSize = true, Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold) };
             cboFirma = new ComboBox { Location = new Point(260, top + 116), Width = 480, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 14F), IntegralHeight = false, Visible = false };
-            btnPickFirma = new Button { Text = "Firma wählen", Location = new Point(260, top + 110), Size = new Size(220, 48), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(33,150,243), ForeColor = Color.White, Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold) };
+            btnPickFirma = new Button { Text = "Firma wï¿½hlen", Location = new Point(260, top + 110), Size = new Size(220, 48), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(33,150,243), ForeColor = Color.White, Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold) };
             btnPickFirma.FlatAppearance.BorderSize = 0;
             lblPickedFirma = new Label { Text = "Bitte Auswahl treffen", Location = new Point(btnPickFirma.Right + 12, top + 118), AutoSize = false, Size = new Size(240, 34), Font = new Font("Segoe UI", 12F, FontStyle.Regular), ForeColor = Color.DimGray, Visible = false };
 
-            // Firmenliste aus DB lesen (Helper) + Platzhalter einfügen
+            // Firmenliste aus DB lesen (Helper) + Platzhalter einfï¿½gen
             Load += async (s, e) =>
             {
                 try
@@ -185,8 +185,8 @@ namespace Geldautomat
                         cboFirma.DataSource = table;
                         try { cboFirma.SelectedIndex = 0; } catch { }
                         try { cboFirma.SelectedValue = DBNull.Value; } catch { }
-                        // Button-Text initial auf "Firma wählen" setzen
-                        try { if (btnPickFirma != null) btnPickFirma.Text = "Firma wählen"; } catch { }
+                        // Button-Text initial auf "Firma wï¿½hlen" setzen
+                        try { if (btnPickFirma != null) btnPickFirma.Text = "Firma wï¿½hlen"; } catch { }
                         // Update touch label
                         try { lblPickedFirma.Text = Convert.ToString((table.Rows[0]["ManName"])) ?? "Bitte Auswahl treffen"; } catch { }
                     }
@@ -203,7 +203,7 @@ namespace Geldautomat
                 var feld = cboFelder.SelectedItem as PaymentFieldSetting;
                 if (feld == null || cboFelder.SelectedIndex == 0)
                 {
-                    MessageBox.Show(this, "Bitte Zahlungsfeld wählen.");
+                    MessageBox.Show(this, "Bitte Zahlungsfeld wï¿½hlen.");
                     return;
                 }
                 var betrag = numBetrag.Value;
@@ -219,7 +219,7 @@ namespace Geldautomat
                 }
                 if (cboFirma.SelectedValue == null || cboFirma.SelectedIndex == 0)
                 {
-                    MessageBox.Show(this, "Bitte Firma wählen.");
+                    MessageBox.Show(this, "Bitte Firma wï¿½hlen.");
                     return;
                 }
 
@@ -272,11 +272,11 @@ namespace Geldautomat
                 }
             };
             
-            // Validierung bei Änderungen
+            // Validierung bei ï¿½nderungen
             cboFelder.SelectedIndexChanged += (s, e) => ValidateMaxAmount();
             numBetrag.ValueChanged += (s, e) => ValidateMaxAmount();
             cboFirma.SelectedIndexChanged += (s, e) => ValidateMaxAmount();
-            // Initial prüfen
+            // Initial prï¿½fen
             ValidateMaxAmount();
 
             // Buttons nach Resize korrekt positionieren
@@ -285,14 +285,14 @@ namespace Geldautomat
             Controls.Add(lblFeld);
             Controls.Add(cboFelder);
             Controls.Add(btnPickFeld);
-            // Hinweis-Label für Feld-Auswahl wird nicht mehr verwendet
+            // Hinweis-Label fï¿½r Feld-Auswahl wird nicht mehr verwendet
             Controls.Add(lblBetrag);
             Controls.Add(numBetrag);
             Controls.Add(btnKeypad);
             Controls.Add(lblFirma);
             Controls.Add(cboFirma);
             Controls.Add(btnPickFirma);
-            // Hinweis-Label für Firma wird nicht mehr angezeigt
+            // Hinweis-Label fï¿½r Firma wird nicht mehr angezeigt
             Controls.Add(btnSave);
 
             // Touch pick handlers
@@ -309,7 +309,7 @@ namespace Geldautomat
                     // Update button caption to selected value
                     if (btnPickFeld != null)
                     {
-                        btnPickFeld.Text = hasSelection ? (feld?.Bezeichnung ?? "Feld wählen") : "Feld wählen";
+                        btnPickFeld.Text = hasSelection ? (feld?.Bezeichnung ?? "Feld wï¿½hlen") : "Feld wï¿½hlen";
                     }
                 }
                 catch { }
@@ -319,10 +319,10 @@ namespace Geldautomat
                 try
                 {
                     if (btnPickFirma == null) return;
-                    // Platzhalter (Index 0) -> "Firma wählen"
+                    // Platzhalter (Index 0) -> "Firma wï¿½hlen"
                     if (cboFirma.SelectedIndex <= 0)
                     {
-                        btnPickFirma.Text = "Firma wählen";
+                        btnPickFirma.Text = "Firma wï¿½hlen";
                         return;
                     }
 
@@ -332,7 +332,7 @@ namespace Geldautomat
                         name = Convert.ToString(drv["ManName"]);
                     if (string.IsNullOrWhiteSpace(name))
                         name = cboFirma.Text; // fallback to ComboBox text
-                    btnPickFirma.Text = string.IsNullOrWhiteSpace(name) ? "Firma wählen" : name;
+                    btnPickFirma.Text = string.IsNullOrWhiteSpace(name) ? "Firma wï¿½hlen" : name;
                 }
                 catch { }
             };
@@ -362,7 +362,7 @@ namespace Geldautomat
             catch { return null; }
         }
 
-        // Ziffernfeld mit Komma – Eingabe in Euro (5 = 5,00 €)
+        // Ziffernfeld mit Komma ï¿½ Eingabe in Euro (5 = 5,00 ï¿½)
 
         private int? ToNullableInt(string s)
         {
@@ -430,10 +430,10 @@ namespace Geldautomat
                 if (feld == null) { btnSave.Enabled = false; return; }
                 var betrag = numBetrag.Value;
                 bool ok = betrag > 0 && betrag <= (cboFelder.SelectedIndex > 0 ? feld.MaxBetrag : 0m);
-                // Firma muss gewählt sein (nicht Platzhalter an Index 0)
+                // Firma muss gewï¿½hlt sein (nicht Platzhalter an Index 0)
                 if (cboFirma.SelectedIndex == 0 || cboFirma.SelectedValue == null)
                     ok = false;
-                // Zahlungsfeld muss gewählt sein
+                // Zahlungsfeld muss gewï¿½hlt sein
                 if (cboFelder.SelectedIndex == 0)
                     ok = false;
                 btnSave.Enabled = ok;
@@ -592,8 +592,8 @@ namespace Geldautomat
                 var data = PaymentSettingsStore.Load();
                 var felder = data.Felder.ToList();
                 // Build items for picker
-                var items = felder.Select(f => new BigItem { Id = f.Bezeichnung ?? string.Empty, Title = f.Bezeichnung ?? string.Empty, Subtitle = $"Max {f.MaxBetrag:N2} €", Tag = f }).ToList();
-                ShowOverlay("Zahlungsfeld wählen", items, (pickedItem) =>
+                var items = felder.Select(f => new BigItem { Id = f.Bezeichnung ?? string.Empty, Title = f.Bezeichnung ?? string.Empty, Subtitle = $"Max {f.MaxBetrag:N2} ï¿½", Tag = f }).ToList();
+                ShowOverlay("Zahlungsfeld wï¿½hlen", items, (pickedItem) =>
                 {
                     var picked = pickedItem?.Tag as PaymentFieldSetting;
                     if (picked != null)
@@ -634,7 +634,7 @@ namespace Geldautomat
                         Tag = r
                     })
                     .ToList();
-                ShowOverlay("Firma wählen", items, (pickedItem) =>
+                ShowOverlay("Firma wï¿½hlen", items, (pickedItem) =>
                 {
                     var idStr = pickedItem?.Id;
                     int id;
@@ -644,7 +644,7 @@ namespace Geldautomat
                     }
                     else
                     {
-                        // Wähle explizit den Index der Firma im Combo (nicht nur SelectedValue)
+                        // Wï¿½hle explizit den Index der Firma im Combo (nicht nur SelectedValue)
                         try
                         {
                             int targetIndex = -1;
@@ -667,7 +667,7 @@ namespace Geldautomat
                                     }
                                 }
                             }
-                            // Fallback: über Namen suchen
+                            // Fallback: ï¿½ber Namen suchen
                             if (targetIndex < 0)
                             {
                                 for (int i = 0; i < cboFirma.Items.Count; i++)
@@ -684,12 +684,12 @@ namespace Geldautomat
                                     }
                                 }
                             }
-                            // Setze nur wenn gültig (>0, nicht Platzhalter)
+                            // Setze nur wenn gï¿½ltig (>0, nicht Platzhalter)
                             cboFirma.SelectedIndex = (targetIndex <= 0) ? Math.Max(1, targetIndex) : targetIndex;
                         }
                         catch { cboFirma.SelectedValue = id; }
                         // Button-Text sofort aktualisieren
-                        try { if (btnPickFirma != null) btnPickFirma.Text = string.IsNullOrWhiteSpace(pickedItem?.Title) ? "Firma wählen" : pickedItem.Title; } catch { }
+                        try { if (btnPickFirma != null) btnPickFirma.Text = string.IsNullOrWhiteSpace(pickedItem?.Title) ? "Firma wï¿½hlen" : pickedItem.Title; } catch { }
                     }
                     ValidateMaxAmount();
                 });

@@ -882,8 +882,10 @@ namespace Geldautomat
                 var gfx = XGraphics.FromPdfPage(page);
 
                 double y = margin;
-                double pageHeight = page.Height;
-                double pageWidth = page.Width;
+                // ...
+                double pageHeight = page.Height.Point;
+                double pageWidth = page.Width.Point;
+                // ...
                 double contentWidth = pageWidth - margin * 2;
 
                 // title

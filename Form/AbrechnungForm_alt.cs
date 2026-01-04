@@ -1,26 +1,26 @@
-ï»¿using System;
-using System.Collections.Generic; // Am Anfang ergÃ¤nzen
-using System.Data;                // FÃ¼r DataTable
+using System;
+using System.Collections.Generic; // Am Anfang ergänzen
+using System.Data;                // Für DataTable
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Globalization;
-using System.Linq; // neu fÃ¼r LINQ
+using System.Linq; // neu für LINQ
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.IO;
 using System.Threading.Tasks;
 using Geldautomat.Coins;
-using System.Reflection; // fÃ¼r DoubleBuffered-Reflektion
-using TaMi_Kassenclient; // fÃ¼r directe RulesEngine-Nutzung als Fallback
+using System.Reflection; // für DoubleBuffered-Reflektion
+using TaMi_Kassenclient; // für directe RulesEngine-Nutzung als Fallback
 using Geldautomat.Printing;
 using Geldautomat.Devices; // for CoinFeederProtocolMode
-using System.Drawing.Imaging; // NEU fÃ¼r ColorMatrix (transparenter Hintergrund)
+using System.Drawing.Imaging; // NEU für ColorMatrix (transparenter Hintergrund)
 
 namespace Geldautomat
 {
     public partial class AbrechnungForm : Form
     {
-        // Global zugÃ¤ngliche aktuelle Personal-ID (fÃ¼r andere Dialoge wie CreatePaymentForm)
+        // Global zugängliche aktuelle Personal-ID (für andere Dialoge wie CreatePaymentForm)
         public static int CurrentPersonalId { get; private set; }
         // Singleton-Helper: nur eine Instanz zulassen
         public static AbrechnungForm FindOpenInstance()
@@ -70,7 +70,7 @@ namespace Geldautomat
                             bg.Top + (bg.Height - frm.Height) / 2);
                     }
                     catch { }
-                    frm.TopMost = true; // darÃ¼ber halten
+                    frm.TopMost = true; // darüber halten
                     frm.Show(Program.BackgroundFormInstance); // Owner setzen
                 }
                 else
@@ -82,7 +82,7 @@ namespace Geldautomat
             return frm;
         }
 
-        // NEU: Ãœberladung mit vorab geladenem Personalguthaben (verhindert doppelte DB-Abfrage)
+        // NEU: Überladung mit vorab geladenem Personalguthaben (verhindert doppelte DB-Abfrage)
         public static AbrechnungForm ShowOrActivate(PersonalInfo personal, ShiftDetails details, NV200_SSP ssp, decimal preloadedGuthaben, bool isAdmin = false)
         {
             var existing = FindOpenInstance();
@@ -130,7 +130,7 @@ namespace Geldautomat
         private decimal _eingezahltSession;
         private NV200_SSP _ssp;
         private ICoinValidator _coin; // via CoinManager
-        private ICoinValidator _coin2 = null; // zweites GerÃ¤t
+        private ICoinValidator _coin2 = null; // zweites Gerät
         private bool _coin2EventsAttached = false;
 
         private bool _eventsAttached = false;
@@ -167,16 +167,17 @@ namespace Geldautomat
 
         private Button btnSchichtAuswahl;
         private decimal _personalGuthaben = 0m;
+        private bool _personalGuthabenPreloaded = false;
 
-        // Laufender Auszahlstatus (reduziert â€“ ungenutzte Felder entfernt)
+        // Laufender Auszahlstatus (reduziert – ungenutzte Felder entfernt)
         private decimal _geplanteAuszahlung = 0m;
         private bool _currentZahlungIstEinzahlung = false;
         private Label lblMaxVerfuegbar;
 
-        // Anzahl aktiver ScheingerÃ¤te wÃ¤hrend Auszahlung
+        // Anzahl aktiver Scheingeräte während Auszahlung
         private int _activeNotePayoutDevices = 0;
 
-        // MÃ¼nzen
+        // Münzen
         private int[] muenzWerte = { 1, 2, 5, 10, 20, 50, 100, 200 }; // Cent
         private int[] auswahlAnzahlMuenzen = new int[8];
         private string[] muenzBilder = { "1cent.jpg", "2cent.jpg", "5cent.jpg", "10cent.jpg", "20cent.jpg", "50cent.jpg", "1euro.jpg", "2euro.jpg" };
@@ -191,7 +192,7 @@ namespace Geldautomat
         private int[] _coin2Avail = new int[8] { -1, -1, -1, -1, -1, -1, -1, -1 };
         private DateTime _lastCoinLevelsRequestUtc = DateTime.MinValue;
 
-        // Payout MÃ¼nzen (reduziert â€“ ungenutzte Felder entfernt)
+        // Payout Münzen (reduziert – ungenutzte Felder entfernt)
         private decimal _geplanteMuenzAuszahlung = 0m;
 
         private bool _notesPayoutInProgress = false;
@@ -271,6 +272,7 @@ namespace Geldautomat
             try
             {
                 _personalGuthaben = preloadedGuthaben;
+                _personalGuthabenPreloaded = true;
                 if (lblGuthaben != null)
                     lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}";
             }
@@ -708,7 +710,7 @@ namespace Geldautomat
 
             btnSchichtAuswahl = new Button
             {
-                Text = "Schicht auswÃ¤hlen",
+                Text = "Schicht auswählen",
                 Font = new Font("Segoe UI Variable", 14F, FontStyle.Bold),
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(33, 150, 243),
@@ -763,7 +765,7 @@ namespace Geldautomat
             y += 60;
             lblGuthaben = new Label
             {
-                Text = "Personal-Guthaben: 0,00 â‚¬ (Platzhalter)",
+                Text = "Personal-Guthaben: 0,00 € (Platzhalter)",
                 Font = new Font("Segoe UI Variable", 20F),
                 Location = new Point(40, y),
                 Size = new Size(800, 44),
@@ -853,12 +855,12 @@ namespace Geldautomat
             };
             tabAbrechnen.Controls.Add(btnCreatePayment);
 
-            // y unverÃ¤ndert lassen, keine zusÃ¤tzlichen Buttons hier
+            // y unverändert lassen, keine zusätzlichen Buttons hier
 
             y += 80;
             nudManuell = new NumericUpDown { Location = new Point(40, y), Size = new Size(200, 44), DecimalPlaces = 2, Minimum = -10000, Maximum = 10000, Increment = 5, Font = new Font("Segoe UI Variable", 20F), Visible = false };
             tabAbrechnen.Controls.Add(nudManuell);
-            btnManuellAdd = new Button { Text = "Manuell hinzufÃ¼gen", Location = new Point(260, y), Size = new Size(280, 48), Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Visible = false };
+            btnManuellAdd = new Button { Text = "Manuell hinzufügen", Location = new Point(260, y), Size = new Size(280, 48), Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Visible = false };
             btnManuellAdd.FlatAppearance.BorderSize = 0;
             btnManuellAdd.Click += btnManuellAdd_Click;
             tabAbrechnen.Controls.Add(btnManuellAdd);
@@ -937,7 +939,7 @@ namespace Geldautomat
                             _activeCoinPayoutDevices = 0;
                             _busyLockSince = DateTime.MinValue;
                             UpdateBusyUI();
-                            try { MessageBox.Show(this, "Timeout erreicht â€“ Bedienung wieder freigegeben.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
+                            try { MessageBox.Show(this, "Timeout erreicht – Bedienung wieder freigegeben.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
                         }
                     }
                 }
@@ -1064,13 +1066,13 @@ namespace Geldautomat
                 }
                 catch { }
                 tabWechseln.Controls.Add(pb); picMuenzen[i] = pb;
-                var bMinus = new Button { Text = "â€“", Location = new Point(startXMuenzMinus, rowY), Size = new Size(48, 48), Tag = i, FlatStyle = FlatStyle.Flat, BackColor = danger, ForeColor = Color.White, Font = new Font("Segoe UI Variable", 24F, FontStyle.Bold) };
+                var bMinus = new Button { Text = "–", Location = new Point(startXMuenzMinus, rowY), Size = new Size(48, 48), Tag = i, FlatStyle = FlatStyle.Flat, BackColor = danger, ForeColor = Color.White, Font = new Font("Segoe UI Variable", 24F, FontStyle.Bold) };
                 bMinus.FlatAppearance.BorderSize = 0; bMinus.Click += BtnMinusMuenzen_Click; tabWechseln.Controls.Add(bMinus); btnMinusMuenzen[i] = bMinus;
                 var lbl = new Label { Text = "0", TextAlign = ContentAlignment.MiddleCenter, Location = new Point(startXMuenzCount, rowY), Size = new Size(60, 48), BorderStyle = BorderStyle.FixedSingle, BackColor = Color.White, Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold) };
                 tabWechseln.Controls.Add(lbl); lblAnzahlMuenzen[i] = lbl;
                 var bPlus = new Button { Text = "+", Location = new Point(startXMuenzPlus, rowY), Size = new Size(48, 48), Tag = i, FlatStyle = FlatStyle.Flat, BackColor = primary, ForeColor = Color.White, Font = new Font("Segoe UI Variable", 24F, FontStyle.Bold) };
                 bPlus.FlatAppearance.BorderSize = 0; bPlus.Click += BtnPlusMuenzen_Click; tabWechseln.Controls.Add(bPlus); btnPlusMuenzen[i] = bPlus;
-                var lAvail = new Label { Text = "vorrÃ¤tig: 0", AutoSize = true, Location = new Point(startXMuenzAvail, rowY + 12), ForeColor = Color.DimGray, Font = new Font("Segoe UI Variable", 18F) };
+                var lAvail = new Label { Text = "vorrätig: 0", AutoSize = true, Location = new Point(startXMuenzAvail, rowY + 12), ForeColor = Color.DimGray, Font = new Font("Segoe UI Variable", 18F) };
                 tabWechseln.Controls.Add(lAvail); lblVerfuegbarMuenzen[i] = lAvail;
             }
 
@@ -1100,21 +1102,21 @@ namespace Geldautomat
                 }
                 catch { }
                 tabWechseln.Controls.Add(pb); picScheine[i] = pb;
-                var bMinus = new Button { Text = "â€“", Location = new Point(startXScheinMinus, rowY), Size = new Size(48, 48), Tag = i, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, Font = new Font("Segoe UI Variable", 24F, FontStyle.Bold) };
+                var bMinus = new Button { Text = "–", Location = new Point(startXScheinMinus, rowY), Size = new Size(48, 48), Tag = i, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, Font = new Font("Segoe UI Variable", 24F, FontStyle.Bold) };
                 bMinus.FlatAppearance.BorderSize = 0; bMinus.Click += BtnMinus_Click; tabWechseln.Controls.Add(bMinus); btnMinus[i] = bMinus;
                 var lbl = new Label { Text = "0", TextAlign = ContentAlignment.MiddleCenter, Location = new Point(startXScheinCount, rowY), Size = new Size(60, 48), BorderStyle = BorderStyle.FixedSingle, BackColor = Color.White, Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold) };
                 tabWechseln.Controls.Add(lbl); lblAnzahl[i] = lbl;
                 var bPlus = new Button { Text = "+", Location = new Point(startXScheinPlus, rowY), Size = new Size(48, 48), Tag = i, FlatStyle = FlatStyle.Flat, BackColor = primary, ForeColor = Color.White, Font = new Font("Segoe UI Variable", 24F, FontStyle.Bold) };
                 bPlus.FlatAppearance.BorderSize = 0; bPlus.Click += BtnPlus_Click; tabWechseln.Controls.Add(bPlus); btnPlus[i] = bPlus;
-                var lAvail = new Label { Text = "vorrÃ¤tig: 0", AutoSize = true, Location = new Point(startXScheinAvail, rowY + 12), ForeColor = Color.DimGray, Font = new Font("Segoe UI Variable", 18F) };
+                var lAvail = new Label { Text = "vorrätig: 0", AutoSize = true, Location = new Point(startXScheinAvail, rowY + 12), ForeColor = Color.DimGray, Font = new Font("Segoe UI Variable", 18F) };
                 tabWechseln.Controls.Add(lAvail); lblVerfuegbar[i] = lAvail;
                 if (scheinWerte[i] >= 100) { pb.Visible = false; bMinus.Visible = false; lbl.Visible = false; bPlus.Visible = false; lAvail.Visible = false; }
             }
 
             int labelX = 600; int labelWidth = 350; int maxVerfuegbarY = startY + Math.Max(muenzWerte.Length, scheinWerte.Length) * rowH + 10; int maxAvailX = labelX - 180;
-            lblMaxVerfuegbar = new Label { Text = $"Maximal verfÃ¼gbar: {(_personalGuthaben + _eingezahltSession):C2}", Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(33, 150, 243), Location = new Point(maxAvailX, maxVerfuegbarY), Size = new Size(labelWidth + 180, 40), TextAlign = ContentAlignment.MiddleRight, BackColor = Color.Transparent };
+            lblMaxVerfuegbar = new Label { Text = $"Maximal verfügbar: {(_personalGuthaben + _eingezahltSession):C2}", Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(33, 150, 243), Location = new Point(maxAvailX, maxVerfuegbarY), Size = new Size(labelWidth + 180, 40), TextAlign = ContentAlignment.MiddleRight, BackColor = Color.Transparent };
             tabWechseln.Controls.Add(lblMaxVerfuegbar);
-            lblSummeAuszahlung = new Label { AutoSize = false, Font = new Font("Segoe UI", 24F, FontStyle.Bold), Text = "Summe: 0,00 â‚¬", TextAlign = ContentAlignment.MiddleRight, Location = new Point(labelX, maxVerfuegbarY + 44), Size = new Size(labelWidth, 48) };
+            lblSummeAuszahlung = new Label { AutoSize = false, Font = new Font("Segoe UI", 24F, FontStyle.Bold), Text = "Summe: 0,00 €", TextAlign = ContentAlignment.MiddleRight, Location = new Point(labelX, maxVerfuegbarY + 44), Size = new Size(labelWidth, 48) };
             tabWechseln.Controls.Add(lblSummeAuszahlung);
             btnAuszahlen = new Button { Text = "Auszahlen", Location = new Point(labelX + labelWidth + 30, maxVerfuegbarY + 40), Size = new Size(180, 60), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(46, 125, 50), ForeColor = Color.White, Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold) };
             btnAuszahlen.FlatAppearance.BorderSize = 0; btnAuszahlen.Click += btnAuszahlen_Click; tabWechseln.Controls.Add(btnAuszahlen);
@@ -1138,15 +1140,15 @@ namespace Geldautomat
                 else
                 {
                     decimal summe = -raw19 - raw7 - raw0;
-                    lblB19.Text = $"19%: {-raw19:C2}"; lblB7.Text = $"7%: {-raw7:C2}"; lblB0.Text = $"0%: {-raw0:C2}"; lblSumme.Text = $"Summe: {summe:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; lblNoch.Text = "Noch zu zahlen: 0,00 â‚¬"; try { lblNoch.ForeColor = Color.Green; } catch { }
+                    lblB19.Text = $"19%: {-raw19:C2}"; lblB7.Text = $"7%: {-raw7:C2}"; lblB0.Text = $"0%: {-raw0:C2}"; lblSumme.Text = $"Summe: {summe:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; lblNoch.Text = "Noch zu zahlen: 0,00 €"; try { lblNoch.ForeColor = Color.Green; } catch { }
                 }
-                // Wichtig: nicht mit Standard-Nullwerten Ã¼berschreiben, wenn eine Auszahlung geladen ist
+                // Wichtig: nicht mit Standard-Nullwerten überschreiben, wenn eine Auszahlung geladen ist
                 UpdateBuchenEnabled();
                 return;
             }
             if (_details == null)
             {
-                lblB19.Text = "19%: 0,00 â‚¬"; lblB7.Text = "7%: 0,00 â‚¬"; lblB0.Text = "0%: 0,00 â‚¬"; lblSumme.Text = "Summe: 0,00 â‚¬"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; lblNoch.Text = "Noch zu zahlen: 0,00 â‚¬"; UpdateBuchenEnabled(); return;
+                lblB19.Text = "19%: 0,00 €"; lblB7.Text = "7%: 0,00 €"; lblB0.Text = "0%: 0,00 €"; lblSumme.Text = "Summe: 0,00 €"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; lblNoch.Text = "Noch zu zahlen: 0,00 €"; UpdateBuchenEnabled(); return;
             }
             lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; var restStd = Math.Max(0, _details.SummeZuZahlen - _eingezahltSession); var nochStd = Math.Max(0, restStd - _personalGuthaben); lblNoch.Text = $"Noch zu zahlen: {nochStd:C2}"; try { lblNoch.ForeColor = (nochStd > 0m) ? Color.Red : Color.Green; } catch { }
             UpdateBuchenEnabled();
@@ -1157,7 +1159,7 @@ namespace Geldautomat
             try
             {
                 var cfg = ReceiptPrinterSettings.Load();
-                // Entferne das frÃ¼he Return: auch bei deaktiviertem Drucker sollen Mail/QR angeboten werden.
+                // Entferne das frühe Return: auch bei deaktiviertem Drucker sollen Mail/QR angeboten werden.
 
                 DialogResult choice = DialogResult.None;
                 if (cfg.AskUser)
@@ -1207,7 +1209,7 @@ namespace Geldautomat
                 }
                 if (choice == DialogResult.Yes)
                 {
-                    // Drucken nur ausfÃ¼hren, wenn Druck aktiviert ist
+                    // Drucken nur ausführen, wenn Druck aktiviert ist
                     if (!cfg.Enabled)
                     {
                         MessageBox.Show(this, "Drucken ist deaktiviert.", "Quittung", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -1264,7 +1266,7 @@ namespace Geldautomat
 
                 var lbl = new Label
                 {
-                    Text = "MÃ¶chten Sie eine Quittung, wenn ja wie?",
+                    Text = "Möchten Sie eine Quittung, wenn ja wie?",
                     AutoSize = false,
                     TextAlign = ContentAlignment.MiddleCenter,
                     Dock = DockStyle.Top,
@@ -1321,7 +1323,7 @@ namespace Geldautomat
                         btnMail.ForeColor = Color.WhiteSmoke;
                         btnMail.FlatAppearance.MouseOverBackColor = Color.LightGray;
                         btnMail.Cursor = Cursors.No;
-                        string reason = !hasEmployeeMail ? "Keine Mitarbeiter-E-Mail hinterlegt." : "Maileinstellungen unvollstÃ¤ndig.";
+                        string reason = !hasEmployeeMail ? "Keine Mitarbeiter-E-Mail hinterlegt." : "Maileinstellungen unvollständig.";
                         try { new ToolTip().SetToolTip(btnMail, reason); } catch { }
                     }
                 }
@@ -1435,7 +1437,7 @@ namespace Geldautomat
                 }
                 if (oldestSchicht != null) LadeSchicht(oldestSchicht.Schicht); else if (oldestAuszahlung != null) LadeAuszahlung(oldestAuszahlung.Auszahlung);
             }
-            catch (Exception ex) { MessageBox.Show(this, $"NV200: Verbindung beim Ã–ffnen fehlgeschlagen:\r\n{ex.Message}", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            catch (Exception ex) { MessageBox.Show(this, $"NV200: Verbindung beim Öffnen fehlgeschlagen:\r\n{ex.Message}", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             {
                 using (var db = new DatabaseHelper()) { _personalGuthaben = await db.GetLastPersonalGuthabenSaldoAsync(_personal.PID); }
             }
@@ -1465,9 +1467,9 @@ namespace Geldautomat
                         {
                             BeginInvoke((Action)(() =>
                             {
-                                AppLogger.Log($"RM5 Payout ERROR Hopper {hopperIdx} â€“ {remaining} MÃ¼nzen nicht ausgezahlt");
+                                AppLogger.Log($"RM5 Payout ERROR Hopper {hopperIdx} – {remaining} Münzen nicht ausgezahlt");
                                 if (AdminMode.IsOpen) return;
-                                MessageBox.Show(this, $"MÃ¼nzauszahlung fehlgeschlagen (Hopper {hopperIdx}). {remaining} MÃ¼nzen nicht ausgezahlt.", "MÃ¼nzauszahlung", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                MessageBox.Show(this, $"Münzauszahlung fehlgeschlagen (Hopper {hopperIdx}). {remaining} Münzen nicht ausgezahlt.", "Münzauszahlung", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             }));
                         }
                         catch { }
@@ -1532,7 +1534,7 @@ namespace Geldautomat
             if (cent <= 0) return;
             try { BeginInvoke((Action)(() => { AddEingezahlt(cent / 100m); })); } catch { }
         }
-        private void CoinOnLog(string msg) { try { BeginInvoke((Action)(() => Text = $"Schicht abrechnen â€“ Coin: {msg}")); } catch { } }
+        private void CoinOnLog(string msg) { try { BeginInvoke((Action)(() => Text = $"Schicht abrechnen – Coin: {msg}")); } catch { } }
 
         private void AttachCoin2Events()
         {
@@ -1566,14 +1568,14 @@ namespace Geldautomat
         }
         private void OnCoinPayoutError(string message)
         {
-            try { BeginInvoke((Action)(() => { _activeCoinPayoutDevices = 0; _coinsPayoutInProgress = false; UpdateBusyUI(); if (!AdminMode.IsOpen && !string.IsNullOrWhiteSpace(message)) MessageBox.Show(this, message, "MÃ¼nzauszahlung", MessageBoxButtons.OK, MessageBoxIcon.Warning); })); } catch { }
+            try { BeginInvoke((Action)(() => { _activeCoinPayoutDevices = 0; _coinsPayoutInProgress = false; UpdateBusyUI(); if (!AdminMode.IsOpen && !string.IsNullOrWhiteSpace(message)) MessageBox.Show(this, message, "Münzauszahlung", MessageBoxButtons.OK, MessageBoxIcon.Warning); })); } catch { }
         }
         private void Coin2OnAccepted(int cent)
         {
             if (cent <= 0) return;
             try { BeginInvoke((Action)(() => { AddEingezahlt(cent / 100m); try { SmartCoinV1.ScheduleLevelsGlobal(); } catch { } })); } catch { }
         }
-        private void Coin2OnLog(string msg) { try { BeginInvoke((Action)(() => Text = $"Schicht abrechnen â€“ Coin/2: {msg}")); } catch { } }
+        private void Coin2OnLog(string msg) { try { BeginInvoke((Action)(() => Text = $"Schicht abrechnen – Coin/2: {msg}")); } catch { } }
 
         private async void btnAbrechnen_Click(object sender, EventArgs e)
         {
@@ -1595,9 +1597,9 @@ namespace Geldautomat
                             decimal betrag19 = (einzahlung ? 1 : -1) * Convert.ToDecimal(_currentAuszahlungRow["Betrag19"]);
                             decimal betrag7 = (einzahlung ? 1 : -1) * Convert.ToDecimal(_currentAuszahlungRow["Betrag7"]);
                             decimal betrag0 = (einzahlung ? 1 : -1) * Convert.ToDecimal(_currentAuszahlungRow["Betrag0"]);
-                            try { AppLogger.Log($"[Buchen] {(einzahlung ? "Einzahlung" : "Auszahlung")} Gesamt={(betrag19 + betrag7 + betrag0):0.00} â‚¬"); } catch { }
+                            try { AppLogger.Log($"[Buchen] {(einzahlung ? "Einzahlung" : "Auszahlung")} Gesamt={(betrag19 + betrag7 + betrag0):0.00} €"); } catch { }
                             decimal aktuellerBestand = GetCurrentKassenbestandEuro();
-                            if (aktuellerBestand + (betrag19 + betrag7 + betrag0) < 0m) { MessageBox.Show(this, "Abrechnen nicht mÃ¶glich: Zu wenig Geld in der Kasse.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+                            if (aktuellerBestand + (betrag19 + betrag7 + betrag0) < 0m) { MessageBox.Show(this, "Abrechnen nicht möglich: Zu wenig Geld in der Kasse.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                             string typ = einzahlung ? "Einzahlung" : "Auszahlung";
                             try
                             {
@@ -1619,7 +1621,7 @@ namespace Geldautomat
                             {
                                 try
                                 {
-                                    // MwSt.-Gruppe anhand der BetrÃ¤ge wÃ¤hlen: PrioritÃ¤t 19 -> 7 -> 0
+                                    // MwSt.-Gruppe anhand der Beträge wählen: Priorität 19 -> 7 -> 0
                                     decimal abs19 = Math.Abs(betrag19);
                                     decimal abs7 = Math.Abs(betrag7);
                                     decimal abs0 = Math.Abs(betrag0);
@@ -1642,7 +1644,7 @@ namespace Geldautomat
                             if (einzahlung)
                             {
                                 decimal totalVerfuegbar = Math.Round(_eingezahltSession + _personalGuthaben, 2);
-                                if (sumPos > totalVerfuegbar) { MessageBox.Show(this, "Nicht genÃ¼gend eingezahlt/Personalguthaben.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+                                if (sumPos > totalVerfuegbar) { MessageBox.Show(this, "Nicht genügend eingezahlt/Personalguthaben.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                             }
                             var entry = new KassenbuchEntry { PersId = _personal.PID, SchichtId = 0, Typ = typ, Buchungstext = buchungstext, Kost1 = kost1, Kost2 = kost2, Konto = konto, Betrag19 = betrag19, Betrag7 = betrag7, Betrag0 = betrag0, FirmenId = _currentAuszahlungRow["FirmenID"] != DBNull.Value ? Convert.ToInt32(_currentAuszahlungRow["FirmenID"]) : 0, AutomatenName = AppSettings.AutomatenName, Kassenbestand = GetCurrentKassenbestandEuro() };
                             await db.InsertKassenbuchAsync(entry);
@@ -1668,7 +1670,7 @@ namespace Geldautomat
                     }
                     catch (Exception ex)
                     {
-                        if (ex is InvalidOperationException iox && string.Equals(iox.Message, "NEGATIVE_KASSENBESTAND", StringComparison.Ordinal)) { MessageBox.Show(this, "Abrechnen nicht mÃ¶glich: Zu wenig Geld.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+                        if (ex is InvalidOperationException iox && string.Equals(iox.Message, "NEGATIVE_KASSENBESTAND", StringComparison.Ordinal)) { MessageBox.Show(this, "Abrechnen nicht möglich: Zu wenig Geld.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                         MessageBox.Show(this, $"Fehler beim Abrechnen:\r\n{ex}", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error); return;
                     }
                 }
@@ -1677,7 +1679,7 @@ namespace Geldautomat
                     try
                     {
                         decimal offen19 = _details.Betrag19; decimal offen7 = _details.Betrag7; decimal offen0 = _details.Betrag0; decimal summe = offen19 + offen7 + offen0;
-                        decimal aktuellerBestand = GetCurrentKassenbestandEuro(); if (aktuellerBestand + summe < 0m) { MessageBox.Show(this, "Diese Abrechnung wÃ¼rde den Kassenbestand negativ machen.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+                        decimal aktuellerBestand = GetCurrentKassenbestandEuro(); if (aktuellerBestand + summe < 0m) { MessageBox.Show(this, "Diese Abrechnung würde den Kassenbestand negativ machen.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                         using (var db = new DatabaseHelper())
                         {
                             await db.UpdateSchichtEinzahlungAsync(_details.SchichtId, _personal.PID, _details.EinzahlungBisher + summe, offen19, offen7, offen0);
@@ -1694,7 +1696,7 @@ namespace Geldautomat
                             decimal diffSum = _details.Betrag19 + _details.Betrag7 + _details.Betrag0; bool istNachzahlung = _details.EinzahlungBisher != 0m && diffSum > 0m; bool istRueckzahlung = _details.EinzahlungBisher != 0m && diffSum < 0m;
                             if (istNachzahlung || istRueckzahlung)
                             {
-                                string marker = istNachzahlung ? "Nachzahlung" : "RÃ¼ckzahlung"; int pos = buchungstextSchicht.IndexOf("Schicht", StringComparison.OrdinalIgnoreCase);
+                                string marker = istNachzahlung ? "Nachzahlung" : "Rückzahlung"; int pos = buchungstextSchicht.IndexOf("Schicht", StringComparison.OrdinalIgnoreCase);
                                 if (pos > 0) buchungstextSchicht = buchungstextSchicht.Substring(0, pos).TrimEnd() + " " + marker + " " + buchungstextSchicht.Substring(pos);
                                 else
                                 {
@@ -1723,7 +1725,7 @@ namespace Geldautomat
                             }
                             try
                             {
-                                string receiptType = istNachzahlung ? "NACHZAHLUNG" : (istRueckzahlung ? "RÃœCKZAHLUNG" : "SCHICHTABRECHNUNG"); decimal r19 = offen19; decimal r7 = offen7; decimal r0 = offen0; decimal total = r19 + r7 + r0; if (total < 0) { r19 = -r19; r7 = -r7; r0 = -r0; }
+                                string receiptType = istNachzahlung ? "NACHZAHLUNG" : (istRueckzahlung ? "RÜCKZAHLUNG" : "SCHICHTABRECHNUNG"); decimal r19 = offen19; decimal r7 = offen7; decimal r0 = offen0; decimal total = r19 + r7 + r0; if (total < 0) { r19 = -r19; r7 = -r7; r0 = -r0; }
                                 var meta = $"::SCHMETA|ID={_details.SchichtId}|DAT={_details.StartZeit:dd.MM.yyyy HH:mm}"; if (!string.IsNullOrWhiteSpace(kennzeichen)) meta += $"|KEN={kennzeichen}"; meta += "::"; TryPrintReceipt(receiptType, r19, r7, r0, meta);
                             }
                             catch { }
@@ -1800,11 +1802,11 @@ namespace Geldautomat
                     automatSum = Math.Round(automatSum, 2);
                     decimal kassenSum = 0m; string autoName = AppSettings.AutomatenName; if (string.IsNullOrWhiteSpace(autoName)) autoName = AppSettings.LoadAutomatenNameFromIni();
                     try { using (var db = new DatabaseHelper()) { var dt = await db.GetLatestKassenbestaendeAsync(autoName ?? string.Empty); foreach (DataRow r in dt.Rows) if (r["Kassenbestand"] != DBNull.Value) kassenSum += Convert.ToDecimal(r["Kassenbestand"]); } kassenSum = Math.Round(kassenSum, 2); } catch { }
-                // ZusÃ¤tzlicher Logeintrag: Kassenbestand zwischen Summe Gesamt und Kassendifferenz
-                try { AppLogger.Log($"Kassenbestand: {kassenSum:0.00} â‚¬"); } catch { }
+                // Zusätzlicher Logeintrag: Kassenbestand zwischen Summe Gesamt und Kassendifferenz
+                try { AppLogger.Log($"Kassenbestand: {kassenSum:0.00} €"); } catch { }
                     try {
                         decimal diff = Math.Round(automatSum - kassenSum, 2);
-                        AppLogger.Log($"Kassendifferenz bei Abmeldung: {diff:0.00} â‚¬");
+                        AppLogger.Log($"Kassendifferenz bei Abmeldung: {diff:0.00} €");
                         try { KassenSummary.Update(automatSum, kassenSum); } catch { }
                     } catch { }
                 }
@@ -1829,11 +1831,11 @@ namespace Geldautomat
             {
                 var ssp2 = Program.NV2002Instance; if (ssp2 != null)
                 {
-                    ssp2.Note_akzepted += SspOnNoteAccepted; ssp2.Wert_Dispensing += SspOnWertDispensing; ssp2.Dispensing_Complete += SspOnDispensingComplete; ssp2.Error_while_payout += SspOnPayoutError; ssp2.Ereignis += SspOnEreignis; ssp2.Note_in_Bezel += (wert) => Console.WriteLine($"(NV200/2) Schein zur Entnahme bereit: {wert} â‚¬");
+                    ssp2.Note_akzepted += SspOnNoteAccepted; ssp2.Wert_Dispensing += SspOnWertDispensing; ssp2.Dispensing_Complete += SspOnDispensingComplete; ssp2.Error_while_payout += SspOnPayoutError; ssp2.Ereignis += SspOnEreignis; ssp2.Note_in_Bezel += (wert) => Console.WriteLine($"(NV200/2) Schein zur Entnahme bereit: {wert} €");
                 }
             }
             catch { }
-            _ssp.Note_in_Bezel += (wert) => { Console.WriteLine($"Schein zur Entnahme bereit: {wert} â‚¬"); };
+            _ssp.Note_in_Bezel += (wert) => { Console.WriteLine($"Schein zur Entnahme bereit: {wert} €"); };
             _eventsAttached = true;
         }
 
@@ -1885,7 +1887,7 @@ namespace Geldautomat
         private void btnAuszahlen_Click(object sender, EventArgs e)
         {
             if (AdminMode.IsOpen) { MessageBox.Show(this, "Im Admin-Modus deaktiviert.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
-            if (_payoutInProgress) { MessageBox.Show(this, "Es lÃ¤uft bereits eine Auszahlung.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+            if (_payoutInProgress) { MessageBox.Show(this, "Es läuft bereits eine Auszahlung.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
             decimal sumNotes = 0m; for (int i = 0; i < scheinWerte.Length; i++) sumNotes += scheinWerte[i] * auswahlAnzahl[i];
             decimal sumCoins = 0m; for (int i = 0; i < muenzWerte.Length; i++) sumCoins += (muenzWerte[i] * auswahlAnzahlMuenzen[i]) / 100m;
             if (sumNotes <= 0m && sumCoins <= 0m) { MessageBox.Show(this, "Bitte Auswahl treffen.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
@@ -1898,7 +1900,7 @@ namespace Geldautomat
                 var req1 = new int[7]; var req2 = new int[7];
                 for (int i = 0; i < scheinWerte.Length; i++)
                 {
-                    int need = auswahlAnzahl[i]; int a1 = avail1[i]; int a2 = avail2[i]; if (!TryBalancedSplit(need, a1, a2, out int take1, out int take2)) { MessageBox.Show(this, "Nicht genÃ¼gend Scheine verfÃ¼gbar.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+                    int need = auswahlAnzahl[i]; int a1 = avail1[i]; int a2 = avail2[i]; if (!TryBalancedSplit(need, a1, a2, out int take1, out int take2)) { MessageBox.Show(this, "Nicht genügend Scheine verfügbar.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                     req1[i] = take1; req2[i] = take2;
                 }
                 _notesPayoutInProgress = true; _activeNotePayoutDevices = 0; UpdateBusyUI();
@@ -1918,10 +1920,10 @@ namespace Geldautomat
             }
             if (sumCoins > 0m)
             {
-                if (_coin == null) { MessageBox.Show(this, "MÃ¼nzgerÃ¤t nicht verbunden.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+                if (_coin == null) { MessageBox.Show(this, "Münzgerät nicht verbunden.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                 try
                 {
-                    bool isRm5 = _coin is Rm5CctalkValidator; var sc1 = _coin as SmartCoinV1; if (sc1 == null && !isRm5) { MessageBox.Show(this, "GerÃ¤t unterstÃ¼tzt keine MÃ¼nzauszahlung.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+                    bool isRm5 = _coin is Rm5CctalkValidator; var sc1 = _coin as SmartCoinV1; if (sc1 == null && !isRm5) { MessageBox.Show(this, "Gerät unterstützt keine Münzauszahlung.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                     _coin.Enable(true); if (_coin2 != null && !isRm5) { try { _coin2.Enable(true); } catch { } }
                     _coinsPayoutInProgress = true; UpdateBusyUI();
                     if (isRm5)
@@ -1934,7 +1936,7 @@ namespace Geldautomat
                     {
                         int need = auswahlAnzahlMuenzen[i]; if (need <= 0) { reqMain[i] = 0; reqSecond[i] = 0; continue; }
                         if (!haveSecond) { reqMain[i] = need; reqSecond[i] = 0; continue; }
-                        int a1 = _coinAvail[i] >= 0 ? _coinAvail[i] : 0; int a2 = _coin2Avail[i] >= 0 ? _coin2Avail[i] : 0; if (a1 + a2 < need) { MessageBox.Show(this, $"Nicht genÃ¼gend MÃ¼nzen ({muenzWerte[i]} ct).", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); _coinsPayoutInProgress = false; UpdateBusyUI(); return; }
+                        int a1 = _coinAvail[i] >= 0 ? _coinAvail[i] : 0; int a2 = _coin2Avail[i] >= 0 ? _coin2Avail[i] : 0; if (a1 + a2 < need) { MessageBox.Show(this, $"Nicht genügend Münzen ({muenzWerte[i]} ct).", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); _coinsPayoutInProgress = false; UpdateBusyUI(); return; }
                         if (a1 > 40 && a2 > 40)
                         {
                             int take1 = need / 2 + (need % 2); int take2 = need - take1; if (take1 > a1) { int deficit = take1 - a1; take1 = a1; take2 += deficit; }
@@ -1953,7 +1955,7 @@ namespace Geldautomat
                 }
                 catch (Exception ex)
                 {
-                    _geplanteMuenzAuszahlung = 0m; _activeCoinPayoutDevices = 0; _coinsPayoutInProgress = false; UpdateBusyUI(); MessageBox.Show(this, $"MÃ¼nzauszahlung Fehler:\r\n{ex.Message}", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    _geplanteMuenzAuszahlung = 0m; _activeCoinPayoutDevices = 0; _coinsPayoutInProgress = false; UpdateBusyUI(); MessageBox.Show(this, $"Münzauszahlung Fehler:\r\n{ex.Message}", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -1962,7 +1964,7 @@ namespace Geldautomat
         {
             if (_ssp != null) { try { _ssp.Payout_angleichen(); } catch { } }
             try { var ssp2 = Program.NV2002Instance; ssp2?.Payout_angleichen(); } catch { }
-            int[] avail = GetCurrentAvailability(); for (int i = 0; i < 7; i++) if (lblVerfuegbar[i] != null) lblVerfuegbar[i].Text = $"vorrÃ¤tig: {avail[i]}";
+            int[] avail = GetCurrentAvailability(); for (int i = 0; i < 7; i++) if (lblVerfuegbar[i] != null) lblVerfuegbar[i].Text = $"vorrätig: {avail[i]}";
             UpdateCoinAvailabilityLabels(); UpdatePlusMinusEnabled(); UpdateBusyUI();
         }
 
@@ -1998,7 +2000,7 @@ namespace Geldautomat
             if (wert <= 0) return;
             BeginInvoke((Action)(() => { if (!AdminMode.IsOpen) { AddEingezahlt(wert); } SafeRefreshAvailability(); }));
         }
-        private void SspOnEreignis(string text) { try { BeginInvoke((Action)(() => Text = $"Schicht abrechnen â€“ NV200: {text}")); } catch { } }
+        private void SspOnEreignis(string text) { try { BeginInvoke((Action)(() => Text = $"Schicht abrechnen – NV200: {text}")); } catch { } }
         private void SspOnWertDispensing(int cent)
         {
             if (AppLogger.KassensturzActive) return; BeginInvoke((Action)(() =>
@@ -2041,7 +2043,7 @@ namespace Geldautomat
                     finally { _consumedGuthabenNotes = 0m; _consumedGuthabenCoins = 0m; }
                 }
             }
-            if (!_payoutInProgress && lblSummeAuszahlung != null) lblSummeAuszahlung.Text = "Summe: 0,00 â‚¬"; _geplanteAuszahlung = 0m; _notesDispensedCent = 0;
+            if (!_payoutInProgress && lblSummeAuszahlung != null) lblSummeAuszahlung.Text = "Summe: 0,00 €"; _geplanteAuszahlung = 0m; _notesDispensedCent = 0;
         }
 
         private async void OnCoinDispenseComplete()
@@ -2050,7 +2052,7 @@ namespace Geldautomat
             if (_activeCoinPayoutDevices > 0) _activeCoinPayoutDevices = Math.Max(0, _activeCoinPayoutDevices - 1); if (_activeCoinPayoutDevices > 0) return;
             try
             {
-                decimal coinsTotal = Math.Round(_coinsDispensedCentTotal / 100m, 2); if (coinsTotal > 0m) { AppLogger.Log($"MÃ¼nzauszahlung Summe: {coinsTotal:0.00} â‚¬ (PG: {_consumedGuthabenCoins:0.00} â‚¬)"); }
+                decimal coinsTotal = Math.Round(_coinsDispensedCentTotal / 100m, 2); if (coinsTotal > 0m) { AppLogger.Log($"Münzauszahlung Summe: {coinsTotal:0.00} € (PG: {_consumedGuthabenCoins:0.00} €)"); }
                 for (int i = 0; i < auswahlAnzahlMuenzen.Length; i++) { auswahlAnzahlMuenzen[i] = 0; if (lblAnzahlMuenzen[i] != null) lblAnzahlMuenzen[i].Text = "0"; }
                 _geplanteMuenzAuszahlung = 0m; lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}"; UpdateAbrechnenSummaries(); SafeRefreshAvailability(); UpdateMaxVerfuegbar();
             }
@@ -2076,7 +2078,7 @@ namespace Geldautomat
                     finally { _consumedGuthabenNotes = 0m; _consumedGuthabenCoins = 0m; }
                 }
             }
-            if (!_payoutInProgress && lblSummeAuszahlung != null) lblSummeAuszahlung.Text = "Summe: 0,00 â‚¬"; AppLogger.Log("MÃ¼nzauszahlung abgeschlossen");
+            if (!_payoutInProgress && lblSummeAuszahlung != null) lblSummeAuszahlung.Text = "Summe: 0,00 €"; AppLogger.Log("Münzauszahlung abgeschlossen");
         }
 
         private int GetAvailByIndex(int idx) { var avail = GetCurrentAvailability(); return (idx >= 0 && idx < avail.Length) ? avail[idx] : 0; }
@@ -2099,7 +2101,7 @@ namespace Geldautomat
             string infoText;
             if (_details.EinzahlungBisher != 0)
             {
-                decimal einnahmenBar = _details.Betrag19 + _details.Betrag7 + _details.Betrag0 + _details.EinzahlungBisher; decimal diff = einnahmenBar - _details.EinzahlungBisher; if (diff > 0) infoText = $"Nachzahlung Schicht \"{kennzeichen}\" vom {datum}"; else if (diff < 0) infoText = $"RÃ¼ckzahlung Schicht \"{kennzeichen}\" vom {datum}"; else infoText = $"Schicht \"{kennzeichen}\" vom {datum}";
+                decimal einnahmenBar = _details.Betrag19 + _details.Betrag7 + _details.Betrag0 + _details.EinzahlungBisher; decimal diff = einnahmenBar - _details.EinzahlungBisher; if (diff > 0) infoText = $"Nachzahlung Schicht \"{kennzeichen}\" vom {datum}"; else if (diff < 0) infoText = $"Rückzahlung Schicht \"{kennzeichen}\" vom {datum}"; else infoText = $"Schicht \"{kennzeichen}\" vom {datum}";
         }
             else infoText = $"Schicht \"{kennzeichen}\" vom {datum}";
             lblBelegInfo.Text = infoText;
@@ -2171,7 +2173,7 @@ namespace Geldautomat
             }
             catch { }
 
-            // UI/BestÃ¤nde aktualisieren
+            // UI/Bestände aktualisieren
             try
                 {
                 SafeRefreshAvailability();
@@ -2197,7 +2199,7 @@ namespace Geldautomat
             else
             {
                 decimal summe = -raw19 - raw7 - raw0;
-                lblB19.Text = $"19%: {-raw19:C2}"; lblB7.Text = $"7%: {-raw7:C2}"; lblB0.Text = $"0%: {-raw0:C2}"; lblSumme.Text = $"Summe: {summe:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; lblNoch.Text = "Noch zu zahlen: 0,00 â‚¬"; try { lblNoch.ForeColor = Color.Green; } catch { }
+                lblB19.Text = $"19%: {-raw19:C2}"; lblB7.Text = $"7%: {-raw7:C2}"; lblB0.Text = $"0%: {-raw0:C2}"; lblSumme.Text = $"Summe: {summe:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; lblNoch.Text = "Noch zu zahlen: 0,00 €"; try { lblNoch.ForeColor = Color.Green; } catch { }
                 UpdateBuchenEnabled();
             }
         }
@@ -2257,12 +2259,12 @@ namespace Geldautomat
             catch { return null; }
         }
 
-                private void UpdateMaxVerfuegbar() { if (lblMaxVerfuegbar != null) lblMaxVerfuegbar.Text = $"Maximal verfÃ¼gbar: {(_personalGuthaben + _eingezahltSession):C2}"; }
-                private void UpdateCoinAvailabilityLabels() { for (int i = 0; i < 8; i++) { if (lblVerfuegbarMuenzen[i] == null) continue; int a = _coinAvail[i] >= 0 ? _coinAvail[i] : 0; int b = _coin2Avail[i] >= 0 ? _coin2Avail[i] : 0; bool known = false; int total = 0; if (a > 0) { total += a; known = true; } if (b > 0) { total += b; known = true; } lblVerfuegbarMuenzen[i].Text = known ? $"vorrÃ¤tig: {total}" : "vorrÃ¤tig: ?"; } }
+                private void UpdateMaxVerfuegbar() { if (lblMaxVerfuegbar != null) lblMaxVerfuegbar.Text = $"Maximal verfügbar: {(_personalGuthaben + _eingezahltSession):C2}"; }
+                private void UpdateCoinAvailabilityLabels() { for (int i = 0; i < 8; i++) { if (lblVerfuegbarMuenzen[i] == null) continue; int a = _coinAvail[i] >= 0 ? _coinAvail[i] : 0; int b = _coin2Avail[i] >= 0 ? _coin2Avail[i] : 0; bool known = false; int total = 0; if (a > 0) { total += a; known = true; } if (b > 0) { total += b; known = true; } lblVerfuegbarMuenzen[i].Text = known ? $"vorrätig: {total}" : "vorrätig: ?"; } }
                 private int GetCombinedCoinAvail(int idx) { try { int a = (idx >= 0 && idx < _coinAvail.Length) ? _coinAvail[idx] : -1; int b = (idx >= 0 && idx < _coin2Avail.Length) ? _coin2Avail[idx] : -1; if (a < 0 && b < 0) return -1; int sum = 0; if (a > 0) sum += a; if (b > 0) sum += b; return sum; } catch { return -1; } }
                 private void OnCoinDispensedDelta(int cent)
                 {
-                    if (AppLogger.KassensturzActive) return; if (cent <= 0) return; try { BeginInvoke((Action)(() => { _coinsDispensedCentTotal += cent; decimal delta = Math.Round(cent / 100m, 2); if (delta <= 0m) return; decimal remain = delta; if (_eingezahltSession > 0m) { var take = Math.Min(_eingezahltSession, remain); _eingezahltSession = Math.Round(_eingezahltSession - take, 2); remain = Math.Round(remain - take, 2); } if (remain > 0m && _personalGuthaben > 0m) { var takeG = Math.Min(_personalGuthaben, remain); _personalGuthaben = Math.Round(_personalGuthaben - takeG, 2); remain = Math.Round(remain - takeG, 2); _consumedGuthabenCoins = Math.Round(_consumedGuthabenCoins + takeG, 2); } if (remain > 0m) AppLogger.Log($"WARN: Delta {remain:0.00} â‚¬ nicht gedeckt."); _geplanteMuenzAuszahlung = Math.Max(0m, Math.Round(_geplanteMuenzAuszahlung - delta, 2)); try { SmartCoinV1.ScheduleLevelsGlobal(); } catch { } decimal restScheine = Math.Max(0m, Math.Round(_geplanteAuszahlung - (_notesDispensedCent / 100m), 2)); decimal restMuenzen = Math.Max(0m, Math.Round(_geplanteMuenzAuszahlung, 2)); decimal restSum = restScheine + restMuenzen; if (_payoutInProgress && lblSummeAuszahlung != null) lblSummeAuszahlung.Text = $"Summe: {restSum:C2}"; lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; UpdateAbrechnenSummaries(); UpdateMaxVerfuegbar(); })); } catch { }
+                    if (AppLogger.KassensturzActive) return; if (cent <= 0) return; try { BeginInvoke((Action)(() => { _coinsDispensedCentTotal += cent; decimal delta = Math.Round(cent / 100m, 2); if (delta <= 0m) return; decimal remain = delta; if (_eingezahltSession > 0m) { var take = Math.Min(_eingezahltSession, remain); _eingezahltSession = Math.Round(_eingezahltSession - take, 2); remain = Math.Round(remain - take, 2); } if (remain > 0m && _personalGuthaben > 0m) { var takeG = Math.Min(_personalGuthaben, remain); _personalGuthaben = Math.Round(_personalGuthaben - takeG, 2); remain = Math.Round(remain - takeG, 2); _consumedGuthabenCoins = Math.Round(_consumedGuthabenCoins + takeG, 2); } if (remain > 0m) AppLogger.Log($"WARN: Delta {remain:0.00} € nicht gedeckt."); _geplanteMuenzAuszahlung = Math.Max(0m, Math.Round(_geplanteMuenzAuszahlung - delta, 2)); try { SmartCoinV1.ScheduleLevelsGlobal(); } catch { } decimal restScheine = Math.Max(0m, Math.Round(_geplanteAuszahlung - (_notesDispensedCent / 100m), 2)); decimal restMuenzen = Math.Max(0m, Math.Round(_geplanteMuenzAuszahlung, 2)); decimal restSum = restScheine + restMuenzen; if (_payoutInProgress && lblSummeAuszahlung != null) lblSummeAuszahlung.Text = $"Summe: {restSum:C2}"; lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; UpdateAbrechnenSummaries(); UpdateMaxVerfuegbar(); })); } catch { }
                 }
                 private void SspOnPayoutError(int wert, int neu)
                 {
@@ -2298,7 +2300,7 @@ namespace Geldautomat
                 {
                     try
                     {
-                        btnSchichtAuswahl.Visible = _auswahlItems != null && _auswahlItems.Count > 1; if (_auswahlItems == null || _auswahlItems.Count == 0) { _details = null; _currentAuszahlungRow = null; lblBelegInfo.Text = string.Empty; lblB19.Text = "19%: 0,00 â‚¬"; lblB7.Text = "7%: 0,00 â‚¬"; lblB0.Text = "0%: 0,00 â‚¬"; lblSumme.Text = "Summe: 0,00 â‚¬"; lblNoch.Text = "Noch zu zahlen: 0,00 â‚¬"; UpdateBuchenEnabled(); return; }
+                        btnSchichtAuswahl.Visible = _auswahlItems != null && _auswahlItems.Count > 1; if (_auswahlItems == null || _auswahlItems.Count == 0) { _details = null; _currentAuszahlungRow = null; lblBelegInfo.Text = string.Empty; lblB19.Text = "19%: 0,00 €"; lblB7.Text = "7%: 0,00 €"; lblB0.Text = "0%: 0,00 €"; lblSumme.Text = "Summe: 0,00 €"; lblNoch.Text = "Noch zu zahlen: 0,00 €"; UpdateBuchenEnabled(); return; }
                         var nextShift = _auswahlItems.Where(a => a.Schicht != null).OrderBy(a => a.Schicht.StartZeit).FirstOrDefault(); if (nextShift != null) { LadeSchicht(nextShift.Schicht); return; }
                         DataRow nextPay = null; DateTime? min = null; foreach (var ai in _auswahlItems.Where(a => a.Auszahlung != null)) { var row = ai.Auszahlung; DateTime t = (row.Table.Columns.Contains("ErfasstAm") && row["ErfasstAm"] != DBNull.Value) ? Convert.ToDateTime(row["ErfasstAm"]) : DateTime.MinValue; if (!min.HasValue || t < min.Value) { min = t; nextPay = row; } }
                         if (nextPay != null) { _currentAuszahlungRow = nextPay; _currentZahlungIstEinzahlung = false; return; }

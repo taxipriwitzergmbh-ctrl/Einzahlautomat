@@ -21,14 +21,11 @@ namespace Geldautomat
         private Label lblTitle;
 
         // Flow Steuerung
-        private enum LoginStage { EnterPid, EnterPassword, CreatePassword1, CreatePassword2 }
-        private LoginStage _stage = LoginStage.EnterPid;
-        
+
         private int _pendingPid = 0;
         private PersonalInfo _pendingPersonalInfo = null;
 
         private string _expectedCode = null;
-        private string _newCodeFirst = null;
         private Label lblPrompt;
         private Button btnCancelPwd;
         private Button _btnRemote; // Fernwartung
@@ -953,10 +950,8 @@ namespace Geldautomat
         {
             try
             {
-                _stage = LoginStage.EnterPid;
                 _pendingPid = 0;
                 _expectedCode = null;
-                _newCodeFirst = null;
                 if (lblPrompt != null) lblPrompt.Text = "Personalnummer:";
                 if (btnLogin != null) btnLogin.Text = "Anmelden";
                 if (txtPersId != null)
@@ -1107,9 +1102,6 @@ namespace Geldautomat
                         _pendingPid = personal.PID;
                         _pendingPersonalInfo = personal;
 
-                        _stage = LoginStage.EnterPid;
-                        _expectedCode = null;
-                        _newCodeFirst = null;
                         btnCancelPwd.Visible = false;
 
                         AppLogger.Log($"NFC-Login erkannt: Token='{token}', PID={_pendingPid}");
