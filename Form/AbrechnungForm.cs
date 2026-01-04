@@ -2277,7 +2277,7 @@ namespace Geldautomat
                     return take1 >= 0 && take2 >= 0 && take1 <= avail1 && take2 <= avail2 && take1 + take2 == need;
                 }
 
-                private AbrechnungForm_KeyDown(object sender, KeyEventArgs e)
+                private void AbrechnungForm_KeyDown(object sender, KeyEventArgs e)
                 {
                     try
                     {
