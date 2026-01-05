@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Xml.Serialization;
 
@@ -20,6 +20,12 @@ namespace Geldautomat.Printing
         public bool AutoPrintIfNoPrompt { get; set; } = true;
         public string SecondaryPrinterName { get; set; } = string.Empty;
         public bool UseSecondaryOnFailure { get; set; } = true;
+
+        // Anzeige-/Berechnungsoptionen fr Arbeits-/Pausenzeiten
+        public bool ShowWorkTimesOnly { get; set; } = true;   // Arbeitszeiten einblenden: keine Anfangs-/Endzeit
+        public bool ShowPauseTime { get; set; } = true;       // Pausenzeiten anzeigen
+        public bool AutoPauseDeduction { get; set; } = true;  // automatischer Pausenabzug (30/45 Min)
+        public bool ShowArbeitszeit { get; set; } = true;     // Arbeitszeit anzeigen und berechnen
 
         // Legacy (serielle) Drucker Konfiguration
         public bool Legacy1Enabled { get; set; }
@@ -55,6 +61,12 @@ namespace Geldautomat.Printing
                         s.AutoPrintIfNoPrompt = ParseBool(IniHelper.ReadValue(IniSection, nameof(AutoPrintIfNoPrompt), ini), true);
                         s.SecondaryPrinterName = IniHelper.ReadValue(IniSection, nameof(SecondaryPrinterName), ini) ?? string.Empty;
                         s.UseSecondaryOnFailure = ParseBool(IniHelper.ReadValue(IniSection, nameof(UseSecondaryOnFailure), ini), true);
+
+                        // Neue Anzeige-/Berechnungsoptionen
+                        s.ShowWorkTimesOnly = ParseBool(IniHelper.ReadValue(IniSection, nameof(ShowWorkTimesOnly), ini), true);
+                        s.ShowPauseTime = ParseBool(IniHelper.ReadValue(IniSection, nameof(ShowPauseTime), ini), true);
+                        s.AutoPauseDeduction = ParseBool(IniHelper.ReadValue(IniSection, nameof(AutoPauseDeduction), ini), true);
+                        s.ShowArbeitszeit = ParseBool(IniHelper.ReadValue(IniSection, nameof(ShowArbeitszeit), ini), true);
 
                         // Legacy Felder
                         s.Legacy1Enabled = ParseBool(IniHelper.ReadValue(IniSection, nameof(Legacy1Enabled), ini), false);
@@ -118,6 +130,12 @@ namespace Geldautomat.Printing
                 IniHelper.WriteValue(IniSection, nameof(AutoPrintIfNoPrompt), AutoPrintIfNoPrompt ? "1" : "0", ini);
                 IniHelper.WriteValue(IniSection, nameof(SecondaryPrinterName), SecondaryPrinterName ?? string.Empty, ini);
                 IniHelper.WriteValue(IniSection, nameof(UseSecondaryOnFailure), UseSecondaryOnFailure ? "1" : "0", ini);
+
+                // Neue Anzeige-/Berechnungsoptionen speichern
+                IniHelper.WriteValue(IniSection, nameof(ShowWorkTimesOnly), ShowWorkTimesOnly ? "1" : "0", ini);
+                IniHelper.WriteValue(IniSection, nameof(ShowPauseTime), ShowPauseTime ? "1" : "0", ini);
+                IniHelper.WriteValue(IniSection, nameof(AutoPauseDeduction), AutoPauseDeduction ? "1" : "0", ini);
+                IniHelper.WriteValue(IniSection, nameof(ShowArbeitszeit), ShowArbeitszeit ? "1" : "0", ini);
 
                 // Legacy Felder speichern
                 IniHelper.WriteValue(IniSection, nameof(Legacy1Enabled), Legacy1Enabled ? "1" : "0", ini);

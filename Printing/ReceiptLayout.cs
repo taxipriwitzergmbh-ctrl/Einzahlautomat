@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
@@ -19,6 +19,7 @@ namespace Geldautomat.Printing
                                              decimal betrag19, decimal betrag7, decimal betrag0, bool withVatLines)
         {
             var list = new List<string>();
+            var cfg = ReceiptPrinterSettings.Load(); // Konfiguration fr Anzeige-/Berechnungsoptionen
 
             // Automatenname
             try
@@ -133,7 +134,6 @@ namespace Geldautomat.Printing
 
                 if (isSchicht)
                 {
-                    // Meta (::SCHMETA|...) hinzufügen und direkt DANACH Arbeitsbeginn/-ende einfügen
                     if (!TryAddFromMetaHeader(buchungstext, list))
                     {
                         if (!TryAddFromFreeText(buchungstext, list))
@@ -141,39 +141,52 @@ namespace Geldautomat.Printing
                             if (!string.IsNullOrWhiteSpace(buchungstext)) list.Add(buchungstext.Trim());
                         }
                     }
-                    // Nach den beiden "Schicht"/"vom" Zeilen die Zeiten einfügen
+                    // Zeiten/Pause/Arbeitszeit einfgen gem Konfiguration
                     try
                     {
-                        if (arbeitsBeginn.HasValue)
-                            list.Add("Arbeitsbeginn: " + arbeitsBeginn.Value.ToString("HH:mm", De));
-                        if (arbeitsEnde.HasValue)
-                            list.Add("Arbeitsende : " + arbeitsEnde.Value.ToString("HH:mm", De));
-                        // Arbeitszeit berechnen, wenn beide Zeiten vorhanden sind
+                        // Anfang/Ende nur anzeigen, wenn nicht "nur Arbeitszeiten" aktiviert ist
+                        if (!cfg.ShowWorkTimesOnly)
+                        {
+                            if (arbeitsBeginn.HasValue)
+                                list.Add("Arbeitsbeginn: " + arbeitsBeginn.Value.ToString("HH:mm", De));
+                            if (arbeitsEnde.HasValue)
+                                list.Add("Arbeitsende : " + arbeitsEnde.Value.ToString("HH:mm", De));
+                        }
+
+                        // Berechnung diff
+                        TimeSpan diff = TimeSpan.Zero;
                         if (arbeitsBeginn.HasValue && arbeitsEnde.HasValue)
                         {
-                            try
-                            {
-                                var start = arbeitsBeginn.Value;
-                                var end = arbeitsEnde.Value;
-                                if (end < start) end = end.AddDays(1); // über Mitternacht
-                                var diff = end - start;
-                                if (diff.TotalMinutes < 0) diff = TimeSpan.Zero;
+                            var start = arbeitsBeginn.Value;
+                            var end = arbeitsEnde.Value;
+                            if (end < start) end = end.AddDays(1);
+                            diff = end - start;
+                            if (diff.TotalMinutes < 0) diff = TimeSpan.Zero;
+                        }
 
-                                // Pausenregel: >6h -> 30 Min, >9h -> 45 Min
-                                TimeSpan pause = TimeSpan.Zero;
-                                if (diff.TotalHours > 9)
-                                    pause = TimeSpan.FromMinutes(45);
-                                else if (diff.TotalHours > 6)
-                                    pause = TimeSpan.FromMinutes(30);
+                        // Pausenzeit (30/45 Min Regel) berechnen ggf. anzeigen
+                        TimeSpan pause = TimeSpan.Zero;
+                        if (cfg.AutoPauseDeduction && diff.TotalMinutes > 0)
+                        {
+                            if (diff.TotalHours > 9)
+                                pause = TimeSpan.FromMinutes(45);
+                            else if (diff.TotalHours > 6)
+                                pause = TimeSpan.FromMinutes(30);
+                        }
+                        if (cfg.ShowPauseTime && diff.TotalMinutes > 0)
+                        {
+                            int ph = (int)pause.TotalHours; int pm = pause.Minutes;
+                            list.Add("Pausenzeit  : " + string.Format("{0}:{1:00} h", ph, pm));
+                        }
 
-                                var netto = diff - pause;
-                                if (netto.TotalMinutes < 0) netto = TimeSpan.Zero;
-
-                                int hours = (int)netto.TotalHours;
-                                int minutes = netto.Minutes;
-                                list.Add("Arbeitszeit : " + $"{hours}:{minutes:00} h");
-                            }
-                            catch { }
+                        // Arbeitszeit nur anzeigen, wenn konfiguriert
+                        if (cfg.ShowArbeitszeit && diff.TotalMinutes > 0)
+                        {
+                            var netto = diff - (cfg.AutoPauseDeduction ? pause : TimeSpan.Zero);
+                            if (netto.TotalMinutes < 0) netto = TimeSpan.Zero;
+                            int hours = (int)netto.TotalHours;
+                            int minutes = netto.Minutes;
+                            list.Add("Arbeitszeit : " + string.Format("{0}:{1:00} h", hours, minutes));
                         }
                     }
                     catch { }
@@ -203,7 +216,7 @@ namespace Geldautomat.Printing
             const int valueColumn = 28;
             string label = (mwst + "%:").PadLeft(labelWidth);
             string amount = betrag.ToString("0.00", De);
-            string value = amount + " €";
+            string value = amount + " ï¿½";
             int spaces = Math.Max(1, valueColumn - label.Length - value.Length);
             return label + new string(' ', spaces) + value;
         }
@@ -213,7 +226,7 @@ namespace Geldautomat.Printing
             const int valueColumn = 28;
             string left = label;
             string amount = betrag.ToString("0.00", De);
-            string value = amount + " €";
+            string value = amount + " ï¿½";
             int spaces = Math.Max(1, valueColumn - left.Length - value.Length);
             return left + new string(' ', spaces) + value;
         }
@@ -284,7 +297,7 @@ namespace Geldautomat.Printing
         {
             if (string.IsNullOrWhiteSpace(title)) return false;
             title = title.Trim().ToUpperInvariant();
-            return title.Contains("SCHICHT") || title.Contains("NACHZAHLUNG") || title.Contains("RÜCKZAHLUNG") || title.Contains("RUECKZAHLUNG");
+            return title.Contains("SCHICHT") || title.Contains("NACHZAHLUNG") || title.Contains("Rï¿½CKZAHLUNG") || title.Contains("RUECKZAHLUNG");
         }
     }
 
