@@ -148,6 +148,33 @@ namespace Geldautomat.Printing
                             list.Add("Arbeitsbeginn: " + arbeitsBeginn.Value.ToString("HH:mm", De));
                         if (arbeitsEnde.HasValue)
                             list.Add("Arbeitsende : " + arbeitsEnde.Value.ToString("HH:mm", De));
+                        // Arbeitszeit berechnen, wenn beide Zeiten vorhanden sind
+                        if (arbeitsBeginn.HasValue && arbeitsEnde.HasValue)
+                        {
+                            try
+                            {
+                                var start = arbeitsBeginn.Value;
+                                var end = arbeitsEnde.Value;
+                                if (end < start) end = end.AddDays(1); // über Mitternacht
+                                var diff = end - start;
+                                if (diff.TotalMinutes < 0) diff = TimeSpan.Zero;
+
+                                // Pausenregel: >6h -> 30 Min, >9h -> 45 Min
+                                TimeSpan pause = TimeSpan.Zero;
+                                if (diff.TotalHours > 9)
+                                    pause = TimeSpan.FromMinutes(45);
+                                else if (diff.TotalHours > 6)
+                                    pause = TimeSpan.FromMinutes(30);
+
+                                var netto = diff - pause;
+                                if (netto.TotalMinutes < 0) netto = TimeSpan.Zero;
+
+                                int hours = (int)netto.TotalHours;
+                                int minutes = netto.Minutes;
+                                list.Add("Arbeitszeit : " + $"{hours}:{minutes:00} h");
+                            }
+                            catch { }
+                        }
                     }
                     catch { }
                 }
