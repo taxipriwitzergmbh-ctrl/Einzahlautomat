@@ -14,7 +14,6 @@ namespace Geldautomat
         // Modern header
         private Panel headerPanel;
         private Button btnClose;
-        private Button btnMinimize;
         private Label lblTitle;
     
 
@@ -85,22 +84,6 @@ namespace Geldautomat
             btnClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 80, 80);
             btnClose.Click += (s, e) => Close();
             headerPanel.Controls.Add(btnClose);
-
-            btnMinimize = new Button
-            {
-                Text = "�",
-                Font = new Font("Segoe UI", 16F, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.Transparent,
-                FlatStyle = FlatStyle.Flat,
-                Size = new Size(48, 48),
-                Location = new Point(ClientSize.Width - 112, 6),
-                TabStop = false
-            };
-            btnMinimize.FlatAppearance.BorderSize = 0;
-            btnMinimize.FlatAppearance.MouseOverBackColor = Color.FromArgb(33, 150, 243, 80);
-            btnMinimize.Click += (s, e) => WindowState = FormWindowState.Minimized;
-            headerPanel.Controls.Add(btnMinimize);
 
             headerPanel.Resize += (s, e) => UpdateHeaderLayout();
             UpdateHeaderLayout();
@@ -459,12 +442,10 @@ namespace Geldautomat
                 int top = 6;
                 if (btnClose != null)
                     btnClose.Location = new Point(Math.Max(0, headerPanel.ClientSize.Width - marginRight - btnClose.Width), top);
-                if (btnMinimize != null && btnClose != null)
-                    btnMinimize.Location = new Point(Math.Max(0, btnClose.Left - spacing - btnMinimize.Width), top);
-                if (lblTitle != null && btnMinimize != null)
+                if (lblTitle != null)
                 {
                     int left = lblTitle.Left;
-                    int rightLimit = btnMinimize.Left - spacing;
+                    int rightLimit = (btnClose != null) ? btnClose.Left - spacing : headerPanel.ClientSize.Width - spacing;
                     int newWidth = Math.Max(120, rightLimit - left);
                     lblTitle.Size = new Size(newWidth, lblTitle.Height);
                 }
