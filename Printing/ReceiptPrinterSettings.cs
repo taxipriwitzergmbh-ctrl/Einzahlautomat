@@ -26,6 +26,7 @@ namespace Geldautomat.Printing
         public bool ShowPauseTime { get; set; } = true;       // Pausenzeiten anzeigen
         public bool AutoPauseDeduction { get; set; } = true;  // automatischer Pausenabzug (30/45 Min)
         public bool ShowArbeitszeit { get; set; } = true;     // Arbeitszeit anzeigen und berechnen
+        public bool MinimumPauseDeduction { get; set; } = true; // Mindest-Pause abziehen (wenn größer als Vorgabe)
 
         // Legacy (serielle) Drucker Konfiguration
         public bool Legacy1Enabled { get; set; }
@@ -46,9 +47,8 @@ namespace Geldautomat.Printing
             try
             {
                 var ini = AppSettings.IniPath;
-                if (File.Exists(ini))
+                if (System.IO.File.Exists(ini))
                 {
-                    // Wenn Section existiert (Enabled key gesetzt), aus INI lesen
                     var enabledRaw = IniHelper.ReadValue(IniSection, nameof(Enabled), ini);
                     if (!string.IsNullOrEmpty(enabledRaw))
                     {
@@ -67,6 +67,7 @@ namespace Geldautomat.Printing
                         s.ShowPauseTime = ParseBool(IniHelper.ReadValue(IniSection, nameof(ShowPauseTime), ini), true);
                         s.AutoPauseDeduction = ParseBool(IniHelper.ReadValue(IniSection, nameof(AutoPauseDeduction), ini), true);
                         s.ShowArbeitszeit = ParseBool(IniHelper.ReadValue(IniSection, nameof(ShowArbeitszeit), ini), true);
+                        s.MinimumPauseDeduction = ParseBool(IniHelper.ReadValue(IniSection, nameof(MinimumPauseDeduction), ini), true);
 
                         // Legacy Felder
                         s.Legacy1Enabled = ParseBool(IniHelper.ReadValue(IniSection, nameof(Legacy1Enabled), ini), false);
@@ -136,6 +137,7 @@ namespace Geldautomat.Printing
                 IniHelper.WriteValue(IniSection, nameof(ShowPauseTime), ShowPauseTime ? "1" : "0", ini);
                 IniHelper.WriteValue(IniSection, nameof(AutoPauseDeduction), AutoPauseDeduction ? "1" : "0", ini);
                 IniHelper.WriteValue(IniSection, nameof(ShowArbeitszeit), ShowArbeitszeit ? "1" : "0", ini);
+                IniHelper.WriteValue(IniSection, nameof(MinimumPauseDeduction), MinimumPauseDeduction ? "1" : "0", ini);
 
                 // Legacy Felder speichern
                 IniHelper.WriteValue(IniSection, nameof(Legacy1Enabled), Legacy1Enabled ? "1" : "0", ini);

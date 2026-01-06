@@ -19,7 +19,7 @@ namespace Geldautomat.Printing
                                              decimal betrag19, decimal betrag7, decimal betrag0, bool withVatLines)
         {
             var list = new List<string>();
-            var cfg = ReceiptPrinterSettings.Load(); // Konfiguration fr Anzeige-/Berechnungsoptionen
+            var cfg = ReceiptPrinterSettings.Load();
 
             // Automatenname
             try
@@ -29,14 +29,15 @@ namespace Geldautomat.Printing
             }
             catch { }
 
-            // Mandantenname und Schichtzeiten
             DateTime? arbeitsBeginn = null;
             DateTime? arbeitsEnde = null;
+            int? schichtId = null;
+            int? pid = null;
             try
             {
                 string mandant = null;
                 string kenFromMeta = null;
-                string schichtId = null;
+                string schichtIdStr = null;
                 if (!string.IsNullOrWhiteSpace(buchungstext) && buchungstext.StartsWith("::SCHMETA|", StringComparison.OrdinalIgnoreCase))
                 {
                     try
@@ -49,7 +50,8 @@ namespace Geldautomat.Printing
                             {
                                 if (part.StartsWith("MAN=", StringComparison.OrdinalIgnoreCase)) mandant = part.Substring(4).Trim();
                                 if (part.StartsWith("KEN=", StringComparison.OrdinalIgnoreCase)) kenFromMeta = part.Substring(4).Trim();
-                                if (part.StartsWith("ID=", StringComparison.OrdinalIgnoreCase)) schichtId = part.Substring(3).Trim();
+                                if (part.StartsWith("ID=", StringComparison.OrdinalIgnoreCase)) schichtIdStr = part.Substring(3).Trim();
+                                if (part.StartsWith("PID=", StringComparison.OrdinalIgnoreCase)) { int v; if (int.TryParse(part.Substring(4).Trim(), out v)) pid = v; }
                                 if (part.StartsWith("END=", StringComparison.OrdinalIgnoreCase))
                                 {
                                     DateTime dt;
@@ -60,33 +62,32 @@ namespace Geldautomat.Printing
                     }
                     catch { }
                 }
-                if (string.IsNullOrWhiteSpace(mandant)) mandant = kenFromMeta; // Fallback nur Kennzeichen
+                if (int.TryParse(schichtIdStr, out var sid)) schichtId = sid;
+                if (string.IsNullOrWhiteSpace(mandant)) mandant = kenFromMeta;
                 if (string.IsNullOrWhiteSpace(mandant))
                 {
                     try
                     {
                         var rx = new Regex(@"Schicht\s+(\d+),\s+(.+?)\s+vo[mn]\s+(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2})\s+eingezahlt", RegexOptions.IgnoreCase);
                         var m = rx.Match(buchungstext ?? string.Empty);
-                        if (m.Success) { mandant = m.Groups[2].Value.Trim(); if (string.IsNullOrWhiteSpace(schichtId)) schichtId = m.Groups[1].Value.Trim(); }
+                        if (m.Success) { mandant = m.Groups[2].Value.Trim(); if (!schichtId.HasValue) schichtId = int.Parse(m.Groups[1].Value.Trim()); }
                     }
                     catch { }
                 }
 
-                // Mandant per ManID -> ManName und Schichtzeiten laden
                 try
                 {
                     string display = null;
                     int manId = -1;
                     int sidTmp;
-                    if (!string.IsNullOrWhiteSpace(schichtId) && int.TryParse(schichtId, out sidTmp))
+                    if (schichtId.HasValue)
                     {
                         using (var db = new Geldautomat.DatabaseHelper())
                         {
-                            var det = db.GetShiftDetailsAsync(sidTmp).GetAwaiter().GetResult();
+                            var det = db.GetShiftDetailsAsync(schichtId.Value).GetAwaiter().GetResult();
                             if (det != null)
                             {
                                 arbeitsBeginn = det.StartZeit;
-                                // EndZeit aus Modell (falls Property vorhanden)
                                 try
                                 {
                                     var p = det.GetType().GetProperty("EndZeit");
@@ -98,16 +99,15 @@ namespace Geldautomat.Printing
                                 }
                                 catch { }
                                 if (det.ManId >= 0) manId = det.ManId;
+                                if (!pid.HasValue && det.PersId > 0) pid = det.PersId;
                             }
-                            // Fallback: direkt aus DB laden, falls noch nicht vorhanden
                             if (!arbeitsEnde.HasValue)
                             {
-                                var end = db.GetShiftEndZeitAsync(sidTmp).GetAwaiter().GetResult();
+                                var end = db.GetShiftEndZeitAsync(schichtId.Value).GetAwaiter().GetResult();
                                 if (end.HasValue) arbeitsEnde = end.Value;
                             }
                         }
                     }
-                    if (manId < 0 && !string.IsNullOrWhiteSpace(mandant) && int.TryParse(mandant, out var mid)) manId = mid;
                     if (manId >= 0)
                     {
                         using (var db = new Geldautomat.DatabaseHelper())
@@ -141,10 +141,8 @@ namespace Geldautomat.Printing
                             if (!string.IsNullOrWhiteSpace(buchungstext)) list.Add(buchungstext.Trim());
                         }
                     }
-                    // Zeiten/Pause/Arbeitszeit einfgen gem Konfiguration
                     try
                     {
-                        // Anfang/Ende nur anzeigen, wenn nicht "nur Arbeitszeiten" aktiviert ist
                         if (!cfg.ShowWorkTimesOnly)
                         {
                             if (arbeitsBeginn.HasValue)
@@ -153,7 +151,6 @@ namespace Geldautomat.Printing
                                 list.Add("Arbeitsende : " + arbeitsEnde.Value.ToString("HH:mm", De));
                         }
 
-                        // Berechnung diff
                         TimeSpan diff = TimeSpan.Zero;
                         if (arbeitsBeginn.HasValue && arbeitsEnde.HasValue)
                         {
@@ -164,25 +161,70 @@ namespace Geldautomat.Printing
                             if (diff.TotalMinutes < 0) diff = TimeSpan.Zero;
                         }
 
-                        // Pausenzeit (30/45 Min Regel) berechnen ggf. anzeigen
-                        TimeSpan pause = TimeSpan.Zero;
-                        if (cfg.AutoPauseDeduction && diff.TotalMinutes > 0)
+                        // tatsächliche Pause aus THistoryZeiterfassung innerhalb der Schicht
+                        TimeSpan actualPause = TimeSpan.Zero;
+                        try
                         {
-                            if (diff.TotalHours > 9)
-                                pause = TimeSpan.FromMinutes(45);
-                            else if (diff.TotalHours > 6)
-                                pause = TimeSpan.FromMinutes(30);
+                            if (pid.HasValue && arbeitsBeginn.HasValue && arbeitsEnde.HasValue)
+                            {
+                                using (var db = new Geldautomat.DatabaseHelper())
+                                {
+                                    var dtPause = db.GetZeiterfassungAsync(pid.Value, arbeitsBeginn.Value.Date, arbeitsEnde.Value.Date.AddDays(1)).GetAwaiter().GetResult();
+                                    foreach (System.Data.DataRow r in dtPause.Rows)
+                                    {
+                                        try
+                                        {
+                                            int typ = r.Table.Columns.Contains("Typ") && r["Typ"] != DBNull.Value ? Convert.ToInt32(r["Typ"]) : 0;
+                                            if (typ == 106) // Pause
+                                            {
+                                                DateTime zv = r["ZeitVon"] != DBNull.Value ? (DateTime)r["ZeitVon"] : DateTime.MinValue;
+                                                DateTime zb = r["ZeitBis"] != DBNull.Value ? (DateTime)r["ZeitBis"] : DateTime.MinValue;
+                                                if (zv == DateTime.MinValue || zb == DateTime.MinValue) continue;
+                                                // nur Pausen innerhalb der Schichtzeit berücksichtigen
+                                                if (zv >= arbeitsBeginn.Value && zv <= arbeitsEnde.Value)
+                                                {
+                                                    var dur = zb - zv;
+                                                    if (dur.TotalMinutes >= 15) actualPause += dur;
+                                                }
+                                            }
+                                        }
+                                        catch { }
+                                    }
+                                }
+                            }
                         }
+                        catch { }
+
+                        // Standard-Pausenregel
+                        TimeSpan standardPause = TimeSpan.Zero;
+                        if (diff.TotalMinutes > 0)
+                        {
+                            if (diff.TotalHours > 9) standardPause = TimeSpan.FromMinutes(45);
+                            else if (diff.TotalHours > 6) standardPause = TimeSpan.FromMinutes(30);
+                        }
+
+                        // ausgewählte Pause abhängig von Einstellungen
+                        TimeSpan usedPause = TimeSpan.Zero;
+                        if (cfg.AutoPauseDeduction)
+                        {
+                            usedPause = standardPause;
+                            if (cfg.MinimumPauseDeduction && actualPause > standardPause)
+                                usedPause = actualPause;
+                        }
+                        else
+                        {
+                            usedPause = actualPause; // kein Autoabzug, nur tatsächlich erfasste Pausen abziehen
+                        }
+
                         if (cfg.ShowPauseTime && diff.TotalMinutes > 0)
                         {
-                            int ph = (int)pause.TotalHours; int pm = pause.Minutes;
+                            int ph = (int)usedPause.TotalHours; int pm = usedPause.Minutes;
                             list.Add("Pausenzeit  : " + string.Format("{0}:{1:00} h", ph, pm));
                         }
 
-                        // Arbeitszeit nur anzeigen, wenn konfiguriert
                         if (cfg.ShowArbeitszeit && diff.TotalMinutes > 0)
                         {
-                            var netto = diff - (cfg.AutoPauseDeduction ? pause : TimeSpan.Zero);
+                            var netto = diff - usedPause;
                             if (netto.TotalMinutes < 0) netto = TimeSpan.Zero;
                             int hours = (int)netto.TotalHours;
                             int minutes = netto.Minutes;
