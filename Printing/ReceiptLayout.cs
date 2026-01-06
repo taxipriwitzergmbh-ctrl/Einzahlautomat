@@ -258,7 +258,7 @@ namespace Geldautomat.Printing
             const int valueColumn = 28;
             string label = (mwst + "%:").PadLeft(labelWidth);
             string amount = betrag.ToString("0.00", De);
-            string value = amount + " �";
+            string value = amount + " €";
             int spaces = Math.Max(1, valueColumn - label.Length - value.Length);
             return label + new string(' ', spaces) + value;
         }
@@ -268,7 +268,7 @@ namespace Geldautomat.Printing
             const int valueColumn = 28;
             string left = label;
             string amount = betrag.ToString("0.00", De);
-            string value = amount + " �";
+            string value = amount + " €";
             int spaces = Math.Max(1, valueColumn - left.Length - value.Length);
             return left + new string(' ', spaces) + value;
         }
