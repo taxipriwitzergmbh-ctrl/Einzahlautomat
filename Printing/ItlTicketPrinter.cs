@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -31,7 +31,15 @@ namespace Geldautomat.Printing
         private bool WaitHandshake(int ms){ var until=System.DateTime.UtcNow.AddMilliseconds(ms); while(System.DateTime.UtcNow<until){ if(_handshakeComplete) return true; System.Threading.Thread.Sleep(120); if((System.DateTime.UtcNow-_lastCommUtc).TotalMilliseconds>500) SendFrame(false, BuildSimple(Cmd.Poll,false)); } return _handshakeComplete; }
 
         public bool PrintLines(System.Collections.Generic.IEnumerable<string> lines){ lock(_sync){ if(!Initialize()) return false; _printComplete=false; _printFailed=false; _nextLinePos=150; _lastStatus=""; try { ClearTemplate(TemplateId); foreach (var raw in (lines ?? System.Linq.Enumerable.Empty<string>())) { var t = Preprocess(raw); if (string.IsNullOrEmpty(t)) { _nextLinePos += LineStep; continue; } AddFixedText(t, _nextLinePos, _rotate90 ? 40 : 20); _nextLinePos += LineStep; } DispenseTicket(TemplateId); var timeout=System.DateTime.UtcNow.AddSeconds(15); while(System.DateTime.UtcNow<timeout && !_printComplete && !_printFailed){ System.Threading.Thread.Sleep(300); SendFrame(false, BuildSimple(Cmd.Poll,false)); } Log($"Print status: complete={_printComplete} failed={_printFailed} status={_lastStatus}"); return _printComplete && !_printFailed; } catch(System.Exception ex){ Log("Print Fehler: "+ex.Message); return false; } } }
-        private string Preprocess(string s){ if(s==null) return string.Empty; s=s.Replace("ö","oe").Replace("Ö","Oe").Replace("ä","ae").Replace("Ä","Ae").Replace("ü","ue").Replace("Ü","Ue").Replace("ß","ss"); if(s.Length>40) s=s.Substring(0,40); return s; }
+        private string Preprocess(string s)
+        {
+            if (s == null) return string.Empty;
+            // Replace characters that may not render on ticket printers
+            s = s.Replace("â‚¬", " EUR");
+            s = s.Replace("ï¿½","oe").Replace("ï¿½","Oe").Replace("ï¿½","ae").Replace("ï¿½","Ae").Replace("ï¿½","ue").Replace("ï¿½","Ue").Replace("ï¿½","ss");
+            if (s.Length > 40) s = s.Substring(0, 40);
+            return s;
+        }
 
         // ==== Handshake Reaction (VB Stil) =====
         private void ProcessResponse(byte[] sent){ try { if(_cmd.ResponseDataLength<1) { Log($"Resp leer cmd={sent[2]} enc={(sent[0])}" ); return;} byte resp=_cmd.ResponseData[0]; byte cmdCode=sent[2]; Log($"Resp cmd={cmdCode} enc={(sent[0])} code={resp} bytes=[{DumpResp()}]"); if(cmdCode==(byte)Cmd.Poll && resp==240){ for(int i=1;i<_cmd.ResponseDataLength;i++){ var ev=_cmd.ResponseData[i]; if(ev==(byte)PollResp.Printing_Ticket) _lastStatus="Printing"; else if(ev==(byte)PollResp.Printed_Ticket){ _lastStatus="Print complete"; _printComplete=true;} else if(ev==(byte)PollResp.Could_Not_Print_Ticket || ev==(byte)PollResp.No_Paper){ _printFailed=true; _lastStatus="Print fail: "+ev; } } }
@@ -42,9 +50,9 @@ namespace Geldautomat.Printing
 _cmd.Key.VariableKey=_keys.KeyHost; Log("Key Request OK -> Keys gesetzt (FixedKey VB)"); SendFrame(false, BuildSimple(Cmd.Enable,false)); Thread.Sleep(60); SetPaperSavingMode(0); Thread.Sleep(60); SetTicketLength(_ticketLength); Thread.Sleep(60); SetTicketWidth(_rotate90? _ticketLength : 150); // heuristik
 Thread.Sleep(80); SendFrame(true, BuildSimple(Cmd.Sync,true)); return; } }
             if(cmdCode==(byte)Cmd.Sync && sent[0]==1){ // encrypted sync
-                // Einige Geräte liefern nur 0xF0 oder manchmal 0xF1 – beides akzeptieren
+                // Einige Gerï¿½te liefern nur 0xF0 oder manchmal 0xF1 ï¿½ beides akzeptieren
                 if(resp==240){ _encryption=true; if(!_handshakeComplete){ _handshakeComplete=true; Log("Encryption aktiv / Handshake abgeschlossen"); ClearTemplate(TemplateId); RequestFirmware(); } return; }
-                if(resp==250){ Log("Key_Not_Set bei encrypted Sync"); if(!_retryAfterKeyNotSet){ _retryAfterKeyNotSet=true; _encryption=false; _handshakeComplete=false; Log("Starte erneuten Versuch mit neuem Sync"); SendFrame(false, BuildSimple(Cmd.Sync,false)); return; } else { Log("Retry bereits durchgeführt – Abbruch"); } }
+                if(resp==250){ Log("Key_Not_Set bei encrypted Sync"); if(!_retryAfterKeyNotSet){ _retryAfterKeyNotSet=true; _encryption=false; _handshakeComplete=false; Log("Starte erneuten Versuch mit neuem Sync"); SendFrame(false, BuildSimple(Cmd.Sync,false)); return; } else { Log("Retry bereits durchgefï¿½hrt ï¿½ Abbruch"); } }
             }
         } catch(System.Exception ex){ Log("ProcessResponse Fehler: "+ex.Message); } }
 
@@ -74,7 +82,7 @@ int xLow=_rotate90? logicalLinePos : basePos; int yLow=_rotate90? basePos : logi
 
         private static bool? _debugFlag; // Lazy Cache
         private static DateTime _debugLastCheckUtc = DateTime.MinValue;
-        private static readonly TimeSpan _debugReloadInterval = TimeSpan.FromSeconds(30); // periodisch neu einlesen (falls INI geändert)
+        private static readonly TimeSpan _debugReloadInterval = TimeSpan.FromSeconds(30); // periodisch neu einlesen (falls INI geï¿½ndert)
         private static bool IsDebugEnabled()
         {
             if (_debugFlag == null || (DateTime.UtcNow - _debugLastCheckUtc) > _debugReloadInterval)
@@ -94,7 +102,7 @@ int xLow=_rotate90? logicalLinePos : basePos; int yLow=_rotate90? basePos : logi
         private static bool ShouldLog(string msg)
         {
             if (string.IsNullOrEmpty(msg)) return false;
-            // Schlüsselwörter für Fehler immer loggen
+            // Schlï¿½sselwï¿½rter fï¿½r Fehler immer loggen
             if (msg.IndexOf("Fehler", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 msg.IndexOf("fail", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 msg.IndexOf("fehlgeschlagen", StringComparison.OrdinalIgnoreCase) >= 0 ||

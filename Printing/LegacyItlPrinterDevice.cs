@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.IO.Ports;
 using System.Text;
 
@@ -44,14 +44,16 @@ namespace Geldautomat.Printing
 
         private void SendInit()
         {
-            // Platzhalter ESC @ reset
+            // ESC @ reset
             TryWrite(new byte[] { 0x1B, 0x40 });
+            // Select code page 1252 (Windows Western) for Euro symbol: ESC t 16
+            TryWrite(new byte[] { 0x1B, 0x74, 16 });
         }
 
         private void SendCut()
         {
             if (!_cfg.CutAfterPrint) return;
-            // Platzhalter GS V 0 (Partial / simple) – ggf. anpassen
+            // Platzhalter GS V 0 (Partial / simple) ï¿½ ggf. anpassen
             TryWrite(new byte[] { 0x1D, 0x56, 0x00 });
         }
 
