@@ -296,18 +296,29 @@ namespace Geldautomat
                 MessageBox.Show(this, "Bitte zuerst Personal laden.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
+
             using (var db = new DatabaseHelper())
             {
                 try
                 {
-                    await db.SetFahrercodeAsync(_currentPid, string.IsNullOrWhiteSpace(txtFahrercode.Text) ? null : txtFahrercode.Text.Trim());
-                    await db.SetNfcAsync(_currentPid, string.IsNullOrWhiteSpace(txtNfc.Text) ? null : txtNfc.Text.Trim());
+                    // Leere Eingaben als leere Strings speichern (statt NULL)
+                    string fahrercode = string.IsNullOrWhiteSpace(txtFahrercode.Text) ? string.Empty : txtFahrercode.Text.Trim();
+                    string nfc        = string.IsNullOrWhiteSpace(txtNfc.Text)        ? string.Empty : txtNfc.Text.Trim();
+
+                    await db.SetFahrercodeAsync(_currentPid, fahrercode);
+                    await db.SetNfcAsync(_currentPid, nfc);
+
                     string warn = string.Empty;
                     if (IsCurrentlyLoginBlocked())
                     {
                         warn = "Achtung: Unter den aktuellen Bedingungen kann sich der Mitarbeiter NICHT anmelden (gesperrt oder ungültiges Eintritts/Austrittsdatum).";
                     }
-                    MessageBox.Show(this, string.IsNullOrEmpty(warn) ? "Gespeichert." : ("Gespeichert.\r\n" + warn), string.IsNullOrEmpty(warn) ? "Info" : "Warnung", MessageBoxButtons.OK, string.IsNullOrEmpty(warn) ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+
+                    MessageBox.Show(this,
+                        string.IsNullOrEmpty(warn) ? "Gespeichert." : ("Gespeichert.\r\n" + warn),
+                        string.IsNullOrEmpty(warn) ? "Info" : "Warnung",
+                        MessageBoxButtons.OK,
+                        string.IsNullOrEmpty(warn) ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
                 }
                 catch (Exception ex)
                 {
