@@ -330,19 +330,19 @@ namespace Geldautomat
             }
 
             // lblPrompt etwas nach unten versetzen falls Automatenname/Service-Leiste sichtbar wird
-            lblPrompt = new Label { Text = "Personalnummer:", Font = new Font("Segoe UI Variable", 14F), Location = new Point(60, 112), Size = new Size(380, 32), ForeColor = Color.FromArgb(33, 37, 41) }; Controls.Add(lblPrompt);
+            lblPrompt = new Label { Text = "Personalnummer:", Font = new Font("Segoe UI Variable", 14F), Location = new Point(60, 128), Size = new Size(380, 32), ForeColor = Color.FromArgb(33, 37, 41) }; Controls.Add(lblPrompt);
 
             // txtPersId, lblError, btnLogin kommen aus Designer – sicherstellen dass sie existieren, sonst hinzufügen
             if (txtPersId == null) { txtPersId = new TextBox(); Controls.Add(txtPersId); }
-            txtPersId.Location = new Point(60, 152); txtPersId.Size = new Size(320, 44); txtPersId.Font = new Font("Segoe UI Variable", 18F); txtPersId.TextAlign = HorizontalAlignment.Center; txtPersId.MaxLength = 8; txtPersId.UseSystemPasswordChar = false;
+            txtPersId.Location = new Point(60, 168); txtPersId.Size = new Size(320, 44); txtPersId.Font = new Font("Segoe UI Variable", 18F); txtPersId.TextAlign = HorizontalAlignment.Center; txtPersId.MaxLength = 8; txtPersId.UseSystemPasswordChar = false;
             txtPersId.GotFocus += (s, e) => txtPersId.SelectAll();
             if (lblError == null) { lblError = new Label(); Controls.Add(lblError); }
-            lblError.Text = string.Empty; lblError.ForeColor = Color.FromArgb(229, 57, 53); lblError.Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold); lblError.Location = new Point(60, 202); lblError.Size = new Size(380, 28); lblError.TextAlign = ContentAlignment.MiddleCenter;
+            lblError.Text = string.Empty; lblError.ForeColor = Color.FromArgb(229, 57, 53); lblError.Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold); lblError.Location = new Point(60, 220); lblError.Size = new Size(380, 28); lblError.TextAlign = ContentAlignment.MiddleCenter;
             if (btnLogin == null) { btnLogin = new Button(); Controls.Add(btnLogin); }
-            btnLogin.Text = "Anmelden"; btnLogin.Location = new Point(60, 242); btnLogin.Size = new Size(380, 48); btnLogin.Font = new Font("Segoe UI Variable Display", 16F, FontStyle.Bold); btnLogin.BackColor = Color.FromArgb(33, 150, 243); btnLogin.ForeColor = Color.White; btnLogin.FlatStyle = FlatStyle.Flat; btnLogin.FlatAppearance.BorderSize = 0; btnLogin.Click += btnLogin_Click;
-            btnCancelPwd = new Button { Text = "?", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.FromArgb(229, 57, 53), FlatStyle = FlatStyle.Flat, Size = new Size(44, 44), Location = new Point(388, 152), Visible = false };
+            btnLogin.Text = "Anmelden"; btnLogin.Location = new Point(60, 260); btnLogin.Size = new Size(380, 48); btnLogin.Font = new Font("Segoe UI Variable Display", 16F, FontStyle.Bold); btnLogin.BackColor = Color.FromArgb(33, 150, 243); btnLogin.ForeColor = Color.White; btnLogin.FlatStyle = FlatStyle.Flat; btnLogin.FlatAppearance.BorderSize = 0; btnLogin.Click += btnLogin_Click;
+            btnCancelPwd = new Button { Text = "?", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.FromArgb(229, 57, 53), FlatStyle = FlatStyle.Flat, Size = new Size(44, 44), Location = new Point(388, 168), Visible = false };
             btnCancelPwd.FlatAppearance.BorderSize = 0; btnCancelPwd.Click += (s, e) => CancelPasswordFlow(); Controls.Add(btnCancelPwd);
-            numPadPanel = new Panel { Location = new Point(60, 312), Size = new Size(380, 340), BackColor = Color.Transparent }; Controls.Add(numPadPanel); BuildNumPad();
+            numPadPanel = new Panel { Location = new Point(60, 330), Size = new Size(380, 340), BackColor = Color.Transparent }; Controls.Add(numPadPanel); BuildNumPad();
             _txtNfcHidden = new TextBox { Visible = false, TabStop = false, Size = new Size(1, 1), Location = new Point(-100, -100) }; Controls.Add(_txtNfcHidden);
             _nfcIdleTimer = new Timer { Interval = NfcIdleTimeoutMs }; _nfcIdleTimer.Tick += (s, e) => { _nfcIdleTimer.Stop(); _nfcBuffer = string.Empty; };
             _onlyNfc = ReadOnlyNfcFlag(); ApplyOnlyNfcLayout();
@@ -1012,6 +1012,8 @@ namespace Geldautomat
                     if (string.Equals(entered, _expectedCode, StringComparison.Ordinal))
                     {
                         using (var db = new DatabaseHelper()) { await ProceedOpenAsync(db); }
+                        // Nach erfolgreichem Login Felder zurücksetzen
+                        CancelPasswordFlow();
                         return;
                     }
                     lblError.Text = "Passwort falsch."; try { txtPersId.SelectAll(); } catch { }
@@ -1039,6 +1041,8 @@ namespace Geldautomat
                         catch (Exception ex) { lblError.Text = "Fehler beim Setzen: " + ex.Message; return; }
                         // Nach setzen direkt prüfen/öffnen
                         await ProceedOpenAsync(db);
+                        // Felder zurücksetzen
+                        CancelPasswordFlow();
                         return;
                     }
                 }
@@ -1130,6 +1134,8 @@ namespace Geldautomat
                             _pendingPid = p.PID;
                             _pendingPersonalInfo = p;
                             await ProceedOpenAsync(db);
+                            // Nach erfolgreichem Wartungsmodus-Login zurücksetzen
+                            CancelPasswordFlow();
                             return;
                         }
                     }
