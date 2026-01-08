@@ -19,9 +19,6 @@ namespace Geldautomat
         private TextBox txtPid; private Label lblName; private Label lblVorname; private TextBox txtNfc; private TextBox txtFahrercode; private Button btnSave; private Panel numPadPanel; private Button btnClearNfc; private Button btnShowHideCode; private Button btnClearCode; private Button btnNfcUebernehmen; private int _currentPid = 0; private TextBox _lastFocusedTextBox; private Label lblStatus; private Label lblEintritt; private Label lblAustritt; private PersonalInfo _loadedPersonal;
         private static readonly DateTime PlaceholderExitDate = new DateTime(1899, 12, 30); // Platzhalter
 
-        // NEU: Ignorierliste für NFC-Tokens (aus INI)
-        private List<string> _ignoredNfcTokens = new List<string>();
-
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
 
@@ -165,10 +162,7 @@ namespace Geldautomat
 
             try { BeginInvoke((Action)(() => { try { txtPid.Focus(); _lastFocusedTextBox = txtPid; txtPid.SelectionStart = txtPid.TextLength; } catch { } })); } catch { }
 
-            // INI-Liste der zu ignorierenden NFC-Tokens laden
-            LoadIgnoredNfcTokens();
-
-            // CoinFeeder NFC-Integration: falls vorhanden, NFC in TextBox schreiben
+            // CoinFeeder NFC-Integration
             try
             {
                 if (Program.CoinFeeder != null)
@@ -346,9 +340,7 @@ namespace Geldautomat
                     var val = prop.GetValue(Program.CoinFeeder) as string;
                     if (!string.IsNullOrWhiteSpace(val) && val.Trim('0').Length > 0)
                     {
-                        var token = val.Trim();
-                        if (IsIgnoredNfcToken(token)) return; // ignorieren
-                        txtNfc.Text = token;
+                        txtNfc.Text = val.Trim();
                     }
                 }
             }
@@ -362,58 +354,9 @@ namespace Geldautomat
             {
                 BeginInvoke((Action)(() =>
                 {
-                    // Nur sinnvolle Tokens akzeptieren
                     if (token.Trim('0').Length == 0) return;
-                    var t = token.Trim();
-                    if (IsIgnoredNfcToken(t)) return; // ignorieren
-                    txtNfc.Text = t;
+                    txtNfc.Text = token.Trim();
                 }));
-            }
-            catch { }
-        }
-
-        private bool IsIgnoredNfcToken(string input)
-        {
-            if (string.IsNullOrWhiteSpace(input)) return false;
-            try
-            {
-                if (_ignoredNfcTokens != null && _ignoredNfcTokens.Count > 0)
-                {
-                    foreach (var t in _ignoredNfcTokens)
-                    {
-                        if (string.Equals(input, t, StringComparison.OrdinalIgnoreCase)) return true;
-                    }
-                }
-                // Fallback: historischer Default
-                if (string.Equals(input, "640001000100", StringComparison.OrdinalIgnoreCase)) return true;
-            }
-            catch { }
-            return false;
-        }
-
-        private void LoadIgnoredNfcTokens()
-        {
-            try
-            {
-                _ignoredNfcTokens.Clear();
-                var v = IniHelper.ReadValue("Device", "IgnoredNfcTokens", AppSettings.IniPath);
-                if (!string.IsNullOrWhiteSpace(v))
-                {
-                    var parts = v.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
-                                 .Select(p => p.Trim())
-                                 .Where(p => p.Length > 0)
-                                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                                 .ToList();
-                    if (parts.Count > 0)
-                    {
-                        _ignoredNfcTokens.AddRange(parts);
-                    }
-                }
-                if (!_ignoredNfcTokens.Any(t => string.Equals(t, "640001000100", StringComparison.OrdinalIgnoreCase)))
-                {
-                    _ignoredNfcTokens.Add("640001000100");
-                }
-                try { AppLogger.Log("PersonalForm: Ignored NFC tokens geladen: " + string.Join(", ", _ignoredNfcTokens.ToArray())); } catch { }
             }
             catch { }
         }

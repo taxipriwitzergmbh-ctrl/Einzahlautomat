@@ -40,7 +40,6 @@ namespace Geldautomat
         private Timer _nfcIdleTimer;
         private const int NfcIdleTimeoutMs = 800; // erhöhte Zeit für manuelle Eingabe
         private const int NfcMinLength = 1;
-        private List<string> _ignoredNfcTokens = new List<string>(); // NEU: aus INI
 
         // Only NFC
         private bool _onlyNfc = false;
@@ -166,8 +165,7 @@ namespace Geldautomat
             {
                 try { if (AdminMode.IsOpen) return; } catch { }
                 try { if (_ssp?.MitarbeiterEingeloggt == true) return; } catch { }
-                // Ignore specific unwanted NFC token
-                if (IsIgnoredNfcToken(token)) return;
+                // Zentrale Filterung im CoinFeeder – hier keine zusätzliche Ignoreliste mehr
                 if (string.IsNullOrWhiteSpace(token) || token.Length < 12 || token.Trim('0').Length == 0) return;
                 var now = DateTime.UtcNow;
                 if (string.Equals(_lastCoinFeederToken, token, StringComparison.OrdinalIgnoreCase) && (now - _lastCoinFeederTokenTime).TotalSeconds < 3) return;
@@ -188,13 +186,11 @@ namespace Geldautomat
             _ssp.Starten();
             try { _ssp.Disable_Device(); } catch { }
             try { _ssp.SetInhibit(true); } catch { }
-            // NEU: Ignorierte NFC-Tokens aus INI laden
-            LoadIgnoredNfcTokens();
+            // Entfernt: LoadIgnoredNfcTokens(); – zentrale Filterung im CoinFeeder
             AttachSspEvents();
             AppLogger.Log("Login-Form angezeigt");
 
-            UpdateServiceIndicator(); // sofortige Erstprüfung
-            // Nach dem Anzeigen höher positionieren
+            UpdateServiceIndicator();
             RepositionHigher();
         }
 
@@ -884,27 +880,6 @@ namespace Geldautomat
         }
 
         private bool IsAdminBackdoor(string input) => string.Equals(input, AdminBackdoorToken, StringComparison.OrdinalIgnoreCase);
-        private bool IsIgnoredNfcToken(string input)
-        {
-            if (string.IsNullOrWhiteSpace(input)) return false;
-            try
-            {
-                // Prüfen gegen Liste aus INI; zusätzlich bleibt der historische Defaultwert erhalten
-                if (_ignoredNfcTokens != null && _ignoredNfcTokens.Count > 0)
-                {
-                    foreach (var t in _ignoredNfcTokens)
-                    {
-                        if (string.Equals(input, t, StringComparison.OrdinalIgnoreCase)) return true;
-                    }
-                }
-                // Fallback: alter hartkodierter Wert
-                if (string.Equals(input, "640001000100", StringComparison.OrdinalIgnoreCase)) return true;
-            }
-            catch { }
-            return false;
-        }
-
-        // Overload-Fix: einfacher Wrapper ruft die erweiterte Variante
         private void PerformAdminLogin(string logMessage) { PerformAdminLogin(logMessage, false); }
         private void PerformAdminLogin(string logMessage, bool developerAdmin)
         {
@@ -1249,8 +1224,7 @@ namespace Geldautomat
             try
             {
                 if (string.IsNullOrWhiteSpace(token)) return;
-                // Unerwünschte Tokens ignorieren
-                if (IsIgnoredNfcToken(token)) return;
+                // Entfernt: IsIgnoredNfcToken(token) – zentrale Filterung im CoinFeeder
 
                 // Admin-Backdoor
                 if (IsAdminBackdoor(token))
@@ -1344,34 +1318,6 @@ namespace Geldautomat
                         try { lblTitle.Refresh(); } catch { }
                     }
                 }
-            }
-            catch { }
-        }
-
-        private void LoadIgnoredNfcTokens()
-        {
-            try
-            {
-                _ignoredNfcTokens.Clear();
-                var v = IniHelper.ReadValue("Device", "IgnoredNfcTokens", AppSettings.IniPath);
-                if (!string.IsNullOrWhiteSpace(v))
-                {
-                    var parts = v.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
-                                 .Select(p => p.Trim())
-                                 .Where(p => p.Length > 0)
-                                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                                 .ToList();
-                    if (parts.Count > 0)
-                    {
-                        _ignoredNfcTokens.AddRange(parts);
-                    }
-                }
-                // Sicherstellen, dass der historische Standardwert weiterhin ignoriert wird
-                if (!_ignoredNfcTokens.Any(t => string.Equals(t, "640001000100", StringComparison.OrdinalIgnoreCase)))
-                {
-                    _ignoredNfcTokens.Add("640001000100");
-                }
-                AppLogger.Log("Ignored NFC tokens geladen: " + string.Join(", ", _ignoredNfcTokens.ToArray()));
             }
             catch { }
         }

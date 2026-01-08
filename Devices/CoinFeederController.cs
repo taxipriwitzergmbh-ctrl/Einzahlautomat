@@ -1,7 +1,8 @@
-using System.Collections.Generic;
+Ôªøusing System.Collections.Generic;
 using System;
 using System.IO.Ports;
 using System.Text;
+using System.Linq;
 
 namespace Geldautomat.Devices
 {
@@ -34,6 +35,9 @@ namespace Geldautomat.Devices
         private DateTime _lastEmittedNfcTime = DateTime.MinValue;
         private static readonly TimeSpan NfcEmitDebounce = TimeSpan.FromSeconds(2);
 
+        // Zentral: ignorierte NFC Tokens (aus INI)
+        private readonly List<string> _ignoredNfcTokens = new List<string>();
+
         public string PortName { get; private set; }
         public int BaudRate { get; private set; } = 9600;
         public Parity Parity { get; private set; } = Parity.None;
@@ -57,7 +61,7 @@ namespace Geldautomat.Devices
         // Fired when an NFC token is decoded from incoming serial data (hex string, uppercase)
         public event Action<string> NfcReceived;
 
-        public CoinFeederController() { }
+        public CoinFeederController() { LoadIgnoredNfcTokens(); }
 
         public void Configure(string portName, int baud = 9600, Parity parity = Parity.None, int dataBits = 8, StopBits stopBits = StopBits.One)
         {
@@ -95,7 +99,7 @@ namespace Geldautomat.Devices
             };
             _port.DataReceived += Port_DataReceived;
             _port.Open();
-            Log($"[INFO] Port geˆffnet: {PortName} @ {BaudRate}bps {Parity}/{DataBits}/{StopBits} DTR={(Dtr ? 1 : 0)} RTS={(Rts ? 1 : 0)}");
+            Log($"[INFO] Port ge√∂ffnet: {PortName} @ {BaudRate}bps {Parity}/{DataBits}/{StopBits} DTR={(Dtr ? 1 : 0)} RTS={(Rts ? 1 : 0)}");
         }
 
         private void Port_DataReceived(object sender, SerialDataReceivedEventArgs e)
@@ -151,7 +155,7 @@ namespace Geldautomat.Devices
             return false;
         }
 
-        // Explizite RM5-Blacklist (Groﬂschreibung, ohne Trennzeichen)
+        // Explizite RM5-Blacklist (Gro√üschreibung, ohne Trennzeichen)
         private static readonly HashSet<string> _rm5ExplicitBlacklist = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "640101002E01",
@@ -163,7 +167,7 @@ namespace Geldautomat.Devices
             "64010100E201",
         };
 
-        // Token-String pr¸fen (nur 6-Byte-Frames), plus Muster 64 01 01 00 ?? 01
+        // Token-String pr√ºfen (nur 6-Byte-Frames), plus Muster 64 01 01 00 ?? 01
         private static bool IsExplicitRm5Blacklisted(string token)
         {
             if (string.IsNullOrWhiteSpace(token)) return false;
@@ -267,10 +271,19 @@ namespace Geldautomat.Devices
                                 foreach (var b in uidBytes) sb.AppendFormat("{0:X2}", b);
                                 string token = sb.ToString();
 
-                                // Explizit RM5-Status unterdr¸cken
+                                // Explizit RM5-Status unterdr√ºcken
                                 if (IsExplicitRm5Blacklisted(token))
                                 {
                                     Log($"NFC: RM5 status frame suppressed ({token})");
+                                    _numberBuffer.RemoveRange(0, _expected2011Length);
+                                    _currentFrameHas2011Header = false; _expected2011Length = -1; _currentFrameHasLargeNumber = false;
+                                    continue;
+                                }
+
+                                // zentral: ignorierte Tokens nicht melden
+                                if (IsIgnoredNfcToken(token))
+                                {
+                                    Log($"NFC: ignored token suppressed ({token})");
                                     _numberBuffer.RemoveRange(0, _expected2011Length);
                                     _currentFrameHas2011Header = false; _expected2011Length = -1; _currentFrameHasLargeNumber = false;
                                     continue;
@@ -351,13 +364,22 @@ namespace Geldautomat.Devices
                                 foreach (var b in uid) sb.AppendFormat("{0:X2}", b);
                                 string token = sb.ToString();
 
-                                // RM5-Status (Heuristik) ODER explizit gemeldete Sequenzen unterdr¸cken
+                                // RM5-Status (Heuristik) ODER explizit gemeldete Sequenzen unterdr√ºcken
                                 if (IsLikelyRm5StatusToken(uid) || IsExplicitRm5Blacklisted(token))
                                 {
                                     Log($"NFC: RM5 status frame suppressed ({token})");
                                     int removeCountSupp = startIndex + uidLenFound;
                                     if (removeCountSupp > 0) _numberBuffer.RemoveRange(0, removeCountSupp);
                                     continue; // do not treat as NFC
+                                }
+
+                                // zentral: ignorierte Tokens nicht melden
+                                if (IsIgnoredNfcToken(token))
+                                {
+                                    Log($"NFC: ignored token suppressed ({token})");
+                                    int removeCountIgn = startIndex + uidLenFound;
+                                    if (removeCountIgn > 0) _numberBuffer.RemoveRange(0, removeCountIgn);
+                                    continue;
                                 }
 
                                 // ignore trivial all-zero tokens
@@ -513,9 +535,9 @@ namespace Geldautomat.Devices
         {
             if (string.IsNullOrEmpty(term)) return false;
             if (string.IsNullOrEmpty(template)) return true;
-            // Wenn das Template bereits mit Zeilenende endet, nichts anh‰ngen
+            // Wenn das Template bereits mit Zeilenende endet, nichts anh√§ngen
             if (template.EndsWith("\n") || template.EndsWith("\r")) return false;
-            // Viele Ger‰te nutzen '$' als Terminator -> optional trotzdem Terminator anh‰ngen
+            // Viele Ger√§te nutzen '$' als Terminator -> optional trotzdem Terminator anh√§ngen
             if (template.EndsWith("$")) return AppendTerminatorAfterDollar;
             return true;
         }
@@ -601,6 +623,49 @@ namespace Geldautomat.Devices
             for (int i = 1; i < bytes.Length - 1; i++)
                 if (bytes[i] == 0x00 || bytes[i] == 0x01) middleSmall++;
             return middleSmall >= (bytes.Length - 2) / 2; // majority small
+        }
+
+        // Zentral: Ignorierliste laden und pr√ºfen
+        private void LoadIgnoredNfcTokens()
+        {
+            try
+            {
+                _ignoredNfcTokens.Clear();
+                var v = IniHelper.ReadValue("Device", "IgnoredNfcTokens", AppSettings.IniPath);
+                if (!string.IsNullOrWhiteSpace(v))
+                {
+                    var parts = v.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                 .Select(p => p.Trim())
+                                 .Where(p => p.Length > 0)
+                                 .Distinct(StringComparer.OrdinalIgnoreCase)
+                                 .ToList();
+                    if (parts.Count > 0)
+                    {
+                        _ignoredNfcTokens.AddRange(parts);
+                    }
+                }
+                // Historischer Default sicherstellen
+                if (!_ignoredNfcTokens.Any(t => string.Equals(t, "640001000100", StringComparison.OrdinalIgnoreCase)))
+                {
+                    _ignoredNfcTokens.Add("640001000100");
+                }
+                try { EventLog?.Invoke("CoinFeeder: Ignored NFC tokens geladen: " + string.Join(", ", _ignoredNfcTokens.ToArray())); } catch { }
+            }
+            catch { }
+        }
+
+        private bool IsIgnoredNfcToken(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token)) return false;
+            try
+            {
+                foreach (var t in _ignoredNfcTokens)
+                {
+                    if (string.Equals(token, t, StringComparison.OrdinalIgnoreCase)) return true;
+                }
+            }
+            catch { }
+            return false;
         }
     }
 }
