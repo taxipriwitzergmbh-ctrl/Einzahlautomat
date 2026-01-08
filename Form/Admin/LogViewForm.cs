@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Threading;
 using System.Linq; // NEU für OrderBy
+using System.Runtime.InteropServices;
 
 namespace Geldautomat
 {
@@ -26,14 +27,37 @@ namespace Geldautomat
         private string _logFilePath;
         private string _logDir;
 
+        // Cue Banner für TextBox (Platzhalter)
+        private const uint EM_SETCUEBANNER = 0x1501;
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, uint msg, IntPtr wParam, string lParam);
+        private static void SetCueBanner(TextBox box, string text)
+        {
+            if (box == null) return;
+            if (box.IsHandleCreated)
+                SendMessage(box.Handle, EM_SETCUEBANNER, (IntPtr)1, text);
+            else
+                box.HandleCreated += (s, e) => SendMessage(box.Handle, EM_SETCUEBANNER, (IntPtr)1, text);
+        }
+
         public LogViewForm()
         {
             Text = "Log anzeigen";
             StartPosition = FormStartPosition.CenterParent;
-            Size = new System.Drawing.Size(1100, 720); // etwas breiter
+            Size = new System.Drawing.Size(1100, 720);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
+            AutoScaleMode = AutoScaleMode.Dpi;
+            Font = new System.Drawing.Font("Segoe UI", 9F);
+            KeyPreview = true;
+            KeyDown += (s, e) =>
+            {
+                if (e.Control && e.KeyCode == Keys.F) { _txtSearch?.Focus(); _txtSearch?.SelectAll(); e.SuppressKeyPress = true; }
+                else if (e.KeyCode == Keys.F3) { DoFind(false); e.SuppressKeyPress = true; }
+                else if (e.KeyCode == Keys.F5) { LoadLog(); e.SuppressKeyPress = true; }
+                else if (e.Alt && e.KeyCode == Keys.D) { JumpToNextDiff(); e.SuppressKeyPress = true; }
+            };
 
             // Log-Textbox zuerst hinzufügen (damit Dock Fill nicht vom Header überlagert wird)
             txtLog = new TextBox
@@ -44,7 +68,8 @@ namespace Geldautomat
                 Dock = DockStyle.Fill,
                 Font = new System.Drawing.Font("Consolas", 10F),
                 WordWrap = false,
-                HideSelection = false
+                HideSelection = false,
+                BackColor = System.Drawing.SystemColors.Window
             };
             Controls.Add(txtLog);
 
@@ -58,87 +83,77 @@ namespace Geldautomat
             btnClose.Click += (s, e) => Close();
             Controls.Add(btnClose);
 
-            // Oberer Header (schmaler)
-            var topPanel = new Panel { Dock = DockStyle.Top, Height = 48, Padding = new Padding(6) };
-            Controls.Add(topPanel);
+            // Moderner Header: TableLayoutPanel mit flexibler Suche-Spalte
+            var top = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 52,
+                Padding = new Padding(6),
+                ColumnCount = 7,
+                RowCount = 1
+            };
+            top.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            top.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 260F)); // Datei-Auswahl
+            top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));       // Reload
+            top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));       // DIF
+            top.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));  // Suche
+            top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));       // Suchen
+            top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));       // Weiter
+            top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));       // Aa
+            Controls.Add(top);
 
             _cmbFiles = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Width = 240, // kleineres Auswahlfeld
-                Left = 6,
-                Top = 10,
-                Font = new System.Drawing.Font("Segoe UI", 9.5F),
-                IntegralHeight = false
+                IntegralHeight = false,
+                MaxDropDownItems = 12,
+                Dock = DockStyle.Fill
             };
-            _cmbFiles.MaxDropDownItems = 12;
             _cmbFiles.DropDownHeight = 260;
             _cmbFiles.SelectedIndexChanged += (s, e) => OnSelectedFileChanged();
-            topPanel.Controls.Add(_cmbFiles);
+            _cmbFiles.Margin = new Padding(0, 6, 8, 6);
+            top.Controls.Add(_cmbFiles, 0, 0);
 
-            btnReload = new Button
-            {
-                Text = "Aktualisieren",
-                Left = _cmbFiles.Right + 8,
-                Top = 8,
-                Width = 110,
-                Height = 30
-            };
+            btnReload = new Button { Text = "Aktualisieren", AutoSize = true };
+            btnReload.Margin = new Padding(0, 6, 6, 6);
             btnReload.Click += (s, e) => LoadLog();
-            topPanel.Controls.Add(btnReload);
+            top.Controls.Add(btnReload, 1, 0);
 
-            // DIF-Button
-            _btnDiff = new Button
-            {
-                Text = "DIF",
-                Left = btnReload.Right + 6,
-                Top = 8,
-                Width = 56,
-                Height = 30
-            };
+            _btnDiff = new Button { Text = "DIF", AutoSize = true };
+            _btnDiff.Margin = new Padding(0, 6, 6, 6);
             _btnDiff.Click += (s, e) => JumpToNextDiff();
-            topPanel.Controls.Add(_btnDiff);
+            top.Controls.Add(_btnDiff, 2, 0);
 
-            _txtSearch = new TextBox
-            {
-                Left = _btnDiff.Right + 8,
-                Top = 10,
-                Width = 200
-            };
+            _txtSearch = new TextBox { Dock = DockStyle.Fill };
+            _txtSearch.Margin = new Padding(0, 6, 6, 6);
             _txtSearch.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.Handled = true; e.SuppressKeyPress = true; DoFind(true); } };
-            topPanel.Controls.Add(_txtSearch);
+            top.Controls.Add(_txtSearch, 3, 0);
+            SetCueBanner(_txtSearch, "Suchen … (F3=Weiter, Strg+F=Fokus)");
 
-            _btnFind = new Button
-            {
-                Text = "Suchen",
-                Left = _txtSearch.Right + 6,
-                Top = 8,
-                Width = 72,
-                Height = 30
-            };
+            _btnFind = new Button { Text = "Suchen", AutoSize = true };
+            _btnFind.Margin = new Padding(0, 6, 6, 6);
             _btnFind.Click += (s, e) => DoFind(true);
-            topPanel.Controls.Add(_btnFind);
+            top.Controls.Add(_btnFind, 4, 0);
 
-            _btnNext = new Button
-            {
-                Text = "Weiter",
-                Left = _btnFind.Right + 6,
-                Top = 8,
-                Width = 64,
-                Height = 30
-            };
+            _btnNext = new Button { Text = "Weiter", AutoSize = true };
+            _btnNext.Margin = new Padding(0, 6, 6, 6);
             _btnNext.Click += (s, e) => DoFind(false);
-            topPanel.Controls.Add(_btnNext);
+            top.Controls.Add(_btnNext, 5, 0);
 
-            _chkCase = new CheckBox
-            {
-                Text = "Aa",
-                Left = _btnNext.Right + 6,
-                Top = 13,
-                Width = 36
-            };
+            _chkCase = new CheckBox { Text = "Aa", AutoSize = true };
+            _chkCase.Margin = new Padding(0, 10, 0, 6);
             _chkCase.CheckedChanged += (s, e) => { _lastFindIndex = -1; _lastFindTerm = null; };
-            topPanel.Controls.Add(_chkCase);
+            top.Controls.Add(_chkCase, 6, 0);
+
+            // Tooltips für bessere UX
+            var tips = new ToolTip();
+            tips.SetToolTip(_cmbFiles, "Logdatei auswählen");
+            tips.SetToolTip(btnReload, "Log neu laden (F5)");
+            tips.SetToolTip(_btnDiff, "Zur nächsten Kassendifferenz ≠ 0 springen (Alt+D)");
+            tips.SetToolTip(_txtSearch, "Suchbegriff eingeben");
+            tips.SetToolTip(_btnFind, "Suchen starten");
+            tips.SetToolTip(_btnNext, "Nächsten Treffer suchen (F3)");
+            tips.SetToolTip(_chkCase, "Groß-/Kleinschreibung beachten");
 
             // Log-Verzeichnis und Dateiliste bestimmen
             _logDir = Path.Combine(Application.StartupPath, "Ereignisse");
