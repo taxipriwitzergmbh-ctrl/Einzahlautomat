@@ -547,5 +547,63 @@ namespace Geldautomat
                 try { return Convert.ToDateTime(o); } catch { return null; }
             }
         }
+
+        // Hilfen zum Ermitteln vollständig qualifizierter Tabellennamen (Schema.Name)
+        private async Task<string> ResolveQualifiedTableAsync(string tableName)
+        {
+            await EnsureOpenAsync().ConfigureAwait(false);
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = "SELECT QUOTENAME(s.name) + '.' + QUOTENAME(t.name) FROM sys.tables t JOIN sys.schemas s ON s.schema_id=t.schema_id WHERE t.name=@name";
+                cmd.Parameters.AddWithValue("@name", tableName);
+                var o = await cmd.ExecuteScalarAsync().ConfigureAwait(false);
+                return (o == null || o == DBNull.Value) ? null : Convert.ToString(o);
+            }
+        }
+        private async Task<string> ResolveAnyQualifiedTableAsync(params string[] candidates)
+        {
+            if (candidates == null) return null;
+            foreach (var c in candidates)
+            {
+                try
+                {
+                    var q = await ResolveQualifiedTableAsync(c).ConfigureAwait(false);
+                    if (!string.IsNullOrEmpty(q)) return q;
+                }
+                catch { }
+            }
+            return null;
+        }
+
+        // Regeln laden: AbrechnungsRegeln
+        public async System.Threading.Tasks.Task<System.Data.DataTable> LoadAbrechnungsRegelnAsync()
+        {
+            await EnsureOpenAsync().ConfigureAwait(false);
+            using (var cmd = _connection.CreateCommand())
+            {
+                var tbl = await ResolveAnyQualifiedTableAsync("TAbrechnungsRegeln", "TAbrechnungsBedingungen").ConfigureAwait(false);
+                if (string.IsNullOrEmpty(tbl)) return new System.Data.DataTable();
+                // Fallback-Spalte nicht selektieren; RulesEngine prüft optional auf Existenz
+                cmd.CommandText = $"SELECT Id, Name, JoinKind, IsDefault, Priority, ResultKost1, ResultKost2, ResultKonto, ResultText, IsActive FROM {tbl} WITH (NOLOCK) ORDER BY Id";
+                var dt = new System.Data.DataTable();
+                using (var rdr = await cmd.ExecuteReaderAsync().ConfigureAwait(false)) { dt.Load(rdr); }
+                return dt;
+            }
+        }
+
+        // Regeln laden: Clauses
+        public async System.Threading.Tasks.Task<System.Data.DataTable> LoadAbrechnungsClausesAsync()
+        {
+            await EnsureOpenAsync().ConfigureAwait(false);
+            using (var cmd = _connection.CreateCommand())
+            {
+                var tbl = await ResolveAnyQualifiedTableAsync("TAbrechnungsClauses", "TAbrechnungsBedingungenClause").ConfigureAwait(false);
+                if (string.IsNullOrEmpty(tbl)) return new System.Data.DataTable();
+                cmd.CommandText = $"SELECT Id, RuleId, GroupId, Field, Operator, Value FROM {tbl} WITH (NOLOCK) ORDER BY RuleId, GroupId, Id";
+                var dt = new System.Data.DataTable();
+                using (var rdr = await cmd.ExecuteReaderAsync().ConfigureAwait(false)) { dt.Load(rdr); }
+                return dt;
+            }
+        }
     }
 }

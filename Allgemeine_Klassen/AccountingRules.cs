@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using TaMi_Kassenclient;//DB Regeln laden
+using Geldautomat.Abrechnung; // DB Regeln lokal laden statt aus externer Assembly
 
 namespace Geldautomat
 {
