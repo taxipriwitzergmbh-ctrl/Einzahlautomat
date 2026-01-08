@@ -23,6 +23,7 @@ namespace Geldautomat
         // Flow Steuerung
         private enum LoginStage { EnterPid, EnterPassword, CreatePassword1, CreatePassword2 }
         private LoginStage _stage = LoginStage.EnterPid;
+
         private int _pendingPid = 0;
         private PersonalInfo _pendingPersonalInfo = null;
 
@@ -259,7 +260,7 @@ namespace Geldautomat
                 Font = new Font("Segoe UI", 13F, FontStyle.Bold),
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(229, 57, 53),
-                Size = new Size(ClientSize.Width - 48,  thirtyHeight()),
+                Size = new Size(ClientSize.Width - 48, thirtyHeight()),
                 Location = new Point(24, 62 + 30),
                 Visible = false,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
@@ -538,7 +539,7 @@ namespace Geldautomat
             // NEU: Fokus direkt setzen, damit sofort Tastatureingabe möglich ist
             try { _maintPwdBox.Focus(); } catch { }
             var panelKeys = new Panel { Location = new Point(60, 140), Size = new Size(300, 300) }; panel.Controls.Add(panelKeys);
-            string[] keys = { "1","2","3","4","5","6","7","8","9","C","0","OK" }; int btnW = 90, btnH = 70, pad = 10;
+            string[] keys = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "OK" }; int btnW = 90, btnH = 70, pad = 10;
             for (int i = 0; i < keys.Length; i++) { int r = i / 3, c = i % 3; var b = new Button { Text = keys[i], Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold), Size = new Size(btnW, btnH), Location = new Point(c * (btnW + pad), r * (btnH + pad)), BackColor = Color.FromArgb(245, 247, 250), FlatStyle = FlatStyle.Flat, Tag = keys[i] }; b.FlatAppearance.BorderSize = 0; b.FlatAppearance.MouseOverBackColor = Color.FromArgb(232, 240, 254); b.Click += MaintKey_Click; panelKeys.Controls.Add(b); }
             var btnAbort = new Button { Text = "Abbrechen", Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.FromArgb(158, 158, 158), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(130, 44), Location = new Point(60, 450) }; btnAbort.FlatAppearance.BorderSize = 0; btnAbort.Click += (s, e) => CloseMaintenanceUnlockPanel(); panel.Controls.Add(btnAbort);
             var btnOk = new Button { Text = "OK", Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.FromArgb(46, 125, 50), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(130, 44), Location = new Point(230, 450) }; btnOk.FlatAppearance.BorderSize = 0; btnOk.Click += (s, e) => ValidateMaintenancePassword(); panel.Controls.Add(btnOk);
@@ -624,7 +625,8 @@ namespace Geldautomat
             if (_picNfc == null)
             {
                 _picNfc = new PictureBox { SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.White, Location = new Point(0, 60), Size = new Size(ClientSize.Width, ClientSize.Height - 60), Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right };
-                Controls.Add(_picNfc); try { _picNfc.SendToBack(); } catch { } try { headerPanel?.BringToFront(); } catch { }
+                Controls.Add(_picNfc); try { _picNfc.SendToBack(); } catch { }
+                try { headerPanel?.BringToFront(); } catch { }
             }
             try
             {
@@ -799,11 +801,11 @@ namespace Geldautomat
             }
             catch { }
 
-            var details = ctx.Shift ?? new ShiftDetails 
-            { 
-                PersId = personal.PID, 
-                PersName = personal.Vorname + " " + personal.Name, 
-                SchichtId = 0, 
+            var details = ctx.Shift ?? new ShiftDetails
+            {
+                PersId = personal.PID,
+                PersName = personal.Vorname + " " + personal.Name,
+                SchichtId = 0,
                 StartZeit = DateTime.Now
             };
 
@@ -981,44 +983,118 @@ namespace Geldautomat
                     lblError.Text = string.Empty;
                     int pid;
                     if (!int.TryParse(txtPersId.Text ?? string.Empty, out pid) || pid <= 0)
-                    {
-                        lblError.Text = "Bitte gültige Personalnummer eingeben.";
-                        return;
-                    }
+                    { lblError.Text = "Bitte gültige Personalnummer eingeben."; return; }
                     using (var db = new DatabaseHelper())
                     {
                         try
                         {
                             var ctx = await db.GetLoginContextAsync(pid);
                             var personal = ctx?.Personal;
-                            if (personal == null)
-                            {
-                                lblError.Text = "Personalnummer nicht gefunden.";
-                                return;
-                            }
-                            // Status prüfen wie beim NFC-Flow
+                            if (personal == null) { lblError.Text = "Personalnummer nicht gefunden."; return; }
                             var status = await db.GetPersonalStatusAsync(personal.PID);
                             if (status == null) { lblError.Text = "Status nicht gefunden."; return; }
                             if (status.Gesperrt) { lblError.Text = "Zugang gesperrt."; return; }
                             var now = DateTime.Now; DateTime defExit = new DateTime(1899, 12, 30);
                             if (status.EintrittAm.HasValue && status.EintrittAm.Value > now) { lblError.Text = "Eintrittsdatum liegt in der Zukunft."; return; }
                             if (status.AustrittAm.HasValue && status.AustrittAm.Value != defExit && status.AustrittAm.Value < now) { lblError.Text = "Austrittsdatum abgelaufen."; return; }
-
-                            _pendingPid = personal.PID;
-                            _pendingPersonalInfo = personal;
-                            await ProceedOpenAsync(db);
-                            return;
+                            _pendingPid = personal.PID; _pendingPersonalInfo = personal; await ProceedOpenAsync(db); return;
                         }
-                        catch (Exception ex)
-                        {
-                            lblError.Text = "Fehler: " + ex.Message;
-                            return;
-                        }
+                        catch (Exception ex) { lblError.Text = "Fehler: " + ex.Message; return; }
                     }
                 }
 
-                // Nicht-Wartungsmodus: bestehende Logik beibehalten (kein Passwort-Flow hier definiert)
-                await System.Threading.Tasks.Task.CompletedTask;
+                // Nicht-Wartungsmodus: Zustandsmaschine
+                lblError.Text = string.Empty;
+                if (_stage == LoginStage.EnterPassword)
+                {
+                    var entered = (txtPersId.Text ?? string.Empty).Trim();
+                    if (string.IsNullOrEmpty(entered)) { lblError.Text = "Bitte Passwort eingeben."; return; }
+                    if (string.Equals(entered, _expectedCode, StringComparison.Ordinal))
+                    {
+                        using (var db = new DatabaseHelper()) { await ProceedOpenAsync(db); }
+                        return;
+                    }
+                    lblError.Text = "Passwort falsch."; try { txtPersId.SelectAll(); } catch { }
+                    return;
+                }
+                if (_stage == LoginStage.CreatePassword1)
+                {
+                    var code1 = (txtPersId.Text ?? string.Empty).Trim();
+                    if (string.IsNullOrEmpty(code1) || code1.Length < 4 || !code1.All(char.IsDigit)) { lblError.Text = "Code: min. 4 Ziffern."; return; }
+                    _newCodeFirst = code1;
+                    _stage = LoginStage.CreatePassword2;
+                    if (lblPrompt != null) lblPrompt.Text = "Code bestätigen:";
+                    if (btnLogin != null) btnLogin.Text = "Speichern";
+                    if (btnCancelPwd != null) btnCancelPwd.Visible = true;
+                    if (txtPersId != null) { txtPersId.Clear(); txtPersId.UseSystemPasswordChar = true; try { txtPersId.Focus(); } catch { } }
+                    return;
+                }
+                if (_stage == LoginStage.CreatePassword2)
+                {
+                    var code2 = (txtPersId.Text ?? string.Empty).Trim();
+                    if (!string.Equals(code2, _newCodeFirst, StringComparison.Ordinal)) { lblError.Text = "Codes stimmen nicht überein."; try { txtPersId.SelectAll(); } catch { } return; }
+                    using (var db = new DatabaseHelper())
+                    {
+                        try { await db.SetFahrercodeAsync(_pendingPid, _newCodeFirst); _expectedCode = _newCodeFirst; }
+                        catch (Exception ex) { lblError.Text = "Fehler beim Setzen: " + ex.Message; return; }
+                        // Nach setzen direkt prüfen/öffnen
+                        await ProceedOpenAsync(db);
+                        return;
+                    }
+                }
+
+                // Stage EnterPid: Personalnummer prüfen und Code-Status holen
+                int pidNum;
+                if (!int.TryParse(txtPersId.Text ?? string.Empty, out pidNum) || pidNum <= 0)
+                { lblError.Text = "Bitte gültige Personalnummer eingeben."; return; }
+
+                using (var db = new DatabaseHelper())
+                {
+                    try
+                    {
+                        var ctx = await db.GetLoginContextAsync(pidNum);
+                        var personal = ctx?.Personal;
+                        if (personal == null) { lblError.Text = "Personalnummer nicht gefunden."; return; }
+                        var status = await db.GetPersonalStatusAsync(personal.PID);
+                        if (status == null) { lblError.Text = "Status nicht gefunden."; return; }
+                        if (status.Gesperrt) { lblError.Text = "Zugang gesperrt."; return; }
+                        var now = DateTime.Now; DateTime defExit = new DateTime(1899, 12, 30);
+                        if (status.EintrittAm.HasValue && status.EintrittAm.Value > now) { lblError.Text = "Eintrittsdatum liegt in der Zukunft."; return; }
+                        if (status.AustrittAm.HasValue && status.AustrittAm.Value != defExit && status.AustrittAm.Value < now) { lblError.Text = "Austrittsdatum abgelaufen."; return; }
+
+                        string code = await db.GetFahrercodeAsync(personal.PID);
+                        _pendingPid = personal.PID; _pendingPersonalInfo = personal;
+
+                        if (string.IsNullOrEmpty(code))
+                        {
+                            // Kein Code -> neuen Code anlegen (2-Schritt Bestätigung)
+                            var dlg = MessageBox.Show(this, "Kein Passwort hinterlegt. Jetzt erstellen?", "Passwort erstellen", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                            if (dlg != DialogResult.Yes)
+                            {
+                                // Abbruch: Flow zurücksetzen
+                                CancelPasswordFlow();
+                                return;
+                            }
+                            _stage = LoginStage.CreatePassword1;
+                            _newCodeFirst = null; _expectedCode = null;
+                            if (lblPrompt != null) lblPrompt.Text = "Neuen Code eingeben:";
+                            if (btnLogin != null) btnLogin.Text = "Weiter";
+                            if (btnCancelPwd != null) btnCancelPwd.Visible = true;
+                            if (txtPersId != null) { txtPersId.Clear(); txtPersId.UseSystemPasswordChar = true; txtPersId.MaxLength = 8; try { txtPersId.Focus(); } catch { } }
+                            return;
+                        }
+
+                        // Code vorhanden -> Passwort abfragen
+                        _expectedCode = code;
+                        _stage = LoginStage.EnterPassword;
+                        if (lblPrompt != null) lblPrompt.Text = "Passwort:";
+                        if (btnLogin != null) btnLogin.Text = "Prüfen";
+                        if (btnCancelPwd != null) btnCancelPwd.Visible = true;
+                        if (txtPersId != null) { txtPersId.Clear(); txtPersId.UseSystemPasswordChar = true; txtPersId.MaxLength = 8; try { txtPersId.Focus(); } catch { } }
+                        return;
+                    }
+                    catch (Exception ex) { lblError.Text = "Fehler: " + ex.Message; return; }
+                }
             }
             catch { }
         }
@@ -1084,21 +1160,13 @@ namespace Geldautomat
                         if (personal == null)
                         {
                             lblError.Text = "NFC nicht erkannt.";
-                            AppLogger.Log("NFC-Token unbekannt (gekürzt)");
+                            try { AppLogger.Log("NFC-Token unbekannt (gekürzt)"); } catch { }
                             return;
                         }
 
                         PersonalStatus status = await db.GetPersonalStatusAsync(personal.PID);
-                        if (status == null)
-                        {
-                            lblError.Text = "Personal-Datensatz nicht gefunden.";
-                            return;
-                        }
-                        if (status.Gesperrt)
-                        {
-                            lblError.Text = "Zugang gesperrt.";
-                            return;
-                        }
+                        if (status == null) { lblError.Text = "Personal-Datensatz nicht gefunden."; return; }
+                        if (status.Gesperrt) { lblError.Text = "Zugang gesperrt."; return; }
                         var now = DateTime.Now; DateTime defExit = new DateTime(1899, 12, 30);
                         if (status.EintrittAm.HasValue && status.EintrittAm.Value > now) { lblError.Text = "Eintrittsdatum liegt in der Zukunft."; return; }
                         if (status.AustrittAm.HasValue && status.AustrittAm.Value != defExit && status.AustrittAm.Value < now) { lblError.Text = "Austrittsdatum abgelaufen."; return; }
@@ -1106,19 +1174,20 @@ namespace Geldautomat
                         _pendingPid = personal.PID;
                         _pendingPersonalInfo = personal;
 
+                        // Reset Login-Stages bei NFC-Login
                         _stage = LoginStage.EnterPid;
                         _expectedCode = null;
                         _newCodeFirst = null;
                         btnCancelPwd.Visible = false;
 
-                        AppLogger.Log($"NFC-Login erkannt: Token='{token}', PID={_pendingPid}");
+                        try { AppLogger.Log($"NFC-Login erkannt: Token='[...]', PID={_pendingPid}"); } catch { }
                         await ProceedOpenAsync(db);
                     }
                 }
                 catch (Exception ex)
                 {
                     lblError.Text = "Fehler: " + ex.Message;
-                    AppLogger.Log("NFC-Login Fehler: " + ex.Message);
+                    try { AppLogger.Log("NFC-Login Fehler: " + ex.Message); } catch { }
                 }
                 finally
                 {
