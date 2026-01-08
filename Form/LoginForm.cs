@@ -339,9 +339,67 @@ namespace Geldautomat
             if (lblError == null) { lblError = new Label(); Controls.Add(lblError); }
             lblError.Text = string.Empty; lblError.ForeColor = Color.FromArgb(229, 57, 53); lblError.Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold); lblError.Location = new Point(60, 220); lblError.Size = new Size(380, 28); lblError.TextAlign = ContentAlignment.MiddleCenter;
             if (btnLogin == null) { btnLogin = new Button(); Controls.Add(btnLogin); }
-            btnLogin.Text = "Anmelden"; btnLogin.Location = new Point(60, 260); btnLogin.Size = new Size(380, 48); btnLogin.Font = new Font("Segoe UI Variable Display", 16F, FontStyle.Bold); btnLogin.BackColor = Color.FromArgb(33, 150, 243); btnLogin.ForeColor = Color.White; btnLogin.FlatStyle = FlatStyle.Flat; btnLogin.FlatAppearance.BorderSize = 0; btnLogin.Click += btnLogin_Click;
-            btnCancelPwd = new Button { Text = "?", Font = new Font("Segoe UI", 14F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.FromArgb(229, 57, 53), FlatStyle = FlatStyle.Flat, Size = new Size(44, 44), Location = new Point(388, 168), Visible = false };
-            btnCancelPwd.FlatAppearance.BorderSize = 0; btnCancelPwd.Click += (s, e) => CancelPasswordFlow(); Controls.Add(btnCancelPwd);
+            btnLogin.Text = "Anmelden";
+            // Make the login button narrower so it aligns with the right edge of the '3' key (numpad col 3)
+            // Numpad metrics must match BuildNumPad(): btnW=110, pad=12, col2 right = 2*(btnW+pad)+btnW = 354
+            int numBtnW = 110, numPad = 12;
+            int rightEdgeCol3 = 2 * (numBtnW + numPad) + numBtnW; // 354
+            btnLogin.Size = new Size(rightEdgeCol3, 48);
+            btnLogin.Font = new Font("Segoe UI Variable Display", 16F, FontStyle.Bold);
+            btnLogin.BackColor = Color.FromArgb(33, 150, 243);
+            btnLogin.ForeColor = Color.White;
+            btnLogin.FlatStyle = FlatStyle.Flat;
+            btnLogin.FlatAppearance.BorderSize = 0;
+            btnLogin.FlatAppearance.MouseOverBackColor = Color.FromArgb(30, 136, 229);
+            // Position directly above the numpad, left-aligned to the numpad so the right edge matches the '3' key
+            try
+            {
+                int y = 260;
+                int x = (numPadPanel != null) ? numPadPanel.Left : 60;
+                btnLogin.Location = new Point(x, y);
+                try { btnLogin.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnLogin.Width, btnLogin.Height, 10, 10)); } catch { }
+            }
+            catch { btnLogin.Location = new Point(60, 260); }
+            btnLogin.Click += btnLogin_Click;
+
+            // Roter Cancel/Zurück-Button rechts neben Eingabe: moderner Stil und Icon
+            btnCancelPwd = new Button
+            {
+                Text = string.Empty,
+                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = Color.FromArgb(229, 57, 53),
+                FlatStyle = FlatStyle.Flat,
+                Size = new Size(44, 44),
+                Location = new Point(388, 168),
+                Visible = false
+            };
+            btnCancelPwd.FlatAppearance.BorderSize = 0;
+            btnCancelPwd.FlatAppearance.MouseOverBackColor = Color.FromArgb(211, 47, 47);
+            try { btnCancelPwd.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnCancelPwd.Width, btnCancelPwd.Height, 8, 8)); } catch { }
+            // Icon laden (Fallback arrow)
+            try
+            {
+                string baseDir = Application.StartupPath;
+                string p1 = Path.Combine(baseDir, "Resources", "back.png");
+                string p2 = Path.Combine(baseDir, "Ressourcen", "back.png");
+                string chosen = File.Exists(p1) ? p1 : (File.Exists(p2) ? p2 : null);
+                if (chosen != null)
+                {
+                    using (var img = Image.FromFile(chosen))
+                    {
+                        btnCancelPwd.Image = new Bitmap(img, new Size(22, 22));
+                        btnCancelPwd.ImageAlign = ContentAlignment.MiddleCenter;
+                    }
+                }
+                else
+                {
+                    btnCancelPwd.Text = "←"; // clear fallback symbol
+                    btnCancelPwd.Image = null;
+                }
+            }
+            catch { btnCancelPwd.Text = "←"; btnCancelPwd.Image = null; }
+            btnCancelPwd.Click += (s, e) => CancelPasswordFlow(); Controls.Add(btnCancelPwd);
             numPadPanel = new Panel { Location = new Point(60, 330), Size = new Size(380, 340), BackColor = Color.Transparent }; Controls.Add(numPadPanel); BuildNumPad();
             _txtNfcHidden = new TextBox { Visible = false, TabStop = false, Size = new Size(1, 1), Location = new Point(-100, -100) }; Controls.Add(_txtNfcHidden);
             _nfcIdleTimer = new Timer { Interval = NfcIdleTimeoutMs }; _nfcIdleTimer.Tick += (s, e) => { _nfcIdleTimer.Stop(); _nfcBuffer = string.Empty; };
@@ -637,19 +695,81 @@ namespace Geldautomat
 
         private void BuildNumPad()
         {
-            int btnW = 100, btnH = 70, pad = 10; string[] keys = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "?", "0", "OK" };
+            int btnW = 110, btnH = 72, pad = 12;
+            string[] keys = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "DEL", "0", "OK" };
+            numPadPanel.Controls.Clear();
             for (int i = 0; i < keys.Length; i++)
             {
-                int row = i / 3, col = i % 3; var b = new Button { Text = keys[i], Font = new Font("Segoe UI Variable Display", 20F, FontStyle.Bold), Size = new Size(btnW, btnH), Location = new Point(col * (btnW + pad), row * (btnH + pad)), BackColor = Color.FromArgb(245, 247, 250), ForeColor = Color.FromArgb(33, 37, 41), FlatStyle = FlatStyle.Flat, Tag = keys[i] };
-                b.FlatAppearance.BorderSize = 0; b.FlatAppearance.MouseOverBackColor = Color.FromArgb(232, 240, 254); b.Click += NumPad_Click; numPadPanel.Controls.Add(b);
+                int row = i / 3, col = i % 3;
+                var b = new Button
+                {
+                    Text = keys[i] == "DEL" ? string.Empty : keys[i],
+                    Font = new Font("Segoe UI Variable Display", 20F, FontStyle.Bold),
+                    Size = new Size(btnW, btnH),
+                    Location = new Point(col * (btnW + pad), row * (btnH + pad)),
+                    BackColor = Color.FromArgb(247, 249, 252),
+                    ForeColor = Color.FromArgb(33, 37, 41),
+                    FlatStyle = FlatStyle.Flat,
+                    Tag = keys[i]
+                };
+                b.FlatAppearance.BorderSize = 0;
+                b.FlatAppearance.MouseOverBackColor = Color.FromArgb(232, 240, 254);
+                // leichte Rundung per Region
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 10, 10)); } catch { }
+
+                // DEL: Mülleimer-Icon setzen
+                if (keys[i] == "DEL")
+                {
+                    try
+                    {
+                        string baseDir = Application.StartupPath;
+                        string p1 = Path.Combine(baseDir, "Resources", "trash.png");
+                        string p2 = Path.Combine(baseDir, "Ressourcen", "trash.png");
+                        string chosen = File.Exists(p1) ? p1 : (File.Exists(p2) ? p2 : null);
+                        if (chosen != null)
+                        {
+                            using (var img = Image.FromFile(chosen))
+                            {
+                                b.Image = new Bitmap(img, new Size(28, 28));
+                                b.ImageAlign = ContentAlignment.MiddleCenter;
+                            }
+                        }
+                        else
+                        {
+                            b.Text = "🗑️"; // Fallback Unicode
+                        }
+                    }
+                    catch { b.Text = "🗑️"; }
+                }
+
+                // OK Button farblich hervorheben
+                if (keys[i] == "OK")
+                {
+                    b.BackColor = Color.FromArgb(33, 150, 243);
+                    b.ForeColor = Color.White;
+                    b.FlatAppearance.MouseOverBackColor = Color.FromArgb(30, 136, 229);
+                }
+
+                b.Click += NumPad_Click;
+                numPadPanel.Controls.Add(b);
             }
         }
         private void NumPad_Click(object sender, EventArgs e)
         {
             var key = ((Button)sender).Tag.ToString();
-            if (key == "OK") btnLogin.PerformClick();
-            else if (key == "?") { if (txtPersId.Text.Length > 0) txtPersId.Text = txtPersId.Text.Substring(0, txtPersId.Text.Length - 1); }
-            else if (txtPersId.Text.Length < txtPersId.MaxLength) txtPersId.Text += key;
+            if (key == "OK")
+            {
+                btnLogin.PerformClick();
+            }
+            else if (key == "DEL")
+            {
+                if (txtPersId.Text.Length > 0)
+                    txtPersId.Text = txtPersId.Text.Substring(0, txtPersId.Text.Length - 1);
+            }
+            else if (txtPersId.Text.Length < txtPersId.MaxLength)
+            {
+                txtPersId.Text += key;
+            }
             txtPersId.Focus(); txtPersId.SelectionStart = txtPersId.Text.Length;
         }
 
