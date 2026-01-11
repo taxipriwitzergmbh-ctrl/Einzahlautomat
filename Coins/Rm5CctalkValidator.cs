@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Text;
@@ -37,9 +37,9 @@ namespace Geldautomat.Coins
         public event Action<int> CoinAccepted;                 // Wert in Cent
         public event Action<string> EventLog;                  // Logausgaben
         public event Action<int[]> CoinLevelsUpdated;          // Aktueller Bestand (Index {1,2,5,10,20,50,100,200})
-        public event Action<int> CoinDispensedDeltaCent;       // Jede bestätigte ausgezahlte Münze (Wert in Cent)
+        public event Action<int> CoinDispensedDeltaCent;       // Jede bestï¿½tigte ausgezahlte Mï¿½nze (Wert in Cent)
         public event Action CoinDispenseComplete;              // Alle Hopper ohne Rest
-        public event Action<int,int> CoinPayoutError;          // (hopperIdx, remaining) – Abort wie in VB, Bestand nicht reduziert
+        public event Action<int,int> CoinPayoutError;          // (hopperIdx, remaining) ï¿½ Abort wie in VB, Bestand nicht reduziert
         #endregion
 
         #region Konstanten / Mapping
@@ -50,14 +50,14 @@ namespace Geldautomat.Coins
         private const byte CMD_READ_BUFFERED_CREDIT = 229;  // Read buffered credit events
         private const byte CMD_MODIFY_INHIBIT = 228;        // Master inhibit on/off
         private const byte CMD_SET_INHIBIT_MASK = 231;      // Accepted channels mask
-        private const byte CMD_SET_SORTER_PATH = 210;       // (hier als "Request sorter path" gemäß Alt-Log, nur 1 Byte: Coin)
-        private const byte CMD_REQ_SORTER_PATH = 209;       // (hier ebenfalls Abfrage – Reihenfolge aus Alt-Log 210 dann 209)
+        private const byte CMD_SET_SORTER_PATH = 210;       // (hier als "Request sorter path" gemï¿½ï¿½ Alt-Log, nur 1 Byte: Coin)
+        private const byte CMD_REQ_SORTER_PATH = 209;       // (hier ebenfalls Abfrage ï¿½ Reihenfolge aus Alt-Log 210 dann 209)
         private const byte CMD_SIMPLE_POLL = 254;
         private const byte CMD_REQ_SERIAL = 242;            // Hopper Seriennummer anfordern
         private const byte CMD_HOPPER_DISPENSE = 167;       // Hopper dispense
         private const byte CMD_HOPPER_POLL = 168;           // Hopper counter poll
-        private const byte CMD_HOPPER_ENABLE = 218;         // (aus Alt-Implementierung – Hopper aktivieren / PIN senden Variante)
-        private const byte CMD_HOPPER_PIN = 164;            // (vermutlich PIN / Security Command – Reihenfolge 218 -> 164)
+        private const byte CMD_HOPPER_ENABLE = 218;         // (aus Alt-Implementierung ï¿½ Hopper aktivieren / PIN senden Variante)
+        private const byte CMD_HOPPER_PIN = 164;            // (vermutlich PIN / Security Command ï¿½ Reihenfolge 218 -> 164)
         private const byte CMD_DEVICE_RESET = 1; // VB: Reset header = 1
 
         private const int MAX_HOPPERS = 5; // 10c,20c,50c,100c,200c
@@ -84,10 +84,10 @@ namespace Geldautomat.Coins
             public bool AwaitingPoll = false;
             public DateTime LastPollUtc = DateTime.MinValue;
             public bool DispenseQueued = false;
-            public byte LastSentHeader = 0; // Für Parser Entscheidung Serial/Poll (jetzt tatsächliche gesendete Frames)
+            public byte LastSentHeader = 0; // Fï¿½r Parser Entscheidung Serial/Poll (jetzt tatsï¿½chliche gesendete Frames)
             public bool ExpectSerial = false; // Nach CMD_REQ_SERIAL
             public int SerialRetry = 0;
-            // NEU: Verzögerten Post-Dispense Poll
+            // NEU: Verzï¿½gerten Post-Dispense Poll
             public bool PostDispensePollPending = false;
             public DateTime PostDispensePollDueUtc = DateTime.MinValue;
         }
@@ -96,22 +96,22 @@ namespace Geldautomat.Coins
         private readonly int[] _coinLevels = { -1, -1, -1, 0, 0, 0, 0, 0 }; // Indizes 3..7 relevant
         private readonly object _levelsLock = new object();
 
-        // Anpassung: wir erlauben optional Kanal 6 (10ct). Default Maske jetzt 6 Kanäle (0x3F)
-        private const byte InhibitMaskLowDefault = 0x3F; // Bits 1..6 -> Kanäle 1..6
+        // Anpassung: wir erlauben optional Kanal 6 (10ct). Default Maske jetzt 6 Kanï¿½le (0x3F)
+        private const byte InhibitMaskLowDefault = 0x3F; // Bits 1..6 -> Kanï¿½le 1..6
         private const byte InhibitMaskHighDefault = 0x00;
 
         // Default Kanalzuordnung (Index = Kanalnummer)
         // Neu: Channel 1 = 10ct (vorher 0). Channel 6 deaktiviert (0) um doppelte 10ct-Zuordnung zu vermeiden.
         // Format: index0 unused, ch1=10, ch2=200, ch3=50, ch4=20, ch5=100, ch6=0
-        // Adjust channel mapping to VB logic: 1=200c,2=50c,3=20c,4=100c,5=10c (updated after field test where ch4 was 1€)
+        // Adjust channel mapping to VB logic: 1=200c,2=50c,3=20c,4=100c,5=10c (updated after field test where ch4 was 1ï¿½)
         private int[] _validatorChannelCent = { 0, 200, 50, 20, 100, 10 }; // (fallback) channel index -> cent
         private readonly int[] _codeValueMap = { 0, 200, 100, 50, 20, 10, 5, 2, 1 }; // event code 1..8 -> cent (VB mapping)
 
-        // Sorter Paths (nur für Logging / spätere Nutzung)
+        // Sorter Paths (nur fï¿½r Logging / spï¿½tere Nutzung)
         // Index: coin number (1..5)
-        // coin1 = 2€ , coin2 = 1€ , coin3 = 50c , coin4 = 20c , coin5 = 10c
-        // Migration Hinweis: frühere Defaults waren coin1->3, coin3->2; jetzt getauscht (coin1->2, coin3->3)
-        // Aktuelle Default-Zuordnung nach Feldtests: 2€ Pfad 2, 1€ Pfad 5, 50c Pfad 3, 20c Pfad 4, 10c Pfad 6
+        // coin1 = 2ï¿½ , coin2 = 1ï¿½ , coin3 = 50c , coin4 = 20c , coin5 = 10c
+        // Migration Hinweis: frï¿½here Defaults waren coin1->3, coin3->2; jetzt getauscht (coin1->2, coin3->3)
+        // Aktuelle Default-Zuordnung nach Feldtests: 2ï¿½ Pfad 2, 1ï¿½ Pfad 5, 50c Pfad 3, 20c Pfad 4, 10c Pfad 6
         private byte[] _sorterPaths = { 0, 2, 5, 3, 4, 6 }; // coin1->2, coin2->5, coin3->3, coin4->4, coin5->6
         // Verification runtime data
         private readonly byte[] _actualSorterPaths = new byte[6]; // last confirmed path from device (via 210 response)
@@ -121,7 +121,7 @@ namespace Geldautomat.Coins
 
         private readonly HashSet<int> _processedCreditEvents = new HashSet<int>();
         private readonly HashSet<int> _creditCodes = new HashSet<int> { 1, 2, 3, 4, 5 };
-        private int _wrapEpoch = 0; // NEU: zählt EventCounter Wraps (255->0)
+        private int _wrapEpoch = 0; // NEU: zï¿½hlt EventCounter Wraps (255->0)
         private const int MaxProcessedKeys = 4096; // Begrenzung
         private int _lastProcessedEventCounter = -1; // bleibt erhalten (war schon vorhanden, hier konsolidiert)
 
@@ -148,10 +148,10 @@ namespace Geldautomat.Coins
         private readonly object _sendLock = new object();
 
         // Entfernt doppelte Deklaration _lastProcessedEventCounter (war hier nochmals vorhanden)
-        private volatile bool _initializing = false; // Während Startup-Sequenz keine zyklischen Polls
+        private volatile bool _initializing = false; // Wï¿½hrend Startup-Sequenz keine zyklischen Polls
         #endregion
 
-        #region Öffentliche API
+        #region ï¿½ffentliche API
         public void SetChannelValue(int channel, int cent)
         {
             if (channel < 1) return;
@@ -164,12 +164,12 @@ namespace Geldautomat.Coins
         // Suppress in-app UI notifications (BusyAnimation popups) while a modal flow is active
         public bool SuppressUiNotifications { get; set; }
         public void AddCreditCode(int code)
-        { if (code >= 0 && code < 256 && _creditCodes.Add(code)) Log($"CreditCode {code} hinzugefügt"); }
+        { if (code >= 0 && code < 256 && _creditCodes.Add(code)) Log($"CreditCode {code} hinzugefï¿½gt"); }
         public int[] GetCoinAvailability()
         { lock (_levelsLock) { var c = new int[_coinLevels.Length]; Array.Copy(_coinLevels, c, c.Length); return c; } }
         public void RequestCoinLevels() { try { CoinLevelsUpdated?.Invoke(GetCoinAvailability()); } catch { } }
 
-        // NEU: Alle Münzbestände dauerhaft auf 0 setzen (Kassensturz endgültig)
+        // NEU: Alle Mï¿½nzbestï¿½nde dauerhaft auf 0 setzen (Kassensturz endgï¿½ltig)
         public void ResetAllCoinLevelsToZero(bool persist = true)
         {
             lock (_levelsLock)
@@ -178,10 +178,10 @@ namespace Geldautomat.Coins
             }
             try { CoinLevelsUpdated?.Invoke(GetCoinAvailability()); } catch { }
             if (persist) { try { PersistLevels(); } catch { } }
-            Log("Alle RM5 Münzlevel auf 0 gesetzt (ResetAllCoinLevelsToZero)");
+            Log("Alle RM5 Mï¿½nzlevel auf 0 gesetzt (ResetAllCoinLevelsToZero)");
         }
 
-        // NEU: kompletten Satz Level setzen (für Revert beim Kassensturz-Dialog)
+        // NEU: kompletten Satz Level setzen (fï¿½r Revert beim Kassensturz-Dialog)
         public void SetAllCoinLevels(int[] levels, bool persist = true)
         {
             if (levels == null || levels.Length < _coinLevels.Length) return;
@@ -192,7 +192,7 @@ namespace Geldautomat.Coins
             }
             try { CoinLevelsUpdated?.Invoke(GetCoinAvailability()); } catch { }
             if (persist) { try { PersistLevels(); } catch { } }
-            Log("RM5 Level übernommen (SetAllCoinLevels)");
+            Log("RM5 Level ï¿½bernommen (SetAllCoinLevels)");
         }
 
         private void PersistLevels()
@@ -252,7 +252,7 @@ namespace Geldautomat.Coins
                 };
                 _sp.Open();
                 Connected = true;
-                Log($"Port eröffnet ({ComPort}) ValidatorAddr={SspAddress}");
+                Log($"Port erï¿½ffnet ({ComPort}) ValidatorAddr={SspAddress}");
 
                 BuildStartupQueue(); // exakte vorgegebene Reihenfolge
                 _initializing = true;
@@ -327,7 +327,7 @@ namespace Geldautomat.Coins
         public void PayoutCoins(int[] countsByIndex)
         {
             if (countsByIndex == null || countsByIndex.Length < 8) return;
-            try { if (!SuppressUiNotifications) BusyAnimationManager.Begin("Münzauszahlung läuft"); } catch { }
+            try { if (!SuppressUiNotifications) BusyAnimationManager.Begin("Mï¿½nzauszahlung lï¿½uft"); } catch { }
             var lv = GetCoinAvailability();
             var sb = new StringBuilder(); sb.Append("PayoutCoins Request=[");
             for (int i = 0; i < 8; i++) { if (i > 0) sb.Append(','); sb.Append(countsByIndex[i]); }
@@ -347,18 +347,18 @@ namespace Geldautomat.Coins
                 }
                 else
                 {
-                    Log($"Hopper {h} Serial fehlt -> erneut anfordern für Auszahlung");
+                    Log($"Hopper {h} Serial fehlt -> erneut anfordern fï¿½r Auszahlung");
                     Enqueue(_hoppers[h].Address, CMD_REQ_SERIAL, null);
                 }
             }
         }
         private void QueueHopperDispense(int h)
         {
-            var hs = _hoppers[h]; if (hs.ToPayout <= 0) return; if (!hs.SerialValid) { Log($"Hopper {h} Dispense verschoben – Serial fehlt"); return; } if (hs.DispenseQueued) return;
+            var hs = _hoppers[h]; if (hs.ToPayout <= 0) return; if (!hs.SerialValid) { Log($"Hopper {h} Dispense verschoben ï¿½ Serial fehlt"); return; } if (hs.DispenseQueued) return;
             int remaining = hs.ToPayout;
             while (remaining > 0)
             { byte take = (byte)Math.Min(255, remaining); byte[] data = { hs.Serial[0], hs.Serial[1], hs.Serial[2], take }; Enqueue(hs.Address, CMD_HOPPER_DISPENSE, data); Log($"Hopper {h} DISPENSE addr={hs.Address} take={take} remainingAfter={remaining - take}"); remaining -= take; }
-            // Sofortigen Poll NICHT mehr direkt senden -> verzögert planen
+            // Sofortigen Poll NICHT mehr direkt senden -> verzï¿½gert planen
             hs.PostDispensePollPending = true;
             hs.PostDispensePollDueUtc = DateTime.UtcNow.AddMilliseconds(PostDispensePollDelayMs);
             hs.DispenseQueued = true;
@@ -396,7 +396,7 @@ namespace Geldautomat.Coins
                                 if (hs.AwaitingPoll && (now - hs.LastPollUtc).TotalMilliseconds > HopperPollReplyTimeoutMs)
                                 {
                                     hs.AwaitingPoll = false; // retry freigeben
-                                    Log($"Hopper {h} Poll timeout – retry");
+                                    Log($"Hopper {h} Poll timeout ï¿½ retry");
                                     _hoppers[h] = hs;
                                 }
                             }
@@ -406,7 +406,7 @@ namespace Geldautomat.Coins
                             if (_sendQueue.Count == 0 && (now - _lastSimplePollUtc).TotalMilliseconds >= SimplePollIntervalMs)
                             { Enqueue(SspAddress, CMD_SIMPLE_POLL, null); _lastSimplePollUtc = now; }
 
-                            // Verzögerten Post-Dispense Poll ausführen
+                            // Verzï¿½gerten Post-Dispense Poll ausfï¿½hren
                             if (_sendQueue.Count == 0)
                             {
                                 for (int h = 0; h < MAX_HOPPERS; h++)
@@ -421,7 +421,7 @@ namespace Geldautomat.Coins
                                 }
                             }
 
-                            // Hopper polls (regulär)
+                            // Hopper polls (regulï¿½r)
                             if (_sendQueue.Count == 0)
                             {
                                 for (int h = 0; h < MAX_HOPPERS; h++)
@@ -530,7 +530,7 @@ namespace Geldautomat.Coins
                 }
                 return; // handled
             }
-            // Sorter path REQUEST response (header 209) – some firmware may echo coin only (len=1); optional extra logging
+            // Sorter path REQUEST response (header 209) ï¿½ some firmware may echo coin only (len=1); optional extra logging
             if (header == CMD_REQ_SORTER_PATH && len == 1 && frame.Length >= 6)
             {
                 byte coin = frame[4];
@@ -565,7 +565,7 @@ namespace Geldautomat.Coins
                         if (isAllZero || isAllFF)
                         {
                             hs.SerialValid = true; hs.ExpectSerial = false; hs.SerialRetry = 0;
-                            Log($"Hopper {hopperIdx} Platzhalter-Serial empfangen ({(isAllFF ? "FF FF FF" : "00 00 00")}) – akzeptiert");
+                            Log($"Hopper {hopperIdx} Platzhalter-Serial empfangen ({(isAllFF ? "FF FF FF" : "00 00 00")}) ï¿½ akzeptiert");
                             // Proceed with baseline poll
                             Enqueue(hs.Address, CMD_HOPPER_POLL, null);
                             // Start pending payout if any
@@ -581,7 +581,7 @@ namespace Geldautomat.Coins
                         {
                             hs.SerialValid = true; hs.ExpectSerial = false; hs.SerialRetry = 0;
                             Log($"Hopper {hopperIdx} Serial={hs.Serial[0]}-{hs.Serial[1]}-{hs.Serial[2]}");
-                            // Nach gültiger Serial Baseline-POLL einreihen (Fix: jetzt erster Poll wirklich nach Serial)
+                            // Nach gï¿½ltiger Serial Baseline-POLL einreihen (Fix: jetzt erster Poll wirklich nach Serial)
                             Enqueue(hs.Address, CMD_HOPPER_POLL, null);
                             // NEU: Falls vor Serial bereits ForcePayoutRaw / PayoutCoins ToPayout gesetzt hat -> jetzt Auszahlung starten
                             if (hs.ToPayout > 0 && !hs.DispenseQueued)
@@ -589,7 +589,7 @@ namespace Geldautomat.Coins
                                 Log($"Hopper {hopperIdx} QueueHopperDispense nach Serial (pending ToPayout={hs.ToPayout})");
                                 _hoppers[hopperIdx] = hs; // erst speichern
                                 QueueHopperDispense(hopperIdx);
-                                hs = _hoppers[hopperIdx]; // zurücklesen
+                                hs = _hoppers[hopperIdx]; // zurï¿½cklesen
                             }
                         }
                         _hoppers[hopperIdx] = hs;
@@ -600,7 +600,7 @@ namespace Geldautomat.Coins
                 {
                     hs.AwaitingPoll = false; _hoppers[hopperIdx] = hs; if (frame.Length >= 8) ProcessHopperPoll(hopperIdx, frame); return;
                 }
-                // Fallback: Wenn neither noch – ignorieren
+                // Fallback: Wenn neither noch ï¿½ ignorieren
             }
             else if (header == 0 && len > 3)
             { ParseCreditEvents(frame); return; }
@@ -626,7 +626,7 @@ namespace Geldautomat.Coins
 
             int diff = total - last;
 
-            // Rollover prüfen (24-bit Counter)
+            // Rollover prï¿½fen (24-bit Counter)
             if (diff < 0 && total < last)
             {
                 int rollover = (HopperCounterMax - last) + total;
@@ -637,11 +637,11 @@ namespace Geldautomat.Coins
                 }
                 else
                 {
-                    // Baseline-Reset Heuristik: starker Rücksprung aber kein echter Rollover -> wie VB ignorieren & Baseline neu
+                    // Baseline-Reset Heuristik: starker Rï¿½cksprung aber kein echter Rollover -> wie VB ignorieren & Baseline neu
                     int jump = last - total;
                     if (jump > 100 && jump < 1000000)
                     {
-                        Log($"Hopper {hopperIdx} Counter sprang rückwärts (last={last} now={total} jump={jump}) – Baseline neu ohne Fortschritt");
+                        Log($"Hopper {hopperIdx} Counter sprang rï¿½ckwï¿½rts (last={last} now={total} jump={jump}) ï¿½ Baseline neu ohne Fortschritt");
                         hs.PaidLast = total;
                         hs.PaidTotal = total;
                         hs.RequestWithoutChange = 0; // nicht als Stillstand werten
@@ -653,7 +653,7 @@ namespace Geldautomat.Coins
                 }
             }
 
-            // Baselines aktualisieren (auch wenn diff==0, damit künftige Sprünge korrekt bewertet werden)
+            // Baselines aktualisieren (auch wenn diff==0, damit kï¿½nftige Sprï¿½nge korrekt bewertet werden)
             hs.PaidLast = total;
             hs.PaidTotal = total;
 
@@ -671,7 +671,7 @@ namespace Geldautomat.Coins
 
                     if (effective > 0)
                     {
-                        // Bestand wie im VB-Modell nur bei bestätigter Auszahlung reduzieren
+                        // Bestand wie im VB-Modell nur bei bestï¿½tigter Auszahlung reduzieren
                         lock (_levelsLock)
                         {
                             if (_coinLevels[coinIndex] < 0) _coinLevels[coinIndex] = 0;
@@ -696,7 +696,7 @@ namespace Geldautomat.Coins
             }
             else
             {
-                // Kein Fortschritt – nur zählen wenn noch Coins angefordert sind
+                // Kein Fortschritt ï¿½ nur zï¿½hlen wenn noch Coins angefordert sind
                 if (hs.ToPayout > 0)
                 {
                     hs.RequestWithoutChange++;
@@ -706,8 +706,8 @@ namespace Geldautomat.Coins
                     if (hs.RequestWithoutChange >= HopperNoChangeAbort)
                     {
                         int remaining = hs.ToPayout;
-                        Log($"ABORT Hopper {hopperIdx}: keine Änderung nach {hs.RequestWithoutChange} Polls – Rest {remaining} verworfen (VB-Verhalten)");
-                        hs.ToPayout = 0; // Rest NICHT abbuchen / Bestand unverändert
+                        Log($"ABORT Hopper {hopperIdx}: keine ï¿½nderung nach {hs.RequestWithoutChange} Polls ï¿½ Rest {remaining} verworfen (VB-Verhalten)");
+                        hs.ToPayout = 0; // Rest NICHT abbuchen / Bestand unverï¿½ndert
                         hs.DispenseQueued = false;
                         hs.RequestWithoutChange = 0;
                         try { if (!SuppressUiNotifications) BusyAnimationManager.End("RM5 Fehler"); } catch { }
@@ -735,11 +735,11 @@ namespace Geldautomat.Coins
                 return;
             }
 
-            // Wrap-Erkennung: alter hoch (>=200), neuer klein (<=15) -> plausibler 255->0 Übergang
+            // Wrap-Erkennung: alter hoch (>=200), neuer klein (<=15) -> plausibler 255->0 ï¿½bergang
             if (eventCounter <= 15 && _lastProcessedEventCounter >= 200)
             {
                 _wrapEpoch++;
-                _processedCreditEvents.Clear(); // Duplikat-Cache leeren, damit nach Wrap alles wieder gezählt wird
+                _processedCreditEvents.Clear(); // Duplikat-Cache leeren, damit nach Wrap alles wieder gezï¿½hlt wird
                 Log($"EC wrap erkannt -> epoch={_wrapEpoch} (alt={_lastProcessedEventCounter} neu={eventCounter})");
             }
 
@@ -749,7 +749,7 @@ namespace Geldautomat.Coins
                 int channel = frame[5 + i * 2 + 1];
                 if (channel < 0) channel = 0;
 
-                int derivedEc = (eventCounter - i) & 0xFF; // rückwärts abzählen wie Gerät liefert
+                int derivedEc = (eventCounter - i) & 0xFF; // rï¿½ckwï¿½rts abzï¿½hlen wie Gerï¿½t liefert
 
                 // Eindeutiger Key unter Einbeug Epoch + Counter + Code + Channel (untere 4 Bit)
                 int key = (_wrapEpoch << 20) | (derivedEc << 12) | ((code & 0xFF) << 4) | (channel & 0x0F);
@@ -892,14 +892,14 @@ namespace Geldautomat.Coins
         public void ForcePayoutRaw(int[] countsByIndex)
         {
             if (countsByIndex == null || countsByIndex.Length < 8) return;
-            try { if (!SuppressUiNotifications) BusyAnimationManager.Begin("Münzauszahlung läuft"); } catch { }
+            try { if (!SuppressUiNotifications) BusyAnimationManager.Begin("Mï¿½nzauszahlung lï¿½uft"); } catch { }
             Log("ForcePayoutRaw gestartet: " + string.Join(",", countsByIndex));
             for (int h = 0; h < MAX_HOPPERS; h++)
             {
                 int idx = 3 + h; // Hopper beginnt bei 10ct Index 3
                 int want = countsByIndex[idx];
                 if (want <= 0) continue;
-                // IGNORIERT interne _coinLevels (kann 0 sein obwohl physisch Münzen vorhanden)
+                // IGNORIERT interne _coinLevels (kann 0 sein obwohl physisch Mï¿½nzen vorhanden)
                 _hoppers[h].ToPayout += want;
                 _hoppers[h].DispenseQueued = false; // neu planen
                 if (_hoppers[h].SerialValid)

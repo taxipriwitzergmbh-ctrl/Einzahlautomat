@@ -670,28 +670,77 @@ namespace Geldautomat
             if (_detectingPort) { StopDetectPortMode(true); return; }
             try
             {
-                _detectBasePorts = SerialPort.GetPortNames();
-                Array.Sort(_detectBasePorts, StringComparer.OrdinalIgnoreCase);
                 _detectingPort = true;
                 btnDetect.Text = "Stop";
+
                 _detectDialog = new Form
                 {
                     Text = "COM-Port Erkennung",
-                    Size = new Size(420,140),
+                    Size = new Size(460, 180),
                     FormBorderStyle = FormBorderStyle.FixedDialog,
-                    StartPosition = FormStartPosition.CenterParent,
+                    StartPosition = FormStartPosition.CenterScreen,
                     ControlBox = false,
-                    TopMost = true
+                    TopMost = true,
+                    BackColor = Color.White
                 };
-                var lbl = new Label { Text = "Bitte jetzt den gewünschten USB / COM Adapter einstecken...\r\nFenster schließt automatisch bei Erkennung.", AutoSize = false, Location = new Point(12,12), Size = new Size(380,56) };
+                var lbl = new Label
+                {
+                    Text = "Ist das entsprechende Gerät getrennt?\r\nBitte Gerät JETZT trennen und danach auf \"Weiter\" klicken.",
+                    AutoSize = false,
+                    Location = new Point(12, 12),
+                    Size = new Size(420, 56),
+                    Font = new Font("Segoe UI Variable", 11F),
+                    ForeColor = Color.FromArgb(33, 37, 41)
+                };
                 _detectDialog.Controls.Add(lbl);
-                var btnCancel = new Button { Text = "Abbrechen", Location = new Point(300,80), Size = new Size(90,28) };
-                btnCancel.Click += (s,e)=> StopDetectPortMode(true);
+                var lblCountdown = new Label { Text = string.Empty, AutoSize = false, Location = new Point(12, 72), Size = new Size(420, 24), ForeColor = Color.DimGray, Font = new Font("Segoe UI Variable", 10F) };
+                _detectDialog.Controls.Add(lblCountdown);
+                var btnContinue = new Button { Text = "Weiter", Location = new Point(260, 110), Size = new Size(90, 28), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(33,150,243), ForeColor = Color.White };
+                btnContinue.FlatAppearance.BorderSize = 0;
+                var btnCancel = new Button { Text = "Abbrechen", Location = new Point(356, 110), Size = new Size(90, 28), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(245,247,250), ForeColor = Color.FromArgb(33,37,41) };
+                btnCancel.FlatAppearance.BorderSize = 0;
+                _detectDialog.Controls.Add(btnContinue);
                 _detectDialog.Controls.Add(btnCancel);
+                btnCancel.Click += (s, e) => { StopDetectPortMode(true); };
+
+                int countdown = 4;
+                var preTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+                btnContinue.Click += (s, e) =>
+                {
+                    try
+                    {
+                        btnContinue.Enabled = false;
+                        lbl.Text = "Bitte warten... (Erkennung startet gleich)";
+                        lblCountdown.Text = $"Countdown: {countdown} s";
+                        preTimer.Tick += (ts, te) =>
+                        {
+                            countdown--;
+                            if (countdown > 0)
+                            {
+                                lblCountdown.Text = $"Countdown: {countdown} s";
+                            }
+                            else
+                            {
+                                preTimer.Stop(); preTimer.Dispose();
+                                try
+                                {
+                                    _detectBasePorts = SerialPort.GetPortNames();
+                                    Array.Sort(_detectBasePorts, StringComparer.OrdinalIgnoreCase);
+                                }
+                                catch { _detectBasePorts = Array.Empty<string>(); }
+                                lbl.Text = "Jetzt bitte das Gerät einstecken.\r\nFenster schließt automatisch bei Erkennung.";
+                                lblCountdown.Text = string.Empty;
+                                _detectTimer = new System.Windows.Forms.Timer { Interval = 700 };
+                                _detectTimer.Tick += (ts2, te2) => LoadPorts();
+                                _detectTimer.Start();
+                            }
+                        };
+                        preTimer.Start();
+                    }
+                    catch { }
+                };
+
                 _detectDialog.Show(this);
-                _detectTimer = new System.Windows.Forms.Timer { Interval = 700 };
-                _detectTimer.Tick += (s,e)=> LoadPorts();
-                _detectTimer.Start();
             }
             catch { StopDetectPortMode(true); }
         }
@@ -705,6 +754,25 @@ namespace Geldautomat
                     cmbPorts.Items.Add(port);
                 }
                 cmbPorts.SelectedItem = port;
+
+                // Automatisch übernehmen: INI speichern und Feeder konfigurieren/öffnen
+                try { IniHelper.WriteValue("CoinFeeder", "ComPort", port, _iniPath); } catch { }
+                try
+                {
+                    if (_feeder != null)
+                    {
+                        bool needOpen = !_feeder.IsOpen || !string.Equals(_feeder.PortName, port, StringComparison.OrdinalIgnoreCase);
+                        if (needOpen)
+                        {
+                            try { if (_feeder.IsOpen) _feeder.Close(); } catch { }
+                            _feeder.Configure(port);
+                            _feeder.Open();
+                        }
+                    }
+                }
+                catch { }
+                UpdateUiState();
+                AppendLog("COM-Port erkannt und übernommen: " + port);
             }
             catch { }
             StopDetectPortMode(false);

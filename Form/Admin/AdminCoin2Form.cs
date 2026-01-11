@@ -518,22 +518,27 @@ namespace Geldautomat
                     Text = "COM-Port Erkennung",
                     Size = new Size(460, 180),
                     FormBorderStyle = FormBorderStyle.FixedDialog,
-                    StartPosition = FormStartPosition.CenterParent,
+                    StartPosition = FormStartPosition.CenterScreen,
                     ControlBox = false,
-                    TopMost = true
+                    TopMost = true,
+                    BackColor = Color.White
                 };
                 var lbl = new Label
                 {
                     Text = "Ist das entsprechende Gerät getrennt?\r\nBitte Gerät JETZT trennen und danach auf \"Weiter\" klicken.",
                     AutoSize = false,
                     Location = new Point(12, 12),
-                    Size = new Size(420, 56)
+                    Size = new Size(420, 56),
+                    Font = new Font("Segoe UI Variable", 11F),
+                    ForeColor = Color.FromArgb(33, 37, 41)
                 };
                 _detectDialog.Controls.Add(lbl);
-                var lblCountdown = new Label { Text = string.Empty, AutoSize = false, Location = new Point(12, 72), Size = new Size(420, 24), ForeColor = Color.DimGray };
+                var lblCountdown = new Label { Text = string.Empty, AutoSize = false, Location = new Point(12, 72), Size = new Size(420, 24), ForeColor = Color.DimGray, Font = new Font("Segoe UI Variable", 10F) };
                 _detectDialog.Controls.Add(lblCountdown);
-                var btnContinue = new Button { Text = "Weiter", Location = new Point(260, 110), Size = new Size(90, 28) };
-                var btnCancel = new Button { Text = "Abbrechen", Location = new Point(356, 110), Size = new Size(90, 28) };
+                var btnContinue = new Button { Text = "Weiter", Location = new Point(260, 110), Size = new Size(90, 28), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(33,150,243), ForeColor = Color.White };
+                btnContinue.FlatAppearance.BorderSize = 0;
+                var btnCancel = new Button { Text = "Abbrechen", Location = new Point(356, 110), Size = new Size(90, 28), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(245,247,250), ForeColor = Color.FromArgb(33,37,41) };
+                btnCancel.FlatAppearance.BorderSize = 0;
                 _detectDialog.Controls.Add(btnContinue);
                 _detectDialog.Controls.Add(btnCancel);
                 btnCancel.Click += (s, e) => { StopDetectPortMode(true); };
