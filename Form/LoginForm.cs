@@ -103,6 +103,25 @@ namespace Geldautomat
             InitializeModernLogin();
         }
 
+        // Ensure the maintenance exit button is fixed at the very bottom
+        private void PositionExitMaintenanceButton()
+        {
+            try
+            {
+                if (_btnExitMaintenance == null) return;
+                int margin = 2; // reduced from 12 to push further down
+                int btnH = _btnExitMaintenance.Height > 0 ? _btnExitMaintenance.Height : 44;
+                int x = 60;
+                int width = Math.Max(200, ClientSize.Width - 120);
+                int y = ClientSize.Height - btnH - margin;
+                _btnExitMaintenance.Location = new Point(x, y);
+                _btnExitMaintenance.Width = width;
+                _btnExitMaintenance.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+                try { _btnExitMaintenance.BringToFront(); } catch { }
+            }
+            catch { }
+        }
+
         // Helfer: Formular etwas höher als zentriert positionieren damit Hintergrund-Logo unten sichtbar bleibt
         private void RepositionHigher()
         {
@@ -221,6 +240,7 @@ namespace Geldautomat
             KeyPreview = true;
             KeyPress += LoginForm_KeyPress;
             KeyDown += LoginForm_KeyDown;
+            this.Resize += (s, e) => PositionExitMaintenanceButton();
 
             headerPanel = new Panel { Location = new Point(0, 0), Size = new Size(ClientSize.Width, 60), Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
             headerPanel.Paint += HeaderPanel_Paint;
@@ -410,6 +430,7 @@ namespace Geldautomat
             EnsureHiddenMaintButtonOnTop();
             _btnExitMaintenance = new Button { Text = "Wartungsmodus beenden", Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(380, 44), Location = new Point(60, ClientSize.Height - 60), Visible = false, Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom };
             _btnExitMaintenance.FlatAppearance.BorderSize = 0; _btnExitMaintenance.Click += (s, e) => ExitMaintenanceMode(); Controls.Add(_btnExitMaintenance);
+            PositionExitMaintenanceButton();
             _serviceTimer = new Timer { Interval = 3000 }; _serviceTimer.Tick += (s, e) => UpdateServiceIndicator(); _serviceTimer.Start();
         }
         private int thirtyHeight() => 34; // helper constant height
@@ -653,12 +674,12 @@ namespace Geldautomat
         private void CloseMaintenanceUnlockPanel()
         { if (_maintUnlockPanel != null) { try { Controls.Remove(_maintUnlockPanel); } catch { } try { _maintUnlockPanel.Dispose(); } catch { } _maintUnlockPanel = null; } }
         private void EnterMaintenanceMode()
-        { _maintenanceMode = true; _btnExitMaintenance.Visible = true; lblError.Text = "Wartungsmodus aktiv – nur Personalnummer nötig."; ForceMaintenanceLayout(); CancelPasswordFlow(); EnsureHiddenMaintButtonOnTop(); }
+        { _maintenanceMode = true; _btnExitMaintenance.Visible = true; lblError.Text = "Wartungsmodus aktiv – nur Personalnummer nötig."; ForceMaintenanceLayout(); CancelPasswordFlow(); EnsureHiddenMaintButtonOnTop(); PositionExitMaintenanceButton(); }
         private void ExitMaintenanceMode()
         { _maintenanceMode = false; _btnExitMaintenance.Visible = false; lblError.Text = string.Empty; _nfcIdleTimer?.Stop(); _nfcBuffer = string.Empty; ApplyOnlyNfcLayout(); CancelPasswordFlow(); EnsureHiddenMaintButtonOnTop(); AppLogger.Log("MaintenanceMode beendet – Buffer reset"); }
 
         private void ForceMaintenanceLayout()
-        { lblPrompt.Visible = true; txtPersId.Visible = true; btnLogin.Visible = true; numPadPanel.Visible = true; lblError.Visible = true; if (_picNfc != null) { try { Controls.Remove(_picNfc); _picNfc.Dispose(); } catch { } _picNfc = null; } }
+        { lblPrompt.Visible = true; txtPersId.Visible = true; btnLogin.Visible = true; numPadPanel.Visible = true; lblError.Visible = true; if (_picNfc != null) { try { Controls.Remove(_picNfc); _picNfc.Dispose(); } catch { } _picNfc = null; } PositionExitMaintenanceButton(); }
 
         private bool ReadOnlyNfcFlag()
         {
@@ -672,11 +693,11 @@ namespace Geldautomat
 
         private void ApplyOnlyNfcLayout()
         {
-            if (_maintenanceMode) { ForceMaintenanceLayout(); return; }
+            if (_maintenanceMode) { ForceMaintenanceLayout(); PositionExitMaintenanceButton(); return; }
             if (!_onlyNfc)
             {
                 if (_picNfc != null) { Controls.Remove(_picNfc); try { _picNfc.Dispose(); } catch { } _picNfc = null; }
-                lblPrompt.Visible = true; txtPersId.Visible = true; btnCancelPwd.Visible = false; lblError.Visible = true; btnLogin.Visible = true; numPadPanel.Visible = true; return;
+                lblPrompt.Visible = true; txtPersId.Visible = true; btnCancelPwd.Visible = false; lblError.Visible = true; btnLogin.Visible = true; numPadPanel.Visible = true; PositionExitMaintenanceButton(); return;
             }
             lblPrompt.Visible = false; txtPersId.Visible = false; btnCancelPwd.Visible = false; lblError.Visible = false; btnLogin.Visible = false; numPadPanel.Visible = false;
             if (_picNfc == null)
