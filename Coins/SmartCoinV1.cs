@@ -1,13 +1,13 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Threading;
 
 namespace Geldautomat.Coins
 {
-    // Port der SmartCoinSystem.vb Kernlogik (SSP/ITLlib). Benötigt ITLlib-Referenz im Projekt.
+    // Port der SmartCoinSystem.vb Kernlogik (SSP/ITLlib). Benï¿½tigt ITLlib-Referenz im Projekt.
     public class SmartCoinV1 : ICoinValidator
     {
-        // Instanzbasierter Throttle für Level-Requests je Gerät (verhindert, dass Coin/2 durch Coin/1 blockiert wird)
+        // Instanzbasierter Throttle fï¿½r Level-Requests je Gerï¿½t (verhindert, dass Coin/2 durch Coin/1 blockiert wird)
         private readonly object _instanceLevelsLock = new object();
         private DateTime _lastInstanceLevelsRequestUtc = DateTime.MinValue;
         private static bool _kassensturzMode = false;
@@ -21,17 +21,17 @@ namespace Geldautomat.Coins
         public event Action<int> CoinAccepted;
         public event Action<string> EventLog;
 
-        // Event bei aktualisierten Münzständen
+        // Event bei aktualisierten Mï¿½nzstï¿½nden
         public event Action<int[]> CoinLevelsUpdated;
 
-        // Events für Münzauszahlungen
+        // Events fï¿½r Mï¿½nzauszahlungen
         public event Action CoinDispenseComplete;
         public event Action<string> CoinPayoutError;
 
-        // NEU: Fortschritts-Event je tatsächlich ausgegebener Münze (Wert in Cent)
+        // NEU: Fortschritts-Event je tatsï¿½chlich ausgegebener Mï¿½nze (Wert in Cent)
         public event Action<int> CoinDispensedDeltaCent;
 
-        // NEU: Statusänderung (Idle, Neustart, Busy, Disabled, Jammed, ...)
+        // NEU: Statusï¿½nderung (Idle, Neustart, Busy, Disabled, Jammed, ...)
         public event Action<string> StatusChanged;
         public string CurrentStatus { get { return _status; } }
         private string _status = "Unbekannt";
@@ -55,13 +55,13 @@ namespace Geldautomat.Coins
         // Enable-Puffer, damit Enable nach Handshake automatisch angewandt wird
         private volatile bool _wantEnabled = false;
 
-        // Vorrätige Münzen (Index 0..7 = {1,2,5,10,20,50,100,200} Cent). -1 = unbekannt
+        // Vorrï¿½tige Mï¿½nzen (Index 0..7 = {1,2,5,10,20,50,100,200} Cent). -1 = unbekannt
         private readonly int[] _coinLevels = new int[8] { -1, -1, -1, -1, -1, -1, -1, -1 };
         private readonly object _levelsLock = new object();
 
-        // Flag: falls verschlüsselt nicht akzeptiert -> unverschlüsselt probieren
+        // Flag: falls verschlï¿½sselt nicht akzeptiert -> unverschlï¿½sselt probieren
         private volatile bool _retryGetDenomUnenc = false;
-        private DateTime _lastCoinCreditUtc = DateTime.MinValue; // Timestamp letzter Münze für Level-Abfrage Verzögerung
+        private DateTime _lastCoinCreditUtc = DateTime.MinValue; // Timestamp letzter Mï¿½nze fï¿½r Level-Abfrage Verzï¿½gerung
 
         // TEMP: Raw-Debug aktiv (bei Bedarf wieder auf false setzen)
         private bool _debugRawPoll = true; // TEMP: Raw-Debug aktiv (bei Bedarf wieder auf false setzen)
@@ -78,10 +78,10 @@ namespace Geldautomat.Coins
             catch { return ""; }
         }
 
-        // NEU: Zeitstempel der letzten verarbeiteten POLL-Antwort für faire Interleaving-Strategie
+        // NEU: Zeitstempel der letzten verarbeiteten POLL-Antwort fï¿½r faire Interleaving-Strategie
         private DateTime _lastPollUtc = DateTime.MinValue;
         // Minimalintervall zwischen zwei Polls auch bei fuller Queue (ms)
-        private const int MaxPollGapMs = 150; // enger takten, damit einzelne Münzen erfasst werden
+        private const int MaxPollGapMs = 150; // enger takten, damit einzelne Mï¿½nzen erfasst werden
         private volatile bool _requestLevelsOnNextPoll = false; // trigger from external events
 
         // NEU: Tracking SmartEmpty
@@ -89,18 +89,18 @@ namespace Geldautomat.Coins
         private DateTime _lastSmartEmptyActivityUtc = DateTime.MinValue; // aktualisiert bei Dispensing / Credits
         private int _smartEmptyRetryCount = 0;
         private int _smartEmptyInitialLevelSum = -1;
-        private const int SmartEmptyWatchdogMs = 7000; // 7s ohne Aktivität => Retry
+        private const int SmartEmptyWatchdogMs = 7000; // 7s ohne Aktivitï¿½t => Retry
         private const int SmartEmptyMaxRetries = 2;
-        private volatile bool _suspendLevelRequests = false; // während SmartEmpty keine Level-Kommandos einreihen
+        private volatile bool _suspendLevelRequests = false; // wï¿½hrend SmartEmpty keine Level-Kommandos einreihen
 
         // NEU: Einzahlungs-Animation Tracking
         private volatile bool _coinDepositAnimActive = false;
         private DateTime _lastDepositAnimCoinUtc = DateTime.MinValue;
 
-        // Feld: letztes Payout-Cmd für Retry nach Re-Sync
+        // Feld: letztes Payout-Cmd fï¿½r Retry nach Re-Sync
         private List<byte> _pendingPayoutCmd;
 
-        // NEU: Deduplizierung/Status für DEVICE_FULL (Code 207)
+        // NEU: Deduplizierung/Status fï¿½r DEVICE_FULL (Code 207)
         private DateTime _lastDeviceFullLogUtc = DateTime.MinValue;
         private int _deviceFullRepeatCount = 0;
 
@@ -149,12 +149,12 @@ namespace Geldautomat.Coins
             if (enable)
             {
                 if (_encryptionOk) EnqueueEnableSequence();
-                else Log("Enable vorgemerkt (wird nach Handshake ausgeführt)");
+                else Log("Enable vorgemerkt (wird nach Handshake ausgefï¿½hrt)");
             }
             else
             {
                 if (_encryptionOk) EnqueueDisableSequence();
-                else Log("Disable vorgemerkt (wird nach Handshake ausgeführt)");
+                else Log("Disable vorgemerkt (wird nach Handshake ausgefï¿½hrt)");
             }
         }
 
@@ -184,18 +184,18 @@ namespace Geldautomat.Coins
                         SetStatus("Verbunden");
                         try
                         {
-                            // Einige Geräte benötigen nach Neustart einen expliziten RESET, wie im KassensystemPRO.
+                            // Einige Gerï¿½te benï¿½tigen nach Neustart einen expliziten RESET, wie im KassensystemPRO.
                             // Sende vor dem Handshake einmal RESET, danach wie gewohnt SYNC/Key-Exchange.
                             Enqueue((byte)0, (byte)1, (byte)CCommands.SSP_CMD_RESET);
                             Log("RESET enqueued (Startup)");
                             SetStatus("Reset...");
                         }
                         catch { }
-                        Sync(); // unverschlüsselt
+                        Sync(); // unverschlï¿½sselt
 
                         while (!_stop)
                         {
-                            // SmartEmpty Watchdog prüfen
+                            // SmartEmpty Watchdog prï¿½fen
                             if (_smartEmptyInProgress)
                             {
                                 if (_lastSmartEmptyActivityUtc != DateTime.MinValue)
@@ -206,7 +206,7 @@ namespace Geldautomat.Coins
                                         int currentSum = CurrentLevelSum();
                                         if (currentSum > 0)
                                         {
-                                            Log("SmartEmpty Watchdog: keine Aktivität seit " + idleMs + "ms, LevelsSum=" + currentSum + ", Retry " + (_smartEmptyRetryCount + 1));
+                                            Log("SmartEmpty Watchdog: keine Aktivitï¿½t seit " + idleMs + "ms, LevelsSum=" + currentSum + ", Retry " + (_smartEmptyRetryCount + 1));
                                             _smartEmptyRetryCount++;
                                             // Queue leeren und SmartEmpty erneut schicken
                                             ClearQueue();
@@ -219,11 +219,11 @@ namespace Geldautomat.Coins
                                         int remain = CurrentLevelSum();
                                         if (remain > 0)
                                         {
-                                            Log("SmartEmpty Watchdog: Abbruch nach max. Retries, verbleibende Münzen (Summe)=" + remain);
+                                            Log("SmartEmpty Watchdog: Abbruch nach max. Retries, verbleibende Mï¿½nzen (Summe)=" + remain);
                                             _smartEmptyInProgress = false;
                                             _suspendLevelRequests = false;
                                             Enable(true);
-                                            try { CoinPayoutError?.Invoke("SmartEmpty unvollständig – bitte erneut versuchen."); } catch { }
+                                            try { CoinPayoutError?.Invoke("SmartEmpty unvollstï¿½ndig ï¿½ bitte erneut versuchen."); } catch { }
                                             ScheduleLevelsRequest();
                                         }
                                     }
@@ -259,7 +259,7 @@ namespace Geldautomat.Coins
                             }
                             else
                             {
-                                // Wenn länger kein Poll verarbeitet wurde, schiebe einen Poll vorn ein (ohne Pause)
+                                // Wenn lï¿½nger kein Poll verarbeitet wurde, schiebe einen Poll vorn ein (ohne Pause)
                                 if ((DateTime.UtcNow - _lastPollUtc).TotalMilliseconds > MaxPollGapMs)
                                 {
                                     EnqueueFront((byte)0, (byte)1, (byte)CCommands.SSP_CMD_POLL);
@@ -286,7 +286,7 @@ namespace Geldautomat.Coins
                                 ClearQueue();
                                 _encryptionOk = false;
                                 SafeClose();
-                                SetStatus("Verbindung unterbrochen  – Neuaufbau");
+                                SetStatus("Verbindung unterbrochen  ï¿½ Neuaufbau");
                                 try { BusyAnimationManager.End("abort comm"); } catch { }
                                 break; // re-open
                             }
@@ -317,7 +317,7 @@ namespace Geldautomat.Coins
                                             if (sentCmd == (byte)CCommands.SSP_CMD_GET_DENOMINATION_LEVEL && !_retryGetDenomUnenc)
                                             {
                                                 _retryGetDenomUnenc = true;
-                                                Log("Retry GET_DENOMINATION_LEVEL unverschlüsselt...");
+                                                Log("Retry GET_DENOMINATION_LEVEL unverschlï¿½sselt...");
                                                 AlignPayoutLevels(false);
                                             }
                                         }
@@ -353,7 +353,7 @@ namespace Geldautomat.Coins
                     else
                     {
                         Log($"Open SSPComPort ({_cmd.ComPort}) failed");
-                        SetStatus("Port nicht verfügbar");
+                        SetStatus("Port nicht verfï¿½gbar");
                         try { BusyAnimationManager.End("abort port"); } catch { }
                     }
 
@@ -373,7 +373,7 @@ namespace Geldautomat.Coins
             _threadEnded = true;
         }
 
-        // Helfer fürs Hex-Loggen
+        // Helfer fï¿½rs Hex-Loggen
         private string Hex(byte[] data, int len)
         {
             if (data == null || len <= 0) return "";
@@ -391,7 +391,7 @@ namespace Geldautomat.Coins
         }
         private char GetHex(int v) => (char)(v < 10 ? '0' + v : 'A' + (v - 10));
 
-        // NEU: Status setzen (nur bei Änderung)
+        // NEU: Status setzen (nur bei ï¿½nderung)
         internal void SetStatus(string s)
         {
             if (string.IsNullOrEmpty(s)) return;
@@ -589,7 +589,7 @@ namespace Geldautomat.Coins
 
                         case CCommands.SSP_POLL_COIN_CREDIT:
                             {
-                                // Während Einwurf als Status melden (für Admin-UI)
+                                // Wï¿½hrend Einwurf als Status melden (fï¿½r Admin-UI)
                                 SetStatus("Einwurf");
                                 if (_debugRawPoll) Log("COIN_BLOCK(SHORT) RAW=" + HexSlice(i, 8));
                                 if (i + 1 < _cmd.ResponseDataLength)
@@ -603,16 +603,16 @@ namespace Geldautomat.Coins
                             }
                         case 0xC1:
                             {
-                                // Extended header marker – actual coin credit follows in 0xBF fragment(s)
+                                // Extended header marker ï¿½ actual coin credit follows in 0xBF fragment(s)
                                 SetStatus("Einwurf");
                                 if (_debugRawPoll) Log("COIN_EXT_HDR RAW=" + HexSlice(i, 10));
-                                // WICHTIG: Hier NICHTs verbrauchen – 0xBF wird im nächsten Switch-Zweig geparst
+                                // WICHTIG: Hier NICHTs verbrauchen ï¿½ 0xBF wird im nï¿½chsten Switch-Zweig geparst
                                 break;
                             }
                         case 191:
                             {
-                                // KassensystemPRO-kompatibel: 0xBF trägt die Extended-Coin-Infos.
-                                // Verwende Low-Byte für Einzelmünzen; falls unplausibel, nimm v32 (aggregierter Cent-Wert).
+                                // KassensystemPRO-kompatibel: 0xBF trï¿½gt die Extended-Coin-Infos.
+                                // Verwende Low-Byte fï¿½r Einzelmï¿½nzen; falls unplausibel, nimm v32 (aggregierter Cent-Wert).
                                 if (_debugRawPoll) Log("FRAG_191 RAW=" + HexSlice(i, 9));
 
                                 if (i + 2 < _cmd.ResponseDataLength)
@@ -634,7 +634,7 @@ namespace Geldautomat.Coins
                                     }
                                     else if (v32 > 0)
                                     {
-                                        // Aggregierte Summe (z. B. 150, 250, 300 ct) – als ein Credit verbuchen
+                                        // Aggregierte Summe (z. B. 150, 250, 300 ct) ï¿½ als ein Credit verbuchen
                                         RaiseCoin(v32);
                                         _lastCoinCreditUtc = DateTime.UtcNow;
                                     }
@@ -643,8 +643,8 @@ namespace Geldautomat.Coins
                                         Log($"FRAG_191 Low-Byte unplausibel: {low}");
                                     }
                                 }
-                                // Blocklänge: BF + 8 Datenbytes (1 Count + 4 Value + 3 'EUR')
-                                // For-Loop erhöht zusätzlich um +1 => hier i += 8
+                                // Blocklï¿½nge: BF + 8 Datenbytes (1 Count + 4 Value + 3 'EUR')
+                                // For-Loop erhï¿½ht zusï¿½tzlich um +1 => hier i += 8
                                 i += 8;
                                 break;
                             }
@@ -652,10 +652,10 @@ namespace Geldautomat.Coins
                         case CCommands.SSP_POLL_DISPENSING:
                             Log("Dispensing coin(s)");
                             SetStatus("Busy (Dispensing)");
-                            _lastSmartEmptyActivityUtc = DateTime.UtcNow; // Aktivität
+                            _lastSmartEmptyActivityUtc = DateTime.UtcNow; // Aktivitï¿½t
                             int disp = ReadInt32(i + 2);
 
-                            // BUGFIX 2: Zähler-Reset / Wrap erkennen (zweite Auszahlung hatte keine Einzel-Events)
+                            // BUGFIX 2: Zï¿½hler-Reset / Wrap erkennen (zweite Auszahlung hatte keine Einzel-Events)
                             if (disp < _lastDispensedCount)
                             {
                                 Log("Dispense counter reset detected (DISPENSING) old=" + _lastDispensedCount + " new=" + disp + ". Reset baseline.");
@@ -685,7 +685,7 @@ namespace Geldautomat.Coins
 
                         case CCommands.SSP_POLL_DISPENSED:
                             Log("Dispensed Coin(s)");
-                            _lastSmartEmptyActivityUtc = DateTime.UtcNow; // Aktivität
+                            _lastSmartEmptyActivityUtc = DateTime.UtcNow; // Aktivitï¿½t
                             try
                             {
                                 int totalDisp = ReadInt32(i + 2);
@@ -743,9 +743,9 @@ namespace Geldautomat.Coins
                                     default: errName = "UNBEKANNT"; break;
                                 }
                                 Log("Fehlercode: " + errName);
-                                SetStatus("Störung: " + errName);
+                                SetStatus("Stï¿½rung: " + errName);
                                 _smartEmptyInProgress = false; _suspendLevelRequests = false; _smartEmptyRetryCount = 0; _smartEmptyInitialLevelSum = -1; _toPay_1 = _toPay_2 = _toPay_5 = _toPay_10 = _toPay_20 = _toPay_50 = _toPay_100 = _toPay_200 = 0;
-                                // Animation VOR MessageBox schließen
+                                // Animation VOR MessageBox schlieï¿½en
                                 try { BusyAnimationManager.End("Coins Fehler"); } catch { }
                                 try { CoinPayoutError?.Invoke("Fehler / Abbruch: " + errName); } catch { }
                                 Enable(true); if (_encryptionOk) ScheduleLevelsRequest();
@@ -754,12 +754,12 @@ namespace Geldautomat.Coins
 
                         case CCommands.SSP_POLL_JAMMED:
                             Log("Unit jammed...");
-                            SetStatus("Störung (Jammed)");
+                            SetStatus("Stï¿½rung (Jammed)");
                             _smartEmptyInProgress = false; _suspendLevelRequests = false;
                             try { BusyAnimationManager.End("Coins Jammed"); } catch { }
                             RequestCoinLevels();
                             i += ((_cmd.ResponseData[i + 1] * 7) + 1);
-                            try { CoinPayoutError?.Invoke("Münzgerät blockiert (JAMMED)."); } catch { }
+                            try { CoinPayoutError?.Invoke("Mï¿½nzgerï¿½t blockiert (JAMMED)."); } catch { }
                             break;
 
                         case CCommands.SSP_POLL_TIME_OUT:
@@ -768,17 +768,17 @@ namespace Geldautomat.Coins
                             _smartEmptyInProgress = false; _suspendLevelRequests = false;
                             try { BusyAnimationManager.End("Coins Timeout"); } catch { }
                             i += ((_cmd.ResponseData[i + 1] * 7) + 1);
-                            try { CoinPayoutError?.Invoke("Münzauszahlung zeitüberschritten."); } catch { }
+                            try { CoinPayoutError?.Invoke("Mï¿½nzauszahlung zeitï¿½berschritten."); } catch { }
                             break;
 
                         case CCommands.SSP_POLL_DEVICE_FULL:
                             {
-                                // SmartCoin meldet vollen Hopper/Stack – korrekt behandeln statt UNSUPPORTED
-                                SetStatus("Maximaler Füllstand erreicht");
+                                // SmartCoin meldet vollen Hopper/Stack ï¿½ korrekt behandeln statt UNSUPPORTED
+                                SetStatus("Maximaler Fï¿½llstand erreicht");
                                 var now = DateTime.UtcNow;
                                 if ((now - _lastDeviceFullLogUtc).TotalSeconds >= 5)
                                 {
-                                    Log("Device FULL (Maximaler Füllstand erreicht)");
+                                    Log("Device FULL (Maximaler Fï¿½llstand erreicht)");
                                     _lastDeviceFullLogUtc = now;
                                     _deviceFullRepeatCount = 0;
                                 }
@@ -787,24 +787,24 @@ namespace Geldautomat.Coins
                                     _deviceFullRepeatCount++;
                                     if (_deviceFullRepeatCount % 10 == 0) Log("Device FULL besteht weiterhin...");
                                 }
-                                // Animationsabbruch – es können keine weiteren Münzen angenommen werden
+                                // Animationsabbruch ï¿½ es kï¿½nnen keine weiteren Mï¿½nzen angenommen werden
                                 try { BusyAnimationManager.End("coins full"); } catch { }
-                                // WICHTIG: Einige Geräte gehen bei FULL in einen deaktivierten Zustand über und
+                                // WICHTIG: Einige Gerï¿½te gehen bei FULL in einen deaktivierten Zustand ï¿½ber und
                                 // verarbeiten danach keine Auszahlungsbefehle mehr, bis ENABLE erneut gesendet wurde.
                                 // Damit Wechselgeld-Auszahlungen weiterhin funktionieren, explizit wieder aktivieren.
                                 try { Enable(true); } catch { }
-                                // Levels aktualisieren, damit UI den tatsächlichen Füllstand sieht
+                                // Levels aktualisieren, damit UI den tatsï¿½chlichen Fï¿½llstand sieht
                                 try { ScheduleLevelsRequest(); } catch { }
                                 break;
                             }
 
-                        // NEU: Zustände beim SmartEmpty
+                        // NEU: Zustï¿½nde beim SmartEmpty
                         case CCommands.SSP_POLL_SMART_EMPTYING:
                         {
                             Log("SMART Emptying...");
                             SetStatus("Smart Emptying");
-                            _lastSmartEmptyActivityUtc = DateTime.UtcNow; // Aktivität markieren -> Watchdog ruhigstellen
-                            // Datenblock überspringen wie bei anderen Events mit Payload
+                            _lastSmartEmptyActivityUtc = DateTime.UtcNow; // Aktivitï¿½t markieren -> Watchdog ruhigstellen
+                            // Datenblock ï¿½berspringen wie bei anderen Events mit Payload
                             i += ((_cmd.ResponseData[i + 1] * 7) + 1);
                             break;
                         }
@@ -818,7 +818,7 @@ namespace Geldautomat.Coins
                             _smartEmptyRetryCount = 0;
                             _smartEmptyInitialLevelSum = -1;
 
-                            // Gerät wieder freigeben und Levels aktualisieren
+                            // Gerï¿½t wieder freigeben und Levels aktualisieren
                             Enable(true);
                             SetStatus("Bereit");
                             try { BusyAnimationManager.End("Coins fertig"); } catch { }
@@ -828,7 +828,7 @@ namespace Geldautomat.Coins
                             break;
                         }
 
-                        // Optional (einige Geräte benutzen EMPTYING/EMPTIED anstelle SMART_*):
+                        // Optional (einige Gerï¿½te benutzen EMPTYING/EMPTIED anstelle SMART_*):
                         case CCommands.SSP_POLL_EMPTYING:
                         {
                             Log("Emptying...");
@@ -861,7 +861,7 @@ namespace Geldautomat.Coins
                 }
             }
 
-            if (cmd == (byte)0xB5) // GET_ALL_LEVELS für SCS (selten)
+            if (cmd == (byte)0xB5) // GET_ALL_LEVELS fï¿½r SCS (selten)
             {
                 try
                 {
@@ -910,7 +910,7 @@ namespace Geldautomat.Coins
                         }
                         else
                         {
-                            Log($"ALL_LEVELS: unbekannt/übersprungen val={valueCent}, count={count}");
+                            Log($"ALL_LEVELS: unbekannt/ï¿½bersprungen val={valueCent}, count={count}");
                         }
                     }
 
@@ -921,7 +921,7 @@ namespace Geldautomat.Coins
                     }
                     else
                     {
-                        Log("GET_ALL_LEVELS enthielt keine verwertbaren Einträge.");
+                        Log("GET_ALL_LEVELS enthielt keine verwertbaren Eintrï¿½ge.");
                     }
                 }
                 catch (Exception ex)
@@ -943,20 +943,20 @@ namespace Geldautomat.Coins
 
         public void ScheduleLevelsRequest()
         {
-            if (_suspendLevelRequests) return; // während SmartEmpty unterdrücken
+            if (_suspendLevelRequests) return; // wï¿½hrend SmartEmpty unterdrï¿½cken
             _requestLevelsOnNextPoll = true;
         }
 
-        // Zerlege eine aggregierte Dispense-Summe in Einzelmünzen und feuere je Münze ein Delta-Event
+        // Zerlege eine aggregierte Dispense-Summe in Einzelmï¿½nzen und feuere je Mï¿½nze ein Delta-Event
         private bool EmitPerCoinDeltas(int diff)
         {
-            if (_smartEmptyInProgress) return false; // keine Einzel-Events während SmartEmpty
+            if (_smartEmptyInProgress) return false; // keine Einzel-Events wï¿½hrend SmartEmpty
             if (diff <= 0) return false;
             int before = diff;
 
             Action<int> raise = (val) => { try { CoinDispensedDeltaCent?.Invoke(val); } catch { } };
 
-            // Hilfs-Lokalfunktion: solange möglich von einem Nominalwert abziehen
+            // Hilfs-Lokalfunktion: solange mï¿½glich von einem Nominalwert abziehen
             void Consume(ref int remaining, ref int counter, int value)
             {
                 while (remaining >= value && counter > 0)
@@ -965,7 +965,7 @@ namespace Geldautomat.Coins
                 }
             }
 
-            // Erst anhand der geplanten Stückzahlen (_toPay_*) abbauen (groß -> klein)
+            // Erst anhand der geplanten Stï¿½ckzahlen (_toPay_*) abbauen (groï¿½ -> klein)
             Consume(ref diff, ref _toPay_200, 200);
             Consume(ref diff, ref _toPay_100, 100);
             Consume(ref diff, ref _toPay_50, 50);
@@ -973,12 +973,12 @@ namespace Geldautomat.Coins
             Consume(ref diff, ref _toPay_10, 10);
             Consume(ref diff, ref _toPay_5, 5);
             Consume(ref diff, ref _toPay_2, 2);
-            // In der Praxis kann vom Gerät gelegentlich eine ungerade Differenz (1ct) gemeldet werden
-            // – obwohl 1ct regulär nicht ausgezahlt wird. Um Kassen-/Guthaben-Anzeigen konsistent zu halten,
+            // In der Praxis kann vom Gerï¿½t gelegentlich eine ungerade Differenz (1ct) gemeldet werden
+            // ï¿½ obwohl 1ct regulï¿½r nicht ausgezahlt wird. Um Kassen-/Guthaben-Anzeigen konsistent zu halten,
             // verbuchen wir auch diese 1ct als Delta-Event.
             Consume(ref diff, ref _toPay_1, 1);
 
-            // Falls noch Rest bleibt (z. B. weil _toPay_* nicht exakt passten), greedy ohne Counter auflösen
+            // Falls noch Rest bleibt (z. B. weil _toPay_* nicht exakt passten), greedy ohne Counter auflï¿½sen
             int[] vals = new[] { 200, 100, 50, 20, 10, 5, 2, 1 };
             foreach (var v in vals)
             {
@@ -1017,7 +1017,7 @@ namespace Geldautomat.Coins
                 {
                     if (!BusyAnimationManager.IsActive)
                     {
-                        BusyAnimationManager.Begin("Einzahlung läuft");
+                        BusyAnimationManager.Begin("Einzahlung lï¿½uft");
                         _coinDepositAnimActive = true;
                     }
                 }
@@ -1072,15 +1072,15 @@ namespace Geldautomat.Coins
             Enqueue((byte)1, (byte)2, (byte)CCommands.SSP_CMD_HOST_PROTOCOL_VERSION, v);
         }
 
-        // Münzauszahlung nach Stückzahlen (Index: {1,2,5,10,20,50,100,200} Cent)
+        // Mï¿½nzauszahlung nach Stï¿½ckzahlen (Index: {1,2,5,10,20,50,100,200} Cent)
         public void PayoutCoins(int[] countsByIndex)
         {
             if (countsByIndex == null || countsByIndex.Length < 8)
             {
-                Log("PayoutCoins: ungültige Stückzahlliste.");
+                Log("PayoutCoins: ungï¿½ltige Stï¿½ckzahlliste.");
                 return;
             }
-            try { BusyAnimationManager.Begin("Münzauszahlung läuft"); } catch { }
+            try { BusyAnimationManager.Begin("Mï¿½nzauszahlung lï¿½uft"); } catch { }
 
             int[] valOrder = new[] { 1, 2, 5, 10, 20, 50, 100, 200 };
 
@@ -1093,7 +1093,7 @@ namespace Geldautomat.Coins
 
                 denoms.Add((v, (ushort)Math.Min(65535, c)));
 
-                // interne ToPay-Zähler grob pflegen
+                // interne ToPay-Zï¿½hler grob pflegen
                 switch (v)
                 {
                     case 1: _toPay_1 += c; break;
@@ -1109,7 +1109,7 @@ namespace Geldautomat.Coins
 
             if (denoms.Count == 0)
             {
-                Log("PayoutCoins: keine unterstützten Münzen > 0 ausgewählt.");
+                Log("PayoutCoins: keine unterstï¿½tzten Mï¿½nzen > 0 ausgewï¿½hlt.");
                 return;
             }
 
@@ -1128,7 +1128,7 @@ namespace Geldautomat.Coins
                 elem.Add((byte)(d.count & 0xFF));
                 elem.Add((byte)((d.count >> 8) & 0xFF));
 
-                // Value (4 LE) – Cent
+                // Value (4 LE) ï¿½ Cent
                 var v = BitConverter.GetBytes(d.valueCent);
                 elem.Add(v[0]); elem.Add(v[1]); elem.Add(v[2]); elem.Add(v[3]);
 
@@ -1141,35 +1141,35 @@ namespace Geldautomat.Coins
             lock (_queueLock)
             {
                 _sendQueue.Add(elem);
-                // Kopie für evtl. Retry nach KEY_NOT_SET
+                // Kopie fï¿½r evtl. Retry nach KEY_NOT_SET
                 _pendingPayoutCmd = new List<byte>(elem);
             }
             Log("PayoutCoins enqueued.");
         }
 
-        // Münz-Level anfragen (wird vom UI zyklisch genutzt)
+        // Mï¿½nz-Level anfragen (wird vom UI zyklisch genutzt)
         public void RequestCoinLevels()
         {
-            // Während sehr kurzer Zeit nach Einwurf keine Levelabfragen (Vermeidet Event-Zerhackung bei vielen Polls)
+            // Wï¿½hrend sehr kurzer Zeit nach Einwurf keine Levelabfragen (Vermeidet Event-Zerhackung bei vielen Polls)
             if ((DateTime.UtcNow - _lastCoinCreditUtc).TotalMilliseconds < 400)
             {
                 return; // kurz aussetzen
             }
-            // Instanzbasiertes Gate je Gerät (separat für Coin/1 und Coin/2)
+            // Instanzbasiertes Gate je Gerï¿½t (separat fï¿½r Coin/1 und Coin/2)
             var now = DateTime.UtcNow;
             lock (_instanceLevelsLock)
             {
                 int minMs = _kassensturzMode ? _kassensturzCooldownMs : 1200;
                 if ((now - _lastInstanceLevelsRequestUtc).TotalMilliseconds < minMs)
                 {
-                    return; // geblockt für dieses Gerät
+                    return; // geblockt fï¿½r dieses Gerï¿½t
                 }
-                _lastInstanceLevelsRequestUtc = now; // Timestamp pro Gerät
+                _lastInstanceLevelsRequestUtc = now; // Timestamp pro Gerï¿½t
             }
             AlignPayoutLevels(false);
         }
 
-        // GET_ALL_LEVELS – optional
+        // GET_ALL_LEVELS ï¿½ optional
         private void RequestAllLevels(bool encrypted)
         {
             byte enc = (byte)(encrypted ? 1 : 0);
@@ -1178,7 +1178,7 @@ namespace Geldautomat.Coins
             Log($"REQ GET_ALL_LEVELS {(encrypted ? "[enc]" : "[plain]")}");
         }
 
-        // Verfügbarkeiten kopiert zurückgeben
+        // Verfï¿½gbarkeiten kopiert zurï¿½ckgeben
         public int[] GetCoinAvailability()
         {
             lock (_levelsLock)
@@ -1208,7 +1208,7 @@ namespace Geldautomat.Coins
             lock (_queueLock) { _sendQueue.Add(elem); }
         }
 
-        // NEU: Front-Queueing für priorisierte Polls
+        // NEU: Front-Queueing fï¿½r priorisierte Polls
         private void EnqueueFront(byte enc, byte len, byte cmd, params byte[] rest)
         {
             var elem = NewCmd(enc, len, cmd);
@@ -1252,12 +1252,12 @@ namespace Geldautomat.Coins
             // Bei laufendem SmartEmpty verbale Roh-Poll Logs etwas drosseln
             if (_smartEmptyInProgress && _debugRawPoll && s.IndexOf("RAW=", StringComparison.OrdinalIgnoreCase) >= 0)
             {
-                // Überspringe detaillierte RAW-Einträge um UI (EventLog) nicht zu überlasten
+                // ï¿½berspringe detaillierte RAW-Eintrï¿½ge um UI (EventLog) nicht zu ï¿½berlasten
                 return;
             }
             try { EventLog?.Invoke("[V1] " + s); } catch { }
 
-            // Zusätzlich in dedizierte SmartCoin-Logdatei schreiben
+            // Zusï¿½tzlich in dedizierte SmartCoin-Logdatei schreiben
             try
             {
                 string folder = null;
@@ -1315,11 +1315,11 @@ namespace Geldautomat.Coins
         {
             if (lv == null || lv.Length < 8) return "(keine Daten)";
             string safe(int i) => lv[i] < 0 ? "?" : lv[i].ToString();
-            return $"1c={safe(0)}, 2c={safe(1)}, 5c={safe(2)}, 10c={safe(3)}, 20c={safe(4)}, 50c={safe(5)}, 1€={safe(6)}, 2€={safe(7)}";
+            return $"1c={safe(0)}, 2c={safe(1)}, 5c={safe(2)}, 10c={safe(3)}, 20c={safe(4)}, 50c={safe(5)}, 1ï¿½={safe(6)}, 2ï¿½={safe(7)}";
         }
 
         /// <summary>
-        /// Führt einen Smart-Empty-Befehl aus (alle Münzen werden ausgezahlt, wie Kassensturz in KassensystemPRO)
+        /// Fï¿½hrt einen Smart-Empty-Befehl aus (alle Mï¿½nzen werden ausgezahlt, wie Kassensturz in KassensystemPRO)
         /// </summary>
         public void SmartEmpty()
         {
@@ -1350,7 +1350,7 @@ namespace Geldautomat.Coins
             }
         }
 
-        // Wiederhergestellt: HardDisconnect für Manager
+        // Wiederhergestellt: HardDisconnect fï¿½r Manager
         public void HardDisconnect()
         {
             try { Log("HardDisconnect init"); } catch { }
@@ -1376,12 +1376,12 @@ namespace Geldautomat.Coins
             try { BusyAnimationManager.EndForce(); } catch { }
         }
 
-        // -- ZENTRALE WRAPPER: einheitliche Level-Abfragen über eine Stelle --
+        // -- ZENTRALE WRAPPER: einheitliche Level-Abfragen ï¿½ber eine Stelle --
         public static void RequestLevelsGlobal()
         {
             try
             {
-                // Kein globales Gate mehr: jede Instanz filtert selbst per Gerät
+                // Kein globales Gate mehr: jede Instanz filtert selbst per Gerï¿½t
                 try
                 {
                     var inst = CoinManager.Instance;
@@ -1407,7 +1407,7 @@ namespace Geldautomat.Coins
             try { (Coin2Manager.Instance as SmartCoinV1)?.ScheduleLevelsRequest(); } catch { }
         }
 
-        // Kassensturz-Mode einschalten/abschalten; setzt globales 5s-Gate für Level-Requests
+        // Kassensturz-Mode einschalten/abschalten; setzt globales 5s-Gate fï¿½r Level-Requests
         public static void EnableKassensturzMode(bool enabled, int cooldownMs = 5000)
         {
             lock (_globalModeLock)

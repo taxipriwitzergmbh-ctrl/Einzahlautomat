@@ -903,7 +903,7 @@ namespace Geldautomat
                                             _lastNoteDepositUtc = DateTime.UtcNow;
                                             if (!_noteDepositAnimActive && !BusyAnimationManager.IsActive)
                                             {
-                                                BusyAnimationManager.Begin("Einzahlung l�uft");
+                                                BusyAnimationManager.Begin("Einzahlung läuft");
                                                 _noteDepositAnimActive = true;
                                             }
                                         }
@@ -934,7 +934,7 @@ namespace Geldautomat
                                     {
                                         // Standard: euro ist eine Euro-Nennwertzahl (z. B. 100). Nur bei Cent-Werten (>=1000) umrechnen.
                                         decimal amount = euro >= 1000 ? euro / 100m : euro;
-                                        AppLogger.Log($"({DetermineNvSection()}) <--- Schein eingezahlt: {amount:0.00} � (Route: CASHBOX)");
+                                        AppLogger.Log($"({DetermineNvSection()}) <--- Schein eingezahlt: {amount:0.00} € (Route: CASHBOX)");
                                     }
                                 }
                                 catch { }
@@ -953,7 +953,7 @@ namespace Geldautomat
                                     if (euro > 0)
                                     {
                                         decimal amount = euro >= 1000 ? euro / 100m : euro;
-                                        AppLogger.Log($"({DetermineNvSection()}) <--- Schein eingezahlt: {amount:0.00} � (Route: PAYOUT)");
+                                        AppLogger.Log($"({DetermineNvSection()}) <--- Schein eingezahlt: {amount:0.00} € (Route: PAYOUT)");
                                     }
                                 }
                                 catch { }
@@ -1018,7 +1018,7 @@ namespace Geldautomat
                                         // Pro Schein loggen (Delta ist der Wert in Cent)
                                         try
                                         {
-                                            AppLogger.Log($"({DetermineNvSection()}) ---> Schein ausgezahlt: {(delta / 100.0):0.00} �");
+                                            AppLogger.Log($"({DetermineNvSection()}) ---> Schein ausgezahlt: {(delta / 100.0):0.00} €");
                                         }
                                         catch { }
 
@@ -1034,11 +1034,12 @@ namespace Geldautomat
                                             case 50000: if (To_Payout_500Euro > 0) To_Payout_500Euro--; break;
                                         }
 
-                                        // NEU: Eingezahlt sofort um den ausgezahlten Betrag verringern
+                                        // NEU: Eingezahlt sofort um den ausgezahlten Betrag verringernmpr
+
                                         try
                                         {
                                             Eingezahlt = Math.Max(0, Eingezahlt - delta);
-                                            Ereignis_adden($"Eingezahlt minus Auszahlung: {(Eingezahlt / 100.0):0.00} �");
+                                            Ereignis_adden($"Eingezahlt minus Auszahlung: {(Eingezahlt / 100.0):0.00} €");
                                         }
                                         catch { }
 
