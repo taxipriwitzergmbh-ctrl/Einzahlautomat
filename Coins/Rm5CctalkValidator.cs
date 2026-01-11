@@ -87,7 +87,7 @@ namespace Geldautomat.Coins
             public byte LastSentHeader = 0; // Für Parser Entscheidung Serial/Poll (jetzt tatsächliche gesendete Frames)
             public bool ExpectSerial = false; // Nach CMD_REQ_SERIAL
             public int SerialRetry = 0;
-            // NEU: Verzögerter Post-Dispense Poll
+            // NEU: Verzögerten Post-Dispense Poll
             public bool PostDispensePollPending = false;
             public DateTime PostDispensePollDueUtc = DateTime.MinValue;
         }
@@ -556,20 +556,22 @@ namespace Geldautomat.Coins
                     if (frame.Length >= 8)
                     {
                         hs.Serial[0] = frame[4]; hs.Serial[1] = frame[5]; hs.Serial[2] = frame[6];
-                        if ((hs.Serial[0] == 0 && hs.Serial[1] == 0 && hs.Serial[2] == 0) || (hs.Serial[0] == 0xFF && hs.Serial[1] == 0xFF && hs.Serial[2] == 0xFF))
+                        // Treat FF FF FF (and 00 00 00) as valid placeholder serials to avoid blocking
+                        bool isAllZero = (hs.Serial[0] == 0 && hs.Serial[1] == 0 && hs.Serial[2] == 0);
+                        bool isAllFF = (hs.Serial[0] == 0xFF && hs.Serial[1] == 0xFF && hs.Serial[2] == 0xFF);
+                        if (isAllZero || isAllFF)
                         {
-                            // Ungültige Serial -> Retry bis 3x
-                            hs.SerialRetry++;
-                            if (hs.SerialRetry <= 3)
+                            hs.SerialValid = true; hs.ExpectSerial = false; hs.SerialRetry = 0;
+                            Log($"Hopper {hopperIdx} Platzhalter-Serial empfangen ({(isAllFF ? "FF FF FF" : "00 00 00")}) – akzeptiert");
+                            // Proceed with baseline poll
+                            Enqueue(hs.Address, CMD_HOPPER_POLL, null);
+                            // Start pending payout if any
+                            if (hs.ToPayout > 0 && !hs.DispenseQueued)
                             {
-                                Log($"Hopper {hopperIdx} ungültige Serial empfangen (00/FF) – Retry {hs.SerialRetry}");
-                                hs.ExpectSerial = true; // erneut
-                                Enqueue(hs.Address, CMD_REQ_SERIAL, null);
-                            }
-                            else
-                            {
-                                Log($"Hopper {hopperIdx} Serial ungültig nach 3 Versuchen – Abbruch");
-                                hs.ExpectSerial = false;
+                                Log($"Hopper {hopperIdx} QueueHopperDispense nach Platzhalter-Serial (pending ToPayout={hs.ToPayout})");
+                                _hoppers[hopperIdx] = hs; // store before queuing
+                                QueueHopperDispense(hopperIdx);
+                                hs = _hoppers[hopperIdx];
                             }
                         }
                         else
