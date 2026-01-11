@@ -34,6 +34,20 @@ namespace Geldautomat
             BackColor = Color.White;
             DoubleBuffered = true;
 
+            // Prüfen, ob NV200/2 global deaktiviert ist (Flag oder INI)
+            bool nv2Disabled = false;
+            try
+            {
+                nv2Disabled = AdminNV200_2Form.DeviceDisabled;
+                if (!nv2Disabled)
+                {
+                    var dv = IniHelper.ReadValue("NV200/2", "Disabled", AppSettings.IniPath);
+                    if (!string.IsNullOrWhiteSpace(dv))
+                        nv2Disabled = dv.Trim().Equals("1", StringComparison.OrdinalIgnoreCase) || dv.Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            catch { }
+
             // Header (wie in den anderen Fenstern ganz oben und zuerst hinzugefügt)
             headerPanel = new Panel
             {
@@ -190,6 +204,22 @@ namespace Geldautomat
                 }
             }
             catch { }
+
+            // NV200/2 Button ggf. ausblenden und nachfolgende Buttons nach oben schieben
+            if (nv2Disabled)
+            {
+                if (btnNV200_2 != null) btnNV200_2.Visible = false;
+                int delta = btnHeight + spacing;
+                if (btnRm5 != null && btnRm5.Visible)
+                {
+                    btnRm5.Location = new Point(btnRm5.Location.X, btnRm5.Location.Y - delta);
+                }
+                else
+                {
+                    btnSmartcoin1.Location = new Point(btnSmartcoin1.Location.X, btnSmartcoin1.Location.Y - delta);
+                    btnSmartcoin2.Location = new Point(btnSmartcoin2.Location.X, btnSmartcoin2.Location.Y - delta);
+                }
+            }
 
             // Rahmen
             this.Paint += (s, e) =>

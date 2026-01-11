@@ -62,10 +62,16 @@ namespace Geldautomat
         private int _manualAdjustIdx = 3; // 10c als Start
         private Label _lblAdjustHint;
 
+        // Touch: manueller Modus per Button +/- je Münzsorte
+        private Button _btnManualAdjust;
+        private Button[] _btnMinus = new Button[8];
+        private Button[] _btnPlus = new Button[8];
+
         // Konstruktor
         public KassensturzRm5Form(Rm5CctalkValidator rm5)
         {
             _rm5 = rm5;
+            try { if (_rm5 != null) _rm5.SuppressUiNotifications = true; } catch { }
             try { _preDialogLevels = _rm5?.GetCoinAvailability(); } catch { }
             SafeCaptureInitialLevels();
             BuildLayout();
@@ -82,23 +88,12 @@ namespace Geldautomat
             {
                 if (e.Control && e.KeyCode == Keys.M)
                 {
-                    _manualAdjustMode = !_manualAdjustMode;
-                    if (_manualAdjustMode)
-                    {
-                        if (_manualAdjustIdx < 3 || _manualAdjustIdx > 7) _manualAdjustIdx = 3;
-                        EnsureAdjustHint();
-                        _lblAdjustHint.Visible = true;
-                    }
-                    else
-                    {
-                        if (_lblAdjustHint != null) _lblAdjustHint.Visible = false;
-                    }
-                    UpdateManualAdjustHighlight();
+                    ToggleManualAdjust();
                     e.Handled = true;
                 }
                 else if (_manualAdjustMode && e.KeyCode == Keys.Escape)
                 {
-                    _manualAdjustMode = false; UpdateManualAdjustHighlight(); if (_lblAdjustHint != null) _lblAdjustHint.Visible = false; e.Handled = true;
+                    ToggleManualAdjust(false); e.Handled = true;
                 }
             }
             catch { }
@@ -431,8 +426,14 @@ namespace Geldautomat
                 yBtn += 36;
             }
 
-            lblDifferenz = new Label { Text = "Differenz: -", Location = new Point(300,500), Size = new Size(200,40), Font = new Font("Segoe UI",15F,FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter }; Controls.Add(lblDifferenz);
-            btnAlleEingezahlt = new Button { Text = "Alle Münzen eingezahlt", Location = new Point(300,550), Size = new Size(200,40), Font = new Font("Segoe UI Variable",12F,FontStyle.Bold), BackColor = Color.FromArgb(46,125,50), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            // Differenz weiter nach oben schieben, um Platz zu schaffen
+            lblDifferenz = new Label { Text = "Differenz: -", Location = new Point(300,460), Size = new Size(200,40), Font = new Font("Segoe UI",15F,FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter }; Controls.Add(lblDifferenz);
+
+            // Touch: Button zum Umschalten in den manuellen Anpassungsmodus – ganz oben über 'Münzen entleeren' platzieren
+            _btnManualAdjust = new Button { Text = "Manuell anpassen", Location = new Point(300, 130), Size = new Size(200, 40), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.FromArgb(96, 125, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            _btnManualAdjust.FlatAppearance.BorderSize = 0; _btnManualAdjust.Click += (s, e) => ToggleManualAdjust(); Controls.Add(_btnManualAdjust);
+
+            btnAlleEingezahlt = new Button { Text = "Alle Münzen eingezahlt", Location = new Point(270,550), Size = new Size(260,40), Font = new Font("Segoe UI Variable",12F,FontStyle.Bold), BackColor = Color.FromArgb(46,125,50), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             btnAlleEingezahlt.FlatAppearance.BorderSize = 0; btnAlleEingezahlt.Click += BtnAlleEingezahlt_Click; Controls.Add(btnAlleEingezahlt);
 
             this.Paint += (s,e)=>{ using(var pen=new Pen(Color.FromArgb(120,120,120),2)){ e.Graphics.DrawRectangle(pen,1,1,ClientSize.Width-3,ClientSize.Height-3);} };
@@ -651,7 +652,7 @@ namespace Geldautomat
             catch { }
         }
 
-        protected override void OnFormClosed(FormClosedEventArgs e){ try{ _tmrLevels?.Stop(); }catch{} try{ _tmrLevels?.Dispose(); }catch{} if(_tmrSafety!=null){ try{ _tmrSafety.Stop(); }catch{} try{ _tmrSafety.Dispose(); }catch{} } DetachRm5Events(); base.OnFormClosed(e); }
+        protected override void OnFormClosed(FormClosedEventArgs e){ try{ _tmrLevels?.Stop(); }catch{} try{ _tmrLevels?.Dispose(); }catch{} if(_tmrSafety!=null){ try{ _tmrSafety.Stop(); }catch{} try{ _tmrSafety.Dispose(); }catch{} } DetachRm5Events(); try{ if(_rm5!=null) _rm5.SuppressUiNotifications=false; }catch{} base.OnFormClosed(e); }
 
         private void EnsureAdjustHint()
         {
@@ -721,6 +722,91 @@ namespace Geldautomat
                 UpdateDifferenz();
 
                 try { _rm5?.RequestCoinLevels(); } catch { }
+            }
+            catch { }
+        }
+
+        // Touch-Helfer: Umschalten der manuellen Anpassung inkl. +/- Buttons
+        private void ToggleManualAdjust() { ToggleManualAdjust(null); }
+        private void ToggleManualAdjust(bool on) { ToggleManualAdjust((bool?)on); }
+        private void ToggleManualAdjust(bool? on)
+        {
+            bool target = on ?? !_manualAdjustMode;
+            if (target && (_emptyStarted || _singleDrainInProgress || _uiZeroLocked))
+            {
+                try { MessageBox.Show(this, "Während einer Entleerung sind manuelle Anpassungen gesperrt.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
+                return;
+            }
+
+            _manualAdjustMode = target;
+            if (_manualAdjustMode && (_manualAdjustIdx < 3 || _manualAdjustIdx > 7)) _manualAdjustIdx = 3;
+
+            EnsureAdjustHint();
+            if (_lblAdjustHint != null) _lblAdjustHint.Visible = _manualAdjustMode;
+            EnsureAdjustButtons();
+            SetAdjustButtonsVisible(_manualAdjustMode);
+            UpdateManualAdjustHighlight();
+        }
+
+        private void EnsureAdjustButtons()
+        {
+            try
+            {
+                for (int i = 3; i < 8; i++)
+                {
+                    int y = (lblAktBestand != null && lblAktBestand.Length > i && lblAktBestand[i] != null) ? lblAktBestand[i].Location.Y : (120 + i * 32);
+
+                    if (_btnMinus[i] == null)
+                    {
+                        var btn = new Button
+                        {
+                            Text = "–",
+                            Location = new Point(540, y),
+                            Size = new Size(32, 28),
+                            Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+                            BackColor = Color.FromArgb(239, 83, 80),
+                            ForeColor = Color.White,
+                            FlatStyle = FlatStyle.Flat,
+                            Tag = i
+                        };
+                        btn.FlatAppearance.BorderSize = 0;
+                        btn.Click += (s, e) => { try { var idx = (int)((Button)s).Tag; _manualAdjustIdx = idx; AdjustSelectedLevel(-1); } catch { } };
+                        Controls.Add(btn);
+                        _btnMinus[i] = btn; _btnMinus[i].Visible = false;
+                    }
+
+                    if (_btnPlus[i] == null)
+                    {
+                        var btn = new Button
+                        {
+                            Text = "+",
+                            Location = new Point(740, y),
+                            Size = new Size(32, 28),
+                            Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+                            BackColor = Color.FromArgb(46, 125, 50),
+                            ForeColor = Color.White,
+                            FlatStyle = FlatStyle.Flat,
+                            Tag = i
+                        };
+                        btn.FlatAppearance.BorderSize = 0;
+                        btn.Click += (s, e) => { try { var idx = (int)((Button)s).Tag; _manualAdjustIdx = idx; AdjustSelectedLevel(+1); } catch { } };
+                        Controls.Add(btn);
+                        _btnPlus[i] = btn; _btnPlus[i].Visible = false;
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void SetAdjustButtonsVisible(bool vis)
+        {
+            try
+            {
+                for (int i = 3; i < 8; i++)
+                {
+                    if (_btnMinus[i] != null) _btnMinus[i].Visible = vis;
+                    if (_btnPlus[i] != null) _btnPlus[i].Visible = vis;
+                }
             }
             catch { }
         }

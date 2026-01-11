@@ -160,6 +160,9 @@ namespace Geldautomat.Coins
             _validatorChannelCent[channel] = cent;
             Log($"Channel {channel} -> {cent}ct");
         }
+
+        // Suppress in-app UI notifications (BusyAnimation popups) while a modal flow is active
+        public bool SuppressUiNotifications { get; set; }
         public void AddCreditCode(int code)
         { if (code >= 0 && code < 256 && _creditCodes.Add(code)) Log($"CreditCode {code} hinzugefügt"); }
         public int[] GetCoinAvailability()
@@ -249,7 +252,7 @@ namespace Geldautomat.Coins
                 };
                 _sp.Open();
                 Connected = true;
-                Log($"Port geöffnet ({ComPort}) ValidatorAddr={SspAddress}");
+                Log($"Port eröffnet ({ComPort}) ValidatorAddr={SspAddress}");
 
                 BuildStartupQueue(); // exakte vorgegebene Reihenfolge
                 _initializing = true;
@@ -324,7 +327,7 @@ namespace Geldautomat.Coins
         public void PayoutCoins(int[] countsByIndex)
         {
             if (countsByIndex == null || countsByIndex.Length < 8) return;
-            try { BusyAnimationManager.Begin("Münzauszahlung läuft"); } catch { }
+            try { if (!SuppressUiNotifications) BusyAnimationManager.Begin("Münzauszahlung läuft"); } catch { }
             var lv = GetCoinAvailability();
             var sb = new StringBuilder(); sb.Append("PayoutCoins Request=[");
             for (int i = 0; i < 8; i++) { if (i > 0) sb.Append(','); sb.Append(countsByIndex[i]); }
@@ -707,7 +710,7 @@ namespace Geldautomat.Coins
                         hs.ToPayout = 0; // Rest NICHT abbuchen / Bestand unverändert
                         hs.DispenseQueued = false;
                         hs.RequestWithoutChange = 0;
-                        try { BusyAnimationManager.End("RM5 Fehler"); } catch { }
+                        try { if (!SuppressUiNotifications) BusyAnimationManager.End("RM5 Fehler"); } catch { }
                         try { CoinPayoutError?.Invoke(hopperIdx, remaining); } catch { }
                     }
                 }
@@ -814,7 +817,7 @@ namespace Geldautomat.Coins
         private void CheckDispenseComplete()
         {
             for (int h = 0; h < MAX_HOPPERS; h++) if (_hoppers[h].ToPayout > 0) return;
-            try { BusyAnimationManager.End("RM5 fertig"); } catch { }
+            try { if (!SuppressUiNotifications) BusyAnimationManager.End("RM5 fertig"); } catch { }
             try { PersistLevels(); } catch { }
             try { CoinDispenseComplete?.Invoke(); } catch { }
         }
@@ -889,7 +892,7 @@ namespace Geldautomat.Coins
         public void ForcePayoutRaw(int[] countsByIndex)
         {
             if (countsByIndex == null || countsByIndex.Length < 8) return;
-            try { BusyAnimationManager.Begin("Münzauszahlung läuft"); } catch { }
+            try { if (!SuppressUiNotifications) BusyAnimationManager.Begin("Münzauszahlung läuft"); } catch { }
             Log("ForcePayoutRaw gestartet: " + string.Join(",", countsByIndex));
             for (int h = 0; h < MAX_HOPPERS; h++)
             {
