@@ -685,8 +685,14 @@ namespace Geldautomat
         {
             try
             {
-                if (!txtComPort.Items.Cast<object>().Any(o => string.Equals(Convert.ToString(o), port, StringComparison.OrdinalIgnoreCase))) txtComPort.Items.Add(port);
+                if (!txtComPort.Items.Cast<object>().Any(o => string.Equals(Convert.ToString(o), port, StringComparison.OrdinalIgnoreCase)))
+                {
+                    txtComPort.Items.Add(port);
+                }
                 txtComPort.SelectedItem = port;
+                try { IniHelper.WriteValue("NV200/1", "ComPort", port, iniPath); } catch { }
+                try { if (_ssp != null) _ssp.ComPort = port; } catch { }
+                try { AppendLog("COM-Port erkannt und übernommen: " + port); } catch { }
             }
             catch { }
             StopDetectPortMode(false);

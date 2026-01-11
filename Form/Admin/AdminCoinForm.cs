@@ -623,6 +623,9 @@ namespace Geldautomat
                     txtCom.Items.Add(port);
                 }
                 txtCom.SelectedItem = port;
+                try { IniHelper.WriteValue("SmartCoin", "ComPort", port, _iniPath); } catch { }
+                try { if (_coin != null) _coin.ComPort = port; } catch { }
+                AppendLog("COM-Port erkannt und übernommen: " + port);
             }
             catch { }
             StopDetectPortMode(false);

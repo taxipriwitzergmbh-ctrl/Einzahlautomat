@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -30,7 +30,7 @@ namespace Geldautomat
         private Button btnConnectToggle;
         private Button btnEnableToggle;
         private Button btnQueryLevels;
-        // btnReloadPorts entfällt
+        // btnReloadPorts entfï¿½llt
         private TextBox txtLog;
 
         private ICoinValidator _coin;
@@ -119,7 +119,7 @@ namespace Geldautomat
             headerPanel.MouseMove += (s, e) => { if (e.Button == MouseButtons.Left) { Left += e.X - _mouseDownLocation.X; Top += e.Y - _mouseDownLocation.Y; } };
             Controls.Add(headerPanel);
 
-            lblTitle = new Label { Text = "Admin - Münzprüfer/2", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(24, 0), Size = new Size(500, 60), BackColor = Color.Transparent };
+            lblTitle = new Label { Text = "Admin - Mï¿½nzprï¿½fer/2", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(24, 0), Size = new Size(500, 60), BackColor = Color.Transparent };
             headerPanel.Controls.Add(lblTitle);
 
             btnClose = new Button { Text = "\u2715", Font = new Font("Segoe UI Symbol", 18F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 56, 6), TabStop = false, Anchor = AnchorStyles.Top | AnchorStyles.Right };
@@ -128,7 +128,7 @@ namespace Geldautomat
             btnClose.Click += (s, e) => Close();
             headerPanel.Controls.Add(btnClose);
 
-            btnMinimize = new Button { Text = "–", Font = new Font("Segoe UI", 18F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 112, 6), TabStop = false, Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            btnMinimize = new Button { Text = "ï¿½", Font = new Font("Segoe UI", 18F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 112, 6), TabStop = false, Anchor = AnchorStyles.Top | AnchorStyles.Right };
             btnMinimize.FlatAppearance.BorderSize = 0;
             btnMinimize.FlatAppearance.MouseOverBackColor = Color.FromArgb(33, 150, 243, 80);
             btnMinimize.Click += (s, e) => WindowState = FormWindowState.Minimized;
@@ -156,7 +156,7 @@ namespace Geldautomat
 
             btnConnectToggle = new Button
             {
-                Text = "Events anhängen",
+                Text = "Events anhï¿½ngen",
                 Location = new Point(160, 230),
                 Size = new Size(170, 44),
                 FlatStyle = FlatStyle.Flat,
@@ -251,16 +251,16 @@ namespace Geldautomat
             _panelBestand = new Panel
             {
                 Location = new Point(560, 290),
-                Size = new Size(300, 460), // mehr Höhe
+                Size = new Size(300, 460), // mehr Hï¿½he
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 BackColor = Color.FromArgb(245, 247, 250)
             };
             Controls.Add(_panelBestand);
 
-            var lblTitel = new Label { Text = "Kassenbestand (Münzen, Stück):", Location = new Point(10, 10), AutoSize = true, Font = new Font("Segoe UI Variable", 13F, FontStyle.Bold) };
+            var lblTitel = new Label { Text = "Kassenbestand (Mï¿½nzen, Stï¿½ck):", Location = new Point(10, 10), AutoSize = true, Font = new Font("Segoe UI Variable", 13F, FontStyle.Bold) };
             _panelBestand.Controls.Add(lblTitel);
 
-            string[] denomText = { "1 c", "2 c", "5 c", "10 c", "20 c", "50 c", "1 €", "2 €" };
+            string[] denomText = { "1 c", "2 c", "5 c", "10 c", "20 c", "50 c", "1 ï¿½", "2 ï¿½" };
             for (int i = 0; i < denomText.Length; i++)
             {
                 var ldenom = new Label { Text = $"{denomText[i],4}:", Location = new Point(20, 50 + i * 38), AutoSize = true, Font = new Font("Segoe UI Variable", 12F) };
@@ -280,11 +280,11 @@ namespace Geldautomat
                 _lblBestandAnzCoins[i] = lval;
             }
 
-            // Summe und Refresh unter die letzte Münz-Zeile verschieben
-            int lastRowY = 50 + (denomText.Length - 1) * 38; // y der 2€ Zeile
+            // Summe und Refresh unter die letzte Mï¿½nz-Zeile verschieben
+            int lastRowY = 50 + (denomText.Length - 1) * 38; // y der 2ï¿½ Zeile
             int sumY = lastRowY + 38; // eine Zeile darunter
 
-            _lblBestandSumCoins = new Label { Text = "Gesamt: 0,00 €", Location = new Point(20, sumY), AutoSize = true, Font = new Font("Segoe UI Variable", 13F, FontStyle.Bold) };
+            _lblBestandSumCoins = new Label { Text = "Gesamt: 0,00 ï¿½", Location = new Point(20, sumY), AutoSize = true, Font = new Font("Segoe UI Variable", 13F, FontStyle.Bold) };
             _panelBestand.Controls.Add(_lblBestandSumCoins);
 
             // Refresh-Button jetzt eine weitere Zeile unter der Summe platzieren
@@ -302,7 +302,7 @@ namespace Geldautomat
 
             // 1) Ports zuerst laden
             LoadComPorts();
-            // 2) Aktuellen Port aus Objekt oder INI selektieren (falls nicht vorhanden hinzufügen)
+            // 2) Aktuellen Port aus Objekt oder INI selektieren (falls nicht vorhanden hinzufï¿½gen)
             SelectOrAddInitialPort();
             // 3) Adresse setzen, falls vorhanden
             if (_coin != null && _coin.SspAddress > 0) nudAddr.Value = _coin.SspAddress;
@@ -312,7 +312,7 @@ namespace Geldautomat
             ApplyDisabledState();
         }
 
-        // Hilfsmethode: aktuellen Port auswählen oder hinzufügen
+        // Hilfsmethode: aktuellen Port auswï¿½hlen oder hinzufï¿½gen
         private void SelectOrAddInitialPort()
         {
             try
@@ -370,7 +370,7 @@ namespace Geldautomat
 
         private void QueryLevels()
         {
-            if (DeviceDisabled) { AppendLog("Gerät deaktiviert – keine Abfrage."); return; }
+            if (DeviceDisabled) { AppendLog("Gerï¿½t deaktiviert ï¿½ keine Abfrage."); return; }
             if (_coin == null) { AppendLog("Kein M?nzpr?fer-Objekt vorhanden."); return; }
             if (!_coin.Connected) { AppendLog("Hinweis: erst verbinden."); return; }
             if (!IsReadyStatus(_statusText))
@@ -394,7 +394,7 @@ namespace Geldautomat
                 }
                 else
                 {
-                    AppendLog("Dieses Münzgerät unterstützt die Level-Abfrage hier nicht.");
+                    AppendLog("Dieses Mï¿½nzgerï¿½t unterstï¿½tzt die Level-Abfrage hier nicht.");
                 }
             }
             catch (Exception ex)
@@ -447,7 +447,7 @@ namespace Geldautomat
         {
             if (lv == null || lv.Length < 8) return "(keine Daten)";
             Func<int, string> Safe = i => lv[i] < 0 ? "?" : lv[i].ToString();
-            return $"1c={Safe(0)}, 2c={Safe(1)}, 5c={Safe(2)}, 10c={Safe(3)}, 20c={Safe(4)}, 50c={Safe(5)}, 1€={Safe(6)}, 2€={Safe(7)}";
+            return $"1c={Safe(0)}, 2c={Safe(1)}, 5c={Safe(2)}, 10c={Safe(3)}, 20c={Safe(4)}, 50c={Safe(5)}, 1ï¿½={Safe(6)}, 2ï¿½={Safe(7)}";
         }
 
         private void UpdateEnableButtonVisual()
@@ -456,7 +456,7 @@ namespace Geldautomat
             btnEnableToggle.BackColor = _enabledRequested ? Color.FromArgb(183, 28, 28) : Color.FromArgb(46, 125, 50);
         }
 
-        // NEU: verfügbare COM-Ports laden (mit Detection + passive Option)
+        // NEU: verfï¿½gbare COM-Ports laden (mit Detection + passive Option)
         private void LoadComPorts(bool passive = false)
         {
             try
@@ -501,7 +501,7 @@ namespace Geldautomat
                     }
                 }
                 if (txtCom.Items.Count == 0) txtCom.SelectedIndex = -1;
-                EnsureSelectedPort(_coin?.ComPort, initial: false); // nur hinzufügen, keine Selektion
+                EnsureSelectedPort(_coin?.ComPort, initial: false); // nur hinzufï¿½gen, keine Selektion
             }
             catch { }
         }
@@ -524,7 +524,7 @@ namespace Geldautomat
                     ControlBox = false,
                     TopMost = true
                 };
-                var lbl = new Label { Text = "Bitte jetzt den gewünschten USB / COM Adapter einstecken...\r\nFenster schließt automatisch bei Erkennung.", AutoSize = false, Location = new Point(12,12), Size = new Size(380,56) };
+                var lbl = new Label { Text = "Bitte jetzt den gewï¿½nschten USB / COM Adapter einstecken...\r\nFenster schlieï¿½t automatisch bei Erkennung.", AutoSize = false, Location = new Point(12,12), Size = new Size(380,56) };
                 _detectDialog.Controls.Add(lbl);
                 var btnCancel = new Button { Text = "Abbrechen", Location = new Point(300,80), Size = new Size(90,28) };
                 btnCancel.Click += (s,e)=> StopDetectPortMode(true);
@@ -600,18 +600,18 @@ namespace Geldautomat
 
                 if (!_didFirstReadyRefresh && IsReadyStatus(_statusText) && _eventsAttached)
                 {
-                    // beim ersten Mal nach Ready gleich Bestände holen
+                    // beim ersten Mal nach Ready gleich Bestï¿½nde holen
                     RefreshBestandCoins();
                 }
 
                 if (_lblScLastEvt != null)
                 {
                     if (_lastCoinEventUtc == DateTime.MinValue)
-                        _lblScLastEvt.Text = "Letzte Aktivität: –";
+                        _lblScLastEvt.Text = "Letzte Aktivitï¿½t: ï¿½";
                     else
                     {
                         var ago = DateTime.UtcNow - _lastCoinEventUtc;
-                        _lblScLastEvt.Text = $"Letzte Aktivität: {_lastCoinEventUtc.ToLocalTime():HH:mm:ss} ({Math.Max(0, (int)ago.TotalSeconds)} s)";
+                        _lblScLastEvt.Text = $"Letzte Aktivitï¿½t: {_lastCoinEventUtc.ToLocalTime():HH:mm:ss} ({Math.Max(0, (int)ago.TotalSeconds)} s)";
                     }
                 }
             }
@@ -691,7 +691,7 @@ namespace Geldautomat
 
         private void btnConnectToggle_Click(object sender, EventArgs e)
         {
-            if (DeviceDisabled) { AppendLog("Gerät deaktiviert – keine Events."); return; }
+            if (DeviceDisabled) { AppendLog("Gerï¿½t deaktiviert ï¿½ keine Events."); return; }
             if (_coin == null)
             {
                 AppendLog("Kein M?nzpr?fer-Objekt vorhanden.");
@@ -701,12 +701,12 @@ namespace Geldautomat
             if (_eventsAttached)
             {
                 DetachCoinEvents();
-                AppendLog("Events gelöst.");
+                AppendLog("Events gelï¿½st.");
             }
             else
             {
                 AttachCoinEvents();
-                AppendLog("Events angehängt.");
+                AppendLog("Events angehï¿½ngt.");
             }
         }
 
@@ -740,7 +740,7 @@ namespace Geldautomat
         private void UpdateConnectButtonVisual()
         {
             if (btnConnectToggle == null) return;
-            btnConnectToggle.Text = _eventsAttached ? "Events lösen" : "Events anhängen";
+            btnConnectToggle.Text = _eventsAttached ? "Events lï¿½sen" : "Events anhï¿½ngen";
             btnConnectToggle.BackColor = DeviceDisabled ? Color.Gray : (_eventsAttached ? Color.FromArgb(183, 28, 28) : Color.FromArgb(33, 150, 243));
         }
 
@@ -783,7 +783,7 @@ namespace Geldautomat
             catch { }
         }
 
-        // Helfer: aktuellen Port sicher im Dropdown selektieren (ggf. hinzufügen)
+        // Helfer: aktuellen Port sicher im Dropdown selektieren (ggf. hinzufï¿½gen)
         private bool _initialPortApplied = false; // NEU
         private void EnsureSelectedPort(string port, bool initial = false)
         {
