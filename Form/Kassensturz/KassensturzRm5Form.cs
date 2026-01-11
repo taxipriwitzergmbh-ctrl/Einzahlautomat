@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,7 +10,7 @@ namespace Geldautomat
     public class KassensturzRm5Form : Form
     {
         private readonly Rm5CctalkValidator _rm5;
-        private int[] _preDialogLevels; // Original Levels beim Öffnen
+        private int[] _preDialogLevels; // Original Levels beim Ã–ffnen
         private Panel headerPanel;
         private Label lblTitle;
         private Button btnClose;
@@ -35,16 +35,16 @@ namespace Geldautomat
         private bool _snapshotLoaded = false;
         private Label _lblSnapshotInfo;
 
-        // Neuer Ablaufstatus für 255er Entleerung
+        // Neuer Ablaufstatus fÃ¼r 255er Entleerung
         private enum DrainStage { None, FirstRunning, SecondRunning }
         private DrainStage _stage = DrainStage.None;
         private bool[] _secondRunNeeded = new bool[8];
-        private int[] _firstRunLevels; // Level direkt vor Start der ersten 255er Runde (für Anzeige / Logik)
+        private int[] _firstRunLevels; // Level direkt vor Start der ersten 255er Runde (fÃ¼r Anzeige / Logik)
 
         private DateTime _drainStartUtc = DateTime.MinValue; // Safety timeout
         // Konfigurierbare Zeitwerte (nicht const wegen Edit&Continue)
-        private int _drainSafetySecondsCfg = 25;            // verkürzt, früheres erzwungenes Finalize
-        private int _earlyAllZeroGraceMsCfg = 4000;         // nach 4s mit allen Hopper=0 früh abschließen
+        private int _drainSafetySecondsCfg = 25;            // verkÃ¼rzt, frÃ¼heres erzwungenes Finalize
+        private int _earlyAllZeroGraceMsCfg = 4000;         // nach 4s mit allen Hopper=0 frÃ¼h abschlieÃŸen
         private Timer _tmrSafety;                            // background safety timer
 
         private bool _uiZeroLocked = false; // Anzeige auf 0 gesperrt nach Start
@@ -54,7 +54,7 @@ namespace Geldautomat
         private bool _singleDrainInProgress = false;
         private int _singleDrainIdx = -1;
         private int _singleDrainInitialLevel = -1;            // initialer Level vor Start
-        private bool _singleSecondRunPending = false;         // zweiter Lauf nötig?
+        private bool _singleSecondRunPending = false;         // zweiter Lauf nÃ¶tig?
         private bool _singleSecondRunLaunched = false;        // zweiter Lauf bereits gestartet?
 
         // NEU: Manuelle Anpassung per Tastatur (Strg+M, +/-)
@@ -62,7 +62,7 @@ namespace Geldautomat
         private int _manualAdjustIdx = 3; // 10c als Start
         private Label _lblAdjustHint;
 
-        // Touch: manueller Modus per Button +/- je Münzsorte
+        // Touch: manueller Modus per Button +/- je MÃ¼nzsorte
         private Button _btnManualAdjust;
         private Button[] _btnMinus = new Button[8];
         private Button[] _btnPlus = new Button[8];
@@ -78,7 +78,7 @@ namespace Geldautomat
             ShowInitial();
             StartAutoRefresh();
             AttachRm5Events();
-            // Tastatursteuerung (für Pfeiltasten zuverlässiger über ProcessCmdKey)
+            // Tastatursteuerung (fÃ¼r Pfeiltasten zuverlÃ¤siger Ã¼ber ProcessCmdKey)
             try { KeyPreview = true; this.KeyDown += KassensturzRm5Form_KeyDown; } catch { }
         }
 
@@ -136,11 +136,11 @@ namespace Geldautomat
                 bool allZero = true;
                 for (int i = 3; i < 8; i++) if (_currentLevels[i] > 0) { allZero = false; break; }
                 if (allZero && (DateTime.UtcNow - _drainStartUtc).TotalMilliseconds > _earlyAllZeroGraceMsCfg)
-                { try { AppLogger.Log("[RM5] Alle Hopper melden 0 – frühzeitiges Finalize"); } catch { } FinalizeDrain(); return; }
+                { try { AppLogger.Log("[RM5] Alle Hopper melden 0 â‚¬ â€“ frÃ¼hzeitiges Finalize"); } catch { } FinalizeDrain(); return; }
             }
 
             if ((DateTime.UtcNow - _drainStartUtc).TotalSeconds < _drainSafetySecondsCfg) return;
-            try { AppLogger.Log("[RM5] Safety timeout – force finalize Kassensturz"); } catch { }
+            try { AppLogger.Log("[RM5] Safety timeout â€“ force finalize Kassensturz"); } catch { }
             try { _rm5?.RequestCoinLevels(); } catch { }
             await Task.Delay(250);
             try { _currentLevels = _rm5?.GetCoinAvailability(); } catch { }
@@ -156,7 +156,7 @@ namespace Geldautomat
             {
                 _rm5.CoinPayoutError += (hopper, remaining) =>
                 {
-                    try { BeginInvoke((Action)(() => { try { AppLogger.Log($"[RM5] Hopper {hopper} PayoutError Rest={remaining} -> prüfe Abschluss"); } catch { } })); } catch { }
+                    try { BeginInvoke((Action)(() => { try { AppLogger.Log($"[RM5] Hopper {hopper} PayoutError Rest={remaining} -> prÃ¼fe Abschluss"); } catch { } })); } catch { }
                 };
             }
             catch { }
@@ -178,7 +178,7 @@ namespace Geldautomat
                     _currentLevels = (int[])lv.Clone();
                     _currentSum = ComputeSum(_currentLevels);
                     for (int i = 0; i < 8; i++)
-                        lblAktBestand[i].Text = string.Format("{0,4:N2} €: {1}", NominalEuro[i], _currentLevels[i] >= 0 ? _currentLevels[i].ToString() : "?");
+                        lblAktBestand[i].Text = string.Format("{0,4:N2} â‚¬: {1}", NominalEuro[i], _currentLevels[i] >= 0 ? _currentLevels[i].ToString() : "?");
                     lblAktSumme.Text = $"Summe: {_currentSum:C2}";
                     UpdateDifferenz();
 
@@ -220,7 +220,7 @@ namespace Geldautomat
                             _currentLevels = (int[])lv.Clone();
                             _currentSum = ComputeSum(_currentLevels);
                             for (int i = 0; i < 8; i++)
-                                lblAktBestand[i].Text = string.Format("{0,4:N2} €: {1}", NominalEuro[i], _currentLevels[i]);
+                                lblAktBestand[i].Text = string.Format("{0,4:N2} â‚¬: {1}", NominalEuro[i], _currentLevels[i]);
                             lblAktSumme.Text = $"Summe: {_currentSum:C2}";
                             UpdateDifferenz();
                         }
@@ -237,7 +237,7 @@ namespace Geldautomat
                                     _singleSecondRunLaunched = true;
                                     try { AppLogger.Log($"[RM5] Einzel-Entleerung: zweiter Lauf gestartet Hopper {_singleDrainIdx}"); } catch { }
                                     try { _rm5?.RequestCoinLevels(); } catch { }
-                                    return; // auf nächsten Complete warten
+                                    return; // auf nÃ¤chsten Complete warten
                                 }
                                 catch (Exception ex)
                                 {
@@ -259,7 +259,7 @@ namespace Geldautomat
                             }
                             catch { }
 
-                            // Status zurücksetzen und UI freigeben
+                            // Status zurÃ¼cksetzen und UI freigeben
                             _singleDrainInProgress = false;
                             _singleDrainIdx = -1;
                             _singleSecondRunPending = false;
@@ -284,7 +284,7 @@ namespace Geldautomat
                         _currentLevels = (int[])lv2.Clone();
                         _currentSum = ComputeSum(_currentLevels);
                         for (int i = 0; i < 8; i++)
-                            lblAktBestand[i].Text = string.Format("{0,4:N2} €: {1}", NominalEuro[i], _currentLevels[i]);
+                            lblAktBestand[i].Text = string.Format("{0,4:N2} â‚¬: {1}", NominalEuro[i], _currentLevels[i]);
                         lblAktSumme.Text = $"Summe: {_currentSum:C2}";
                         UpdateDifferenz();
                     }
@@ -333,21 +333,21 @@ namespace Geldautomat
             _uiZeroLocked = false;
             if (_tmrSafety != null) { try { _tmrSafety.Stop(); } catch { } }
             try { _rm5?.ResetAllCoinLevelsToZero(true); } catch { }
-            try { AppLogger.Log("[RM5] ResetAllCoinLevelsToZero ausgeführt (Finalize)"); } catch { }
+            try { AppLogger.Log("[RM5] ResetAllCoinLevelsToZero ausgefÃ¼hrt (Finalize)"); } catch { }
 
-            // Physikalische / persistente Bestände jetzt auf 0 setzen
+            // Physikalische / persistente BestÃ¤nde jetzt auf 0 setzen
             try { _rm5?.ResetAllCoinLevelsToZero(true); } catch { }
-            try { AppLogger.Log("[RM5] ResetAllCoinLevelsToZero ausgeführt (Finalize)"); } catch { }
+            try { AppLogger.Log("[RM5] ResetAllCoinLevelsToZero ausgefÃ¼hrt (Finalize)"); } catch { }
 
             // Anzeige rechts auf 0 setzen (aktueller Bestand)
             _currentLevels = new int[8];
             _currentSum = 0m;
             for (int i = 0; i < 8; i++)
-                lblAktBestand[i].Text = $"{NominalEuro[i],4:N2} €: 0";
-            lblAktSumme.Text = "Summe: 0,00 €";
+                lblAktBestand[i].Text = $"{NominalEuro[i],4:N2} â‚¬: 0";
+            lblAktSumme.Text = "Summe: 0,00 â‚¬";
             UpdateDifferenz();
             btnEntleeren.Enabled = true;
-            try { AppLogger.Log("[RM5] Kassensturz abgeschlossen (finalize) – Referenzbestand erhalten"); } catch { }
+            try { AppLogger.Log("[RM5] Kassensturz abgeschlossen (finalize) â€“ Referenzbestand erhalten"); } catch { }
         }
 
         private void SafeCaptureInitialLevels()
@@ -392,17 +392,17 @@ namespace Geldautomat
             _lblSnapshotInfo = new Label { Text = string.Empty, Location = new Point(40,60), Size = new Size(720,20), ForeColor = Color.DarkOrange, Font = new Font("Segoe UI",9.5f,FontStyle.Bold), Visible = false }; Controls.Add(_lblSnapshotInfo);
 
             var lblLinksTitel = new Label { Text = "Bestand vor Entleerung:", Location = new Point(40,80), Size = new Size(260,30), Font = new Font("Segoe UI",13F,FontStyle.Bold) }; Controls.Add(lblLinksTitel);
-            lblStartBestand = new Label[8]; for (int i=0;i<8;i++){ var l = new Label { Text = $"{NominalEuro[i],4:N2} €: -", Location = new Point(60,120 + i*32), Size = new Size(150,28), Font = new Font("Segoe UI",12F) }; Controls.Add(l); lblStartBestand[i]=l; }
+            lblStartBestand = new Label[8]; for (int i=0;i<8;i++){ var l = new Label { Text = $"{NominalEuro[i],4:N2} â‚¬: -", Location = new Point(60,120 + i*32), Size = new Size(150,28), Font = new Font("Segoe UI",12F) }; Controls.Add(l); lblStartBestand[i]=l; }
             lblStartSumme = new Label { Text = "Summe: -", Location = new Point(60,390), Size = new Size(180,32), Font = new Font("Segoe UI",13F,FontStyle.Bold) }; Controls.Add(lblStartSumme);
 
             var lblRechtsTitel = new Label { Text = "Aktueller Bestand:", Location = new Point(560,80), Size = new Size(200,30), Font = new Font("Segoe UI",13F,FontStyle.Bold) }; Controls.Add(lblRechtsTitel);
-            lblAktBestand = new Label[8]; for (int i=0;i<8;i++){ var l = new Label { Text = $"{NominalEuro[i],4:N2} €: -", Location = new Point(580,120 + i*32), Size = new Size(150,28), Font = new Font("Segoe UI",12F) }; Controls.Add(l); lblAktBestand[i]=l; }
+            lblAktBestand = new Label[8]; for (int i=0;i<8;i++){ var l = new Label { Text = $"{NominalEuro[i],4:N2} â‚¬: -", Location = new Point(580,120 + i*32), Size = new Size(150,28), Font = new Font("Segoe UI",12F) }; Controls.Add(l); lblAktBestand[i]=l; }
             lblAktSumme = new Label { Text = "Summe: -", Location = new Point(580,390), Size = new Size(180,32), Font = new Font("Segoe UI",13F,FontStyle.Bold) }; Controls.Add(lblAktSumme);
 
-            btnEntleeren = new Button { Text = "Münzen entleeren", Location = new Point(300,180), Size = new Size(200,60), Font = new Font("Segoe UI Variable",15F,FontStyle.Bold), BackColor = Color.FromArgb(33,150,243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            btnEntleeren = new Button { Text = "MÃ¼nzen entleeren", Location = new Point(300,180), Size = new Size(200,60), Font = new Font("Segoe UI Variable",15F,FontStyle.Bold), BackColor = Color.FromArgb(33,150,243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             btnEntleeren.FlatAppearance.BorderSize = 0; btnEntleeren.Click += BtnEntleeren_Click; Controls.Add(btnEntleeren);
 
-            // NEU: Einzel-Entleerung je Münzsorte (10c..2€)
+            // NEU: Einzel-Entleerung je Mï¿½nzsorte (10c..2ï¿½)
             var lblEinzeln = new Label { Text = "Einzeln entleeren:", Location = new Point(300,260), Size = new Size(200,24), Font = new Font("Segoe UI",11F,FontStyle.Bold) };
             Controls.Add(lblEinzeln);
             int yBtn = 290;
@@ -410,7 +410,7 @@ namespace Geldautomat
             {
                 var b = new Button
                 {
-                    Text = $"{NominalEuro[i]:0.00} € entleeren",
+                    Text = $"{NominalEuro[i]:0.00} â‚¬ entleeren",
                     Location = new Point(300, yBtn),
                     Size = new Size(200, 32),
                     Font = new Font("Segoe UI", 10F, FontStyle.Bold),
@@ -429,23 +429,23 @@ namespace Geldautomat
             // Differenz weiter nach oben schieben, um Platz zu schaffen
             lblDifferenz = new Label { Text = "Differenz: -", Location = new Point(300,460), Size = new Size(200,40), Font = new Font("Segoe UI",15F,FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter }; Controls.Add(lblDifferenz);
 
-            // Touch: Button zum Umschalten in den manuellen Anpassungsmodus – ganz oben über 'Münzen entleeren' platzieren
+            // Touch: Button zum Umschalten in den manuellen Anpassungsmodus â€“ ganz oben Ã¼ber 'MÃ¼nzen entleeren' platzieren
             _btnManualAdjust = new Button { Text = "Manuell anpassen", Location = new Point(300, 130), Size = new Size(200, 40), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.FromArgb(96, 125, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             _btnManualAdjust.FlatAppearance.BorderSize = 0; _btnManualAdjust.Click += (s, e) => ToggleManualAdjust(); Controls.Add(_btnManualAdjust);
 
-            btnAlleEingezahlt = new Button { Text = "Alle Münzen eingezahlt", Location = new Point(270,550), Size = new Size(260,40), Font = new Font("Segoe UI Variable",12F,FontStyle.Bold), BackColor = Color.FromArgb(46,125,50), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            btnAlleEingezahlt = new Button { Text = "Alle MÃ¼nzen eingezahlt", Location = new Point(270,550), Size = new Size(260,40), Font = new Font("Segoe UI Variable",12F,FontStyle.Bold), BackColor = Color.FromArgb(46,125,50), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             btnAlleEingezahlt.FlatAppearance.BorderSize = 0; btnAlleEingezahlt.Click += BtnAlleEingezahlt_Click; Controls.Add(btnAlleEingezahlt);
 
             this.Paint += (s,e)=>{ using(var pen=new Pen(Color.FromArgb(120,120,120),2)){ e.Graphics.DrawRectangle(pen,1,1,ClientSize.Width-3,ClientSize.Height-3);} };
             if (_snapshotLoaded) ShowSnapshotInfo();
         }
 
-        private void ShowSnapshotInfo(){ if (_lblSnapshotInfo!=null){ _lblSnapshotInfo.Text = "Aktiver RM5 Snapshot – 'Münzen entleeren' setzt keinen neuen Startbestand. Für Neustart 'Alle Münzen eingezahlt' wählen."; _lblSnapshotInfo.Visible = true; } }
+        private void ShowSnapshotInfo(){ if (_lblSnapshotInfo!=null){ _lblSnapshotInfo.Text = "Aktiver RM5 Snapshot â€“ 'MÃ¼nzen entleeren' setzt keinen neuen Startbestand. FÃ¼r Neustart 'Alle MÃ¼nzen eingezahlt' wÃ¤hlen."; _lblSnapshotInfo.Visible = true; } }
         private void HideSnapshotInfo(){ if (_lblSnapshotInfo!=null){ _lblSnapshotInfo.Visible=false; _lblSnapshotInfo.Text=string.Empty; } }
-        private void ShowInitial(){ for (int i=0;i<8;i++){ int v = (_initialLevels!=null && i<_initialLevels.Length)?_initialLevels[i]:-1; lblStartBestand[i].Text = $"{NominalEuro[i],4:N2} €: {(v>=0? v.ToString():"?")}"; } lblStartSumme.Text = $"Summe: {_initialSum:C2}"; UpdateDifferenz(); }
+        private void ShowInitial(){ for (int i=0;i<8;i++){ int v = (_initialLevels!=null && i<_initialLevels.Length)?_initialLevels[i]:-1; lblStartBestand[i].Text = $"{NominalEuro[i],4:N2} â‚¬: {(v>=0? v.ToString():"?")}"; } lblStartSumme.Text = $"Summe: {_initialSum:C2}"; UpdateDifferenz(); }
         private void StartAutoRefresh(){ _tmrLevels = new Timer { Interval = 3000 }; _tmrLevels.Tick += async (s,e)=> await RefreshLevelsAsync(); _tmrLevels.Enabled = true; _ = RefreshLevelsAsync(); }
-        private async Task RefreshLevelsAsync(){ if (_rm5==null) return; if(_stage!=DrainStage.None) return; // Während Abfluss UI nicht dauernd überschreiben
-            try { _rm5.RequestCoinLevels(); } catch { } await Task.Delay(250); int[] lv=null; try { lv=_rm5.GetCoinAvailability(); } catch { } if (lv!=null && lv.Length>=8){ _currentLevels=(int[])lv.Clone(); _currentSum=ComputeSum(_currentLevels); for(int i=0;i<8;i++){ lblAktBestand[i].Text=$"{NominalEuro[i],4:N2} €: {(_currentLevels[i]>=0?_currentLevels[i].ToString():"?" )}"; } lblAktSumme.Text=$"Summe: {_currentSum:C2}"; if(!_snapshotLoaded && !_emptyStarted){ _initialLevels=(int[])_currentLevels.Clone(); _initialSum=_currentSum; ShowInitial(); } UpdateDifferenz(); } }
+        private async Task RefreshLevelsAsync(){ if (_rm5==null) return; if(_stage!=DrainStage.None) return; // WÃ¤hrend Abfluss UI nicht dauernd Ã¼berschreiben
+            try { _rm5.RequestCoinLevels(); } catch { } await Task.Delay(250); int[] lv=null; try { lv=_rm5.GetCoinAvailability(); } catch { } if (lv!=null && lv.Length>=8){ _currentLevels=(int[])lv.Clone(); _currentSum=ComputeSum(_currentLevels); for(int i=0;i<8;i++){ lblAktBestand[i].Text=$"{NominalEuro[i],4:N2} â‚¬: {(_currentLevels[i]>=0?_currentLevels[i].ToString():"?" )}"; } lblAktSumme.Text=$"Summe: {_currentSum:C2}"; if(!_snapshotLoaded && !_emptyStarted){ _initialLevels=(int[])_currentLevels.Clone(); _initialSum=_currentSum; ShowInitial(); } UpdateDifferenz(); } }
         private decimal ComputeSum(int[] lv){ if (lv==null||lv.Length<8) return 0m; long cent=0; for(int i=0;i<8;i++) if (lv[i]>0) cent += (long)lv[i]*NominalCent[i]; return cent/100m; }
         private void UpdateDifferenz(){ decimal diff=_currentSum - _initialSum; lblDifferenz.Text=$"Differenz: {diff:C2}"; }
 
@@ -453,7 +453,7 @@ namespace Geldautomat
         {
             if (_emptyStarted)
             {
-                if (MessageBox.Show(this, "Erneut entleeren?", "Bestätigung", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                if (MessageBox.Show(this, "Erneut entleeren?", "BestÃ¤tigung", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
             }
             if (!_snapshotLoaded)
             {
@@ -467,10 +467,10 @@ namespace Geldautomat
 
                 _firstRunLevels = (int[])lv.Clone();
                 for (int i = 0; i < 8; i++)
-                    _secondRunNeeded[i] = (i >= 3) && _firstRunLevels[i] > 200; // Nur echte Hopper (10c..2€) prüfen
+                    _secondRunNeeded[i] = (i >= 3) && _firstRunLevels[i] > 200; // Nur echte Hopper (10c..2â‚¬) prÃ¼fen
 
                 var req = new int[8];
-                // ERSTE RUNDE: immer 255 pro Hopper (10c..2€) anfordern – ForcePayoutRaw ignoriert interne Levels
+                // ERSTE RUNDE: immer 255 pro Hopper (10c..2â‚¬) anfordern â€“ ForcePayoutRaw ignoriert interne Levels
                 for(int i=0;i<8;i++)
                 {
                     if (i >= 3) req[i] = 255; else req[i] = 0;
@@ -484,12 +484,12 @@ namespace Geldautomat
                 _currentLevels = new int[8];
                 _currentSum = 0m;
                 for (int i = 0; i < 8; i++)
-                    lblAktBestand[i].Text = $"{NominalEuro[i],4:N2} €: 0";
-                lblAktSumme.Text = "Summe: 0,00 €";
+                    lblAktBestand[i].Text = $"{NominalEuro[i],4:N2} â‚¬: 0";
+                lblAktSumme.Text = "Summe: 0,00 â‚¬";
                 UpdateDifferenz();
 
                 _emptyStarted = true; btnEntleeren.Enabled = false; _stage = DrainStage.FirstRunning; _drainStartUtc = DateTime.UtcNow; StartSafetyTimer();
-                try { AppLogger.Log("[RM5] Kassensturz gestartet – ForcePayoutRaw Batch 255 (UI sofort auf 0)"); } catch { }
+                try { AppLogger.Log("[RM5] Kassensturz gestartet â€“ ForcePayoutRaw Batch 255 (UI sofort auf 0)"); } catch { }
             }
             catch (Exception ex){ MessageBox.Show(this,"Entleerung fehlgeschlagen: "+ex.Message,"Fehler",MessageBoxButtons.OK,MessageBoxIcon.Error); }
         }
@@ -500,17 +500,17 @@ namespace Geldautomat
             int idx = (int)b.Tag;
             if (idx < 3 || idx > 7)
             {
-                MessageBox.Show(this, "RM5 unterstützt Einzelentleerung für 10c..2€.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, "RM5 unterstÃ¼tzt Einzelentleerung fÃ¼r 10c..2â‚¬.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             if (_emptyStarted || _stage != DrainStage.None)
             {
-                MessageBox.Show(this, "Globaler Kassensturz läuft. Bitte warten.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, "Globaler Kassensturz lÃ¤uft. Bitte warten.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             if (_singleDrainInProgress)
             {
-                MessageBox.Show(this, "Es läuft bereits eine Einzel-Entleerung.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, "Es lÃ¤uft bereits eine Einzel-Entleerung.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -522,7 +522,7 @@ namespace Geldautomat
                     try { SaveSnapshot(_initialLevels ?? new int[8]); _snapshotLoaded = true; ShowSnapshotInfo(); } catch { }
                 }
 
-                // Initialen Level optional erfassen (nur für 2. Lauf-Entscheidung), aber nicht blockieren
+                // Initialen Level optional erfassen (nur fï¿½r 2. Lauf-Entscheidung), aber nicht blockieren
                 int level = -1;
                 try { var lv = _rm5?.GetCoinAvailability(); if (lv != null && lv.Length > idx) level = lv[idx]; } catch { }
 
@@ -533,7 +533,7 @@ namespace Geldautomat
                 _singleSecondRunLaunched = false;
 
                 b.Enabled = false;
-                if (btnEntleeren != null) btnEntleeren.Enabled = false; // während Einzelentleerung globalen Start sperren
+                if (btnEntleeren != null) btnEntleeren.Enabled = false; // wï¿½hrend Einzelentleerung globalen Start sperren
 
                 var req = new int[8]; req[idx] = 255; // IMMER 255 senden, egal wie der Bestand ist
                 try { _rm5?.ForcePayoutRaw(req); }
@@ -553,7 +553,7 @@ namespace Geldautomat
 
         private void BtnAlleEingezahlt_Click(object sender, EventArgs e)
         {
-            // Benutzer bestätigt, dass alle vorhandenen Münzen als eingezahlt gelten
+            // Benutzer bestï¿½tigt, dass alle vorhandenen Mï¿½nzen als eingezahlt gelten
             try
             {
                 // Aktuelle Levels ermitteln (rechter Bestand)
@@ -571,9 +571,9 @@ namespace Geldautomat
                     return;
                 }
 
-                // WICHTIG: Beim RM5 den rechten (aktuellen) Bestand als Geräte-/Referenzbestand übernehmen
+                // WICHTIG: Beim RM5 den rechten (aktuellen) Bestand als Gerï¿½te-/Referenzbestand ï¿½bernehmen
                 try { _rm5?.SetAllCoinLevels(cur, true); } catch { }
-                try { AppLogger.Log("[RM5] Manuell: Alle Münzen eingezahlt -> SetAllCoinLevels(current, persist)"); } catch { }
+                try { AppLogger.Log("[RM5] Manuell: Alle Mï¿½nzen eingezahlt -> SetAllCoinLevels(current, persist)"); } catch { }
 
                 // Reset / Neubeginn: Snapshot aufheben und linken Referenzbestand auf aktuellen setzen
                 ClearSnapshot();
@@ -586,7 +586,7 @@ namespace Geldautomat
                 _initialLevels = (int[])cur.Clone();
                 _initialSum = ComputeSum(_initialLevels);
 
-                // UI aktualisieren: Links = Referenz (neu), Rechts = aktuell (unverändert)
+                // UI aktualisieren: Links = Referenz (neu), Rechts = aktuell (unverï¿½ndert)
                 ShowInitial();
                 HideSnapshotInfo();
                 btnEntleeren.Enabled = true;
@@ -595,19 +595,19 @@ namespace Geldautomat
                 _currentLevels = (int[])cur.Clone();
                 _currentSum = ComputeSum(_currentLevels);
                 for (int i = 0; i < 8; i++)
-                    lblAktBestand[i].Text = $"{NominalEuro[i],4:N2} €: {_currentLevels[i]}";
+                    lblAktBestand[i].Text = $"{NominalEuro[i],4:N2} â‚¬: {_currentLevels[i]}";
                 lblAktSumme.Text = $"Summe: {_currentSum:C2}";
-                UpdateDifferenz(); // sollte jetzt 0,00 € zeigen
+                UpdateDifferenz(); // sollte jetzt 0,00 â‚¬ zeigen
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "Fehler beim Übernehmen des aktuellen Bestands: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, "Fehler beim ï¿½bernehmen des aktuellen Bestands: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private void SaveSnapshot(int[] levels){ if (levels==null||levels.Length<8) return; try{ string payload=string.Join(",",levels.Select(v=> v<0? -1: v)); string line=$"v1;{DateTime.UtcNow.Ticks};{payload}"; IniHelper.WriteValue(SnapshotSection, SnapshotKey, line, AppSettings.IniPath); try{ AppLogger.Log("[RM5] Snapshot gespeichert: "+line);}catch{} }catch{} }
         private bool LoadSnapshotIfExists(){ try{ string line=IniHelper.ReadValue(SnapshotSection, SnapshotKey, AppSettings.IniPath); if(string.IsNullOrWhiteSpace(line)) return false; var parts=line.Split(';'); if(parts.Length<3) return false; var lvCsv=string.Join(";",parts.Skip(2)); var lvParts=lvCsv.Split(','); if(lvParts.Length<8) return false; _initialLevels=new int[8]; for(int i=0;i<8;i++){ if(!int.TryParse(lvParts[i],out var v)) v=-1; _initialLevels[i]=v; } try{ AppLogger.Log("[RM5] Snapshot geladen: "+line);}catch{} return true; }catch{ return false; } }
-        private void ClearSnapshot(){ try{ IniHelper.WriteValue(SnapshotSection, SnapshotKey, string.Empty, AppSettings.IniPath);}catch{} try{ AppLogger.Log("[RM5] Snapshot gelöscht"); }catch{} }
+        private void ClearSnapshot(){ try{ IniHelper.WriteValue(SnapshotSection, SnapshotKey, string.Empty, AppSettings.IniPath);}catch{} try{ AppLogger.Log("[RM5] Snapshot gelÃ¶scht"); }catch{} }
 
         // Close-Prompt: Speichern oder verwerfen
         protected override void OnFormClosing(FormClosingEventArgs e)
@@ -618,8 +618,8 @@ namespace Geldautomat
             {
                 // Aktuelle Levels holen
                 int[] cur = null; try { cur = _rm5?.GetCoinAvailability(); } catch { }
-                bool allZero = cur != null && cur.Length >= 8 && cur.Skip(3).All(v => v == 0); // echte Hopper 10c..2€ prüfen
-                // Wenn bereits alle 0 UND differenz angezeigt – trotzdem fragen ob behalten
+                bool allZero = cur != null && cur.Length >= 8 && cur.Skip(3).All(v => v == 0); // echte Hopper 10c..2â‚¬ prÃ¼fen
+                // Wenn bereits alle 0 UND differenz angezeigt â‚¬ trotzdem fragen ob behalten
                 if (_preDialogLevels != null && cur != null)
                 {
                     bool changed = false;
@@ -630,7 +630,7 @@ namespace Geldautomat
                     if (changed)
                     {
                         var dr = MessageBox.Show(this,
-                            "Neue Münzbestände speichern?\r\n\rJa = neue (aktuellen) Stand dauerhaft übernehmen.\rNein = ursprüngliche Werte wiederherstellen.",
+                            "Neue MÃ¼nzbestÃ¤nde speichern?\r\n\rJa = neue (aktuellen) Stand dauerhaft Ã¼bernehmen.\rNein = ursprÃ¼ngliche Werte wiederherstellen.",
                             "RM5 Kassensturz", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
                         if (dr == DialogResult.Cancel)
                         {
@@ -639,12 +639,12 @@ namespace Geldautomat
                         if (dr == DialogResult.Yes)
                         {
                             try { _rm5?.SetAllCoinLevels(cur, true); } catch { }
-                            try { AppLogger.Log("[RM5] Kassensturz: neue Levels gespeichert beim Schließen"); } catch { }
+                            try { AppLogger.Log("[RM5] Kassensturz: neue Levels gespeichert beim SchlieÃŸen"); } catch { }
                         }
                         else if (dr == DialogResult.No)
                         {
                             try { _rm5?.SetAllCoinLevels(_preDialogLevels, true); } catch { }
-                            try { AppLogger.Log("[RM5] Kassensturz: ursprüngliche Levels wiederhergestellt beim Schließen"); } catch { }
+                            try { AppLogger.Log("[RM5] Kassensturz: ursprÃ¼ngliche Levels wiederhergestellt beim SchlieÃŸen"); } catch { }
                         }
                     }
                 }
@@ -659,7 +659,7 @@ namespace Geldautomat
             if (_lblAdjustHint != null) return;
             _lblAdjustHint = new Label
             {
-                Text = "Manuell (Strg+M): +/- ändern, Pfeile wechseln, Esc beendet",
+                Text = "Manuell (Strg+M): +/- Ã¤ndern, Pfeile wechseln, Esc beendet",
                 AutoSize = false,
                 Width = 520,
                 Height = 24,
@@ -698,7 +698,7 @@ namespace Geldautomat
         {
             try
             {
-                if (_emptyStarted || _singleDrainInProgress || _uiZeroLocked) return; // während Entleerung gesperrt
+                if (_emptyStarted || _singleDrainInProgress || _uiZeroLocked) return; // wï¿½hrend Entleerung gesperrt
                 int idx = _manualAdjustIdx;
                 if (idx < 3 || idx > 7) return; // nur echte Hopper
 
@@ -717,7 +717,7 @@ namespace Geldautomat
                 _currentLevels = (int[])cur.Clone();
                 _currentSum = ComputeSum(_currentLevels);
                 if (lblAktBestand != null && lblAktBestand.Length > idx && lblAktBestand[idx] != null)
-                    lblAktBestand[idx].Text = string.Format("{0,4:N2} €: {1}", NominalEuro[idx], newVal);
+                    lblAktBestand[idx].Text = string.Format("{0,4:N2} â‚¬: {1}", NominalEuro[idx], newVal);
                 if (lblAktSumme != null) lblAktSumme.Text = $"Summe: {_currentSum:C2}";
                 UpdateDifferenz();
 
@@ -734,7 +734,7 @@ namespace Geldautomat
             bool target = on ?? !_manualAdjustMode;
             if (target && (_emptyStarted || _singleDrainInProgress || _uiZeroLocked))
             {
-                try { MessageBox.Show(this, "Während einer Entleerung sind manuelle Anpassungen gesperrt.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
+                try { MessageBox.Show(this, "WÃ¤hrend einer Entleerung sind manuelle Anpassungen gesperrt.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
                 return;
             }
 
@@ -760,7 +760,7 @@ namespace Geldautomat
                     {
                         var btn = new Button
                         {
-                            Text = "–",
+                            Text = "âˆ’",
                             Location = new Point(540, y),
                             Size = new Size(32, 28),
                             Font = new Font("Segoe UI", 14f, FontStyle.Bold),

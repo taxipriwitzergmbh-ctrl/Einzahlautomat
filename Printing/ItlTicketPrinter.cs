@@ -36,7 +36,12 @@ namespace Geldautomat.Printing
             if (s == null) return string.Empty;
             // Replace characters that may not render on ticket printers
             s = s.Replace("€", " EUR");
-            s = s.Replace("�","oe").Replace("�","Oe").Replace("�","ae").Replace("�","Ae").Replace("�","ue").Replace("�","Ue").Replace("�","ss");
+            // Properly map German umlauts to ASCII-friendly sequences
+            s = s
+                .Replace("ä", "ae").Replace("Ä", "Ae")
+                .Replace("ö", "oe").Replace("Ö", "Oe")
+                .Replace("ü", "ue").Replace("Ü", "Ue")
+                .Replace("ß", "ss");
             if (s.Length > 40) s = s.Substring(0, 40);
             return s;
         }
