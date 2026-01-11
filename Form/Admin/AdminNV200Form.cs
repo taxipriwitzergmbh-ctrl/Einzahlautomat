@@ -650,20 +650,82 @@ namespace Geldautomat
             if (_detectingPort) { StopDetectPortMode(true); return; }
             try
             {
-                _detectBasePorts = SerialPort.GetPortNames();
-                Array.Sort(_detectBasePorts, StringComparer.OrdinalIgnoreCase);
                 _detectingPort = true;
                 _btnDetectPort.Text = "Stop";
-                _detectDialog = new Form { Text = "COM-Port Erkennung", Size = new Size(420,140), FormBorderStyle = FormBorderStyle.FixedDialog, StartPosition = FormStartPosition.CenterParent, ControlBox = false, TopMost = true };
-                var lbl = new Label { Text = "Bitte jetzt gew�nschten USB / COM Adapter einstecken...\r\nFenster schlie�t automatisch bei Erkennung.", AutoSize = false, Location = new Point(12,12), Size = new Size(380,56) };
+
+                // Dialog mit zweistufigem Ablauf: Trennen -> Weiter -> 4s Countdown -> Detection
+                _detectDialog = new Form
+                {
+                    Text = "COM-Port Erkennung",
+                    Size = new Size(460, 180),
+                    FormBorderStyle = FormBorderStyle.FixedDialog,
+                    StartPosition = FormStartPosition.CenterParent,
+                    ControlBox = false,
+                    TopMost = true
+                };
+                var lbl = new Label
+                {
+                    Text = "Ist das entsprechende Gerät getrennt?\r\nBitte Gerät JETZT trennen und danach auf \"Weiter\" klicken.",
+                    AutoSize = false,
+                    Location = new Point(12, 12),
+                    Size = new Size(420, 56)
+                };
                 _detectDialog.Controls.Add(lbl);
-                var btnCancel = new Button { Text = "Abbrechen", Location = new Point(300,80), Size = new Size(90,28) };
-                btnCancel.Click += (s,e)=> StopDetectPortMode(true);
+                var lblCountdown = new Label
+                {
+                    Text = string.Empty,
+                    AutoSize = false,
+                    Location = new Point(12, 72),
+                    Size = new Size(420, 24),
+                    ForeColor = Color.DimGray
+                };
+                _detectDialog.Controls.Add(lblCountdown);
+                var btnContinue = new Button { Text = "Weiter", Location = new Point(260, 110), Size = new Size(90, 28) };
+                var btnCancel = new Button { Text = "Abbrechen", Location = new Point(356, 110), Size = new Size(90, 28) };
+                _detectDialog.Controls.Add(btnContinue);
                 _detectDialog.Controls.Add(btnCancel);
+                btnCancel.Click += (s, e) => { StopDetectPortMode(true); };
+
+                int countdown = 4;
+                Timer preTimer = new Timer { Interval = 1000 };
+                btnContinue.Click += (s, e) =>
+                {
+                    try
+                    {
+                        btnContinue.Enabled = false;
+                        lbl.Text = "Bitte warten... (Erkennung startet gleich)";
+                        lblCountdown.Text = $"Countdown: {countdown} s";
+                        preTimer.Tick += (ts, te) =>
+                        {
+                            countdown--;
+                            if (countdown > 0)
+                            {
+                                try { lblCountdown.Text = $"Countdown: {countdown} s"; } catch { }
+                            }
+                            else
+                            {
+                                try { preTimer.Stop(); preTimer.Dispose(); } catch { }
+                                // Jetzt Basisliste aufnehmen und Detection starten
+                                try
+                                {
+                                    _detectBasePorts = SerialPort.GetPortNames();
+                                    Array.Sort(_detectBasePorts, StringComparer.OrdinalIgnoreCase);
+                                }
+                                catch { _detectBasePorts = Array.Empty<string>(); }
+                                lbl.Text = "Jetzt bitte das Gerät einstecken.\r\nFenster schließt automatisch bei Erkennung.";
+                                lblCountdown.Text = string.Empty;
+                                // Start Polling Timer
+                                _detectTimer = new Timer { Interval = 700 };
+                                _detectTimer.Tick += (ts2, te2) => LoadComPorts();
+                                _detectTimer.Start();
+                            }
+                        };
+                        preTimer.Start();
+                    }
+                    catch { }
+                };
+
                 _detectDialog.Show(this);
-                _detectTimer = new Timer { Interval = 700 };
-                _detectTimer.Tick += (s,e)=> LoadComPorts();
-                _detectTimer.Start();
             }
             catch { StopDetectPortMode(true); }
         }
