@@ -7,6 +7,8 @@ using System.Windows.Forms;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Collections.Generic;
+using System.Security.Cryptography; // DPAPI
+using System.Text; // DPAPI
 
 namespace Geldautomat
 {
@@ -82,6 +84,21 @@ namespace Geldautomat
         // UI-Stabilitätsprüfung: SERVICE-Anzeige erst nach 10s gleicher Codes zeigen
         private DateTime _uiFaultFirstSeenUtc = DateTime.MinValue;
         private string _uiFaultCodes = string.Empty;
+
+        // Simple DPAPI helpers to handle encrypted values from INI
+        private static string DecryptSecret(string stored)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(stored)) return string.Empty;
+                if (!stored.StartsWith("enc:", StringComparison.Ordinal)) return stored; // backward plaintext
+                var b64 = stored.Substring(4);
+                var protectedBytes = Convert.FromBase64String(b64);
+                var unprotected = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
+                return Encoding.UTF8.GetString(unprotected);
+            }
+            catch { return string.Empty; }
+        }
 
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
@@ -634,7 +651,11 @@ namespace Geldautomat
             try
             {
                 var v = IniHelper.ReadValue("Security", "MaintenancePassword", AppSettings.IniPath);
-                if (!string.IsNullOrWhiteSpace(v)) return v.Trim();
+                if (!string.IsNullOrWhiteSpace(v))
+                {
+                    var dec = DecryptSecret(v.Trim());
+                    if (!string.IsNullOrEmpty(dec)) return dec;
+                }
             }
             catch { }
             return MaintenancePassword; // Default
@@ -644,7 +665,11 @@ namespace Geldautomat
             try
             {
                 var v = IniHelper.ReadValue("Security", "AdminNumericBackdoor", AppSettings.IniPath);
-                if (!string.IsNullOrWhiteSpace(v)) return v.Trim();
+                if (!string.IsNullOrWhiteSpace(v))
+                {
+                    var dec = DecryptSecret(v.Trim());
+                    if (!string.IsNullOrEmpty(dec)) return dec;
+                }
             }
             catch { }
             return AdminNumericBackdoor; // Default

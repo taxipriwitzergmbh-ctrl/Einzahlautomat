@@ -1,8 +1,10 @@
-using System;
+ï»¿using System;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using System.Drawing.Drawing2D;
+using System.Security.Cryptography; // added for DPAPI
+using System.Text; // added for DPAPI
 
 namespace Geldautomat
 {
@@ -45,6 +47,32 @@ namespace Geldautomat
             LoadValues();
         }
 
+        // Simple DPAPI helpers (local to this form)
+        private static string EncryptSecret(string plain)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(plain)) return string.Empty;
+                var data = Encoding.UTF8.GetBytes(plain);
+                var protectedBytes = ProtectedData.Protect(data, null, DataProtectionScope.CurrentUser);
+                return "enc:" + Convert.ToBase64String(protectedBytes);
+            }
+            catch { return plain ?? string.Empty; }
+        }
+        private static string DecryptSecret(string stored)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(stored)) return string.Empty;
+                if (!stored.StartsWith("enc:", StringComparison.Ordinal)) return stored; // backward plaintext
+                var b64 = stored.Substring(4);
+                var protectedBytes = Convert.FromBase64String(b64);
+                var unprotected = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
+                return Encoding.UTF8.GetString(unprotected);
+            }
+            catch { return string.Empty; }
+        }
+
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
 
@@ -54,7 +82,7 @@ namespace Geldautomat
             StartPosition = FormStartPosition.CenterParent;
             BackColor = Color.White;
             DoubleBuffered = true;
-            Size = new Size(700, 760); // mehr Platz, damit nichts überlappt
+            Size = new Size(700, 760); // mehr Platz, damit nichts ï¿½berlappt
 
             // Header
             _headerPanel = new Panel
@@ -144,7 +172,7 @@ namespace Geldautomat
 
             _lblDocStore = new Label { Text = "Dokumente-Pfad (DocStore)", AutoSize = true, Location = new Point(left + 26, y), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold), Visible = false };
             _txtDocStore = new TextBox { Location = new Point(left + 26, y + 24), Width = 420, Font = new Font("Segoe UI", 11F), Visible = false };
-            _btnDocStoreBrowse = new Button { Text = "Pfad wählen...", Location = new Point(_txtDocStore.Right + 12, y + 22), Size = new Size(140, 32), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 10.5F, FontStyle.Bold), Visible = false };
+            _btnDocStoreBrowse = new Button { Text = "Pfad wï¿½hlen...", Location = new Point(_txtDocStore.Right + 12, y + 22), Size = new Size(140, 32), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 10.5F, FontStyle.Bold), Visible = false };
             _btnDocStoreBrowse.FlatAppearance.BorderSize = 0;
             _btnDocStoreBrowse.Click += (s, e) => BrowseDocStore();
             content.Controls.Add(_lblDocStore); content.Controls.Add(_txtDocStore); content.Controls.Add(_btnDocStoreBrowse);
@@ -156,7 +184,7 @@ namespace Geldautomat
             content.Controls.Add(lblDev); content.Controls.Add(_txtDeviceId); content.Controls.Add(_lblDeviceHint);
             y += 24 + 24 + 12;
 
-            _lblBusyUnlock = new Label { Text = "Timeout Freigabe (Sek.) bei Gerätefehler", AutoSize = true, Location = new Point(left + 26, y), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
+            _lblBusyUnlock = new Label { Text = "Timeout Freigabe (Sek.) bei Gerï¿½tefehler", AutoSize = true, Location = new Point(left + 26, y), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
             _txtBusyUnlock = new TextBox { Location = new Point(left + 26, y + 24), Width = 150, Font = new Font("Segoe UI", 11F) };
             content.Controls.Add(_lblBusyUnlock); content.Controls.Add(_txtBusyUnlock);
             y += 24 + 24 + 12;
@@ -184,7 +212,7 @@ namespace Geldautomat
             content.Controls.Add(lblHours); content.Controls.Add(_chkTimeTrackingEnabled);
             y += rowGap;
 
-            _lblTimeTrackingPwd = new Label { Text = "Passwortabfrage für Zeiterfassung", AutoSize = true, Location = new Point(left + 26, y), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), Visible = false };
+            _lblTimeTrackingPwd = new Label { Text = "Passwortabfrage fï¿½r Zeiterfassung", AutoSize = true, Location = new Point(left + 26, y), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), Visible = false };
             _chkTimeTrackingPwd = new CheckBox { Location = new Point(left, y - 2), AutoSize = true, Visible = false };
             content.Controls.Add(_lblTimeTrackingPwd); content.Controls.Add(_chkTimeTrackingPwd);
             _chkTimeTrackingEnabled.CheckedChanged += (s, e) => { ToggleTimeTrackingPwd(_chkTimeTrackingEnabled.Checked); };
@@ -194,7 +222,7 @@ namespace Geldautomat
             Controls.Add(footer);
             _btnSave = new Button { Text = "Speichern", Size = new Size(180, 48), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold) };
             _btnSave.FlatAppearance.BorderSize = 0; _btnSave.Click += (s, e) => SaveValues();
-            _btnClose = new Button { Text = "Schließen", Size = new Size(180, 48), BackColor = Color.FromArgb(158, 158, 158), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold) };
+            _btnClose = new Button { Text = "Schlieï¿½en", Size = new Size(180, 48), BackColor = Color.FromArgb(158, 158, 158), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold) };
             _btnClose.FlatAppearance.BorderSize = 0; _btnClose.Click += (s, e) => Close();
             footer.Resize += (s, e) =>
             {
@@ -215,7 +243,7 @@ namespace Geldautomat
         private void HeaderPanel_MouseMove(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) { Left += e.X - _mouseDownLocation.X; Top += e.Y - _mouseDownLocation.Y; } }
 
         private void ToggleDocStoreUi(bool show) { try { _lblDocStore.Visible = show; _txtDocStore.Visible = show; _btnDocStoreBrowse.Visible = show; } catch { } }
-        private void BrowseDocStore() { try { using (var dlg = new FolderBrowserDialog()) { dlg.Description = "Wählen Sie den Stammordner (DocStore) für Dokumente"; dlg.ShowNewFolderButton = true; if (!string.IsNullOrWhiteSpace(_txtDocStore.Text) && System.IO.Directory.Exists(_txtDocStore.Text)) dlg.SelectedPath = _txtDocStore.Text; if (dlg.ShowDialog(this) == DialogResult.OK) { _txtDocStore.Text = dlg.SelectedPath; } } } catch { } }
+        private void BrowseDocStore() { try { using (var dlg = new FolderBrowserDialog()) { dlg.Description = "Wï¿½hlen Sie den Stammordner (DocStore) fï¿½r Dokumente"; dlg.ShowNewFolderButton = true; if (!string.IsNullOrWhiteSpace(_txtDocStore.Text) && System.IO.Directory.Exists(_txtDocStore.Text)) dlg.SelectedPath = _txtDocStore.Text; if (dlg.ShowDialog(this) == DialogResult.OK) { _txtDocStore.Text = dlg.SelectedPath; } } } catch { } }
         private void ToggleTimeTrackingPwd(bool show) { try { _lblTimeTrackingPwd.Visible = show; _chkTimeTrackingPwd.Visible = show; } catch { } }
 
         private void LoadValues()
@@ -247,13 +275,15 @@ namespace Geldautomat
             try
             {
                 var maint = IniHelper.ReadValue("Security", "MaintenancePassword", AppSettings.IniPath);
-                if (!string.IsNullOrEmpty(maint)) { _txtMaintPwd.Text = maint; _txtMaintPwd2.Text = maint; }
+                var decMaint = DecryptSecret(maint ?? string.Empty);
+                if (!string.IsNullOrEmpty(decMaint)) { _txtMaintPwd.Text = decMaint; _txtMaintPwd2.Text = decMaint; }
             }
             catch { }
             try
             {
                 var adm = IniHelper.ReadValue("Security", "AdminNumericBackdoor", AppSettings.IniPath);
-                if (!string.IsNullOrEmpty(adm)) { _txtAdminBackdoor.Text = adm; _txtAdminBackdoor2.Text = adm; }
+                var decAdm = DecryptSecret(adm ?? string.Empty);
+                if (!string.IsNullOrEmpty(decAdm)) { _txtAdminBackdoor.Text = decAdm; _txtAdminBackdoor2.Text = decAdm; }
             }
             catch { }
             try
@@ -310,7 +340,7 @@ namespace Geldautomat
                 var m2 = (_txtMaintPwd2.Text ?? string.Empty).Trim();
                 if (!string.Equals(m1, m2, StringComparison.Ordinal))
                 {
-                    MessageBox.Show(this, "Wartungscode stimmt nicht überein.", "Eingabe prüfen", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(this, "Wartungscode stimmt nicht Ã¼berein.", "Eingabe prÃ¼fen", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     _txtMaintPwd2.Focus();
                     return;
                 }
@@ -322,14 +352,14 @@ namespace Geldautomat
                 var a2 = (_txtAdminBackdoor2.Text ?? string.Empty).Trim();
                 if (!string.Equals(a1, a2, StringComparison.Ordinal))
                 {
-                    MessageBox.Show(this, "Admin-Backdoor stimmt nicht überein.", "Eingabe prüfen", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(this, "Admin-Backdoor stimmt nicht Ã¼berein.", "Eingabe prÃ¼fen", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     _txtAdminBackdoor2.Focus();
                     return;
                 }
             }
             catch { }
 
-            // Device-ID prüfen
+            // Device-ID prÃ¼fen
             int newDevId = AppSettings.DeviceId;
             try
             {
@@ -338,7 +368,7 @@ namespace Geldautomat
                 {
                     if (!int.TryParse(raw, out newDevId) || newDevId <= 0)
                     {
-                        MessageBox.Show(this, "Ungültige Device-ID. Bitte eine positive Zahl eingeben.", "Eingabe prüfen", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        MessageBox.Show(this, "UngÃ¼ltige Device-ID. Bitte eine positive Zahl eingeben.", "Eingabe prÃ¼fen", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         _txtDeviceId.Focus();
                         return;
                     }
@@ -354,8 +384,8 @@ namespace Geldautomat
                 var raw = (_txtBusyUnlock.Text ?? string.Empty).Trim(); int sec = 0; if (!string.IsNullOrEmpty(raw)) int.TryParse(raw, out sec); if (sec < 0) sec = 0; IniHelper.WriteValue("UI", "BusyUnlockTimeoutSec", sec.ToString(), AppSettings.IniPath);
             }
             catch { }
-            try { IniHelper.WriteValue("Security", "MaintenancePassword", (_txtMaintPwd.Text ?? string.Empty).Trim(), AppSettings.IniPath); } catch { }
-            try { IniHelper.WriteValue("Security", "AdminNumericBackdoor", (_txtAdminBackdoor.Text ?? string.Empty).Trim(), AppSettings.IniPath); } catch { }
+            try { IniHelper.WriteValue("Security", "MaintenancePassword", EncryptSecret((_txtMaintPwd.Text ?? string.Empty).Trim()), AppSettings.IniPath); } catch { }
+            try { IniHelper.WriteValue("Security", "AdminNumericBackdoor", EncryptSecret((_txtAdminBackdoor.Text ?? string.Empty).Trim()), AppSettings.IniPath); } catch { }
             try { IniHelper.WriteValue("ReceiptPrinter", "AskUser", _chkReceiptPromptEnabled.Checked ? "True" : "False", AppSettings.IniPath); } catch { }
             try { IniHelper.WriteValue("UI", "QrCodeEnabled", _chkQrCodeEnabled.Checked ? "True" : "False", AppSettings.IniPath); } catch { }
             try { IniHelper.WriteValue("UI", "DocumentsEnabled", _chkDocumentsEnabled.Checked ? "True" : "False", AppSettings.IniPath); } catch { }
@@ -364,7 +394,7 @@ namespace Geldautomat
             try { IniHelper.WriteValue("UI", "TimeTrackingPasswordRequired", _chkTimeTrackingPwd.Checked ? "True" : "False", AppSettings.IniPath); } catch { }
 
             try { AppLogger.Log($"Allgemeine Einstellungen gespeichert. Prompt={( _chkReceiptPromptEnabled.Checked ? "on" : "off")}, QR={( _chkQrCodeEnabled.Checked ? "on" : "off")}, Docs={( _chkDocumentsEnabled.Checked ? "on" : "off")}, DocStore='{_txtDocStore.Text}'"); } catch { }
-            try { MessageBox.Show(this, "Einstellungen gespeichert.\nHinweis: Änderungen an NFC/Device-ID wirken erst nach Neustart.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
+            try { MessageBox.Show(this, "Einstellungen gespeichert.\nHinweis: Ã„nderungen an NFC/Device-ID wirken erst nach Neustart.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch { }
         }
     }
 }

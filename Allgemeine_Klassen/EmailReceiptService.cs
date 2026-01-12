@@ -1,9 +1,10 @@
-using System;
+ï»¿using System;
 using System.Net;
 using System.Net.Mail;
 using System.Text;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography; // DPAPI
 
 namespace Geldautomat
 {
@@ -16,7 +17,7 @@ namespace Geldautomat
             if (string.IsNullOrWhiteSpace(email)) throw new InvalidOperationException("Keine E-Mail-Adresse hinterlegt.");
 
             var cfg = MailSettings.Load();
-            if (!cfg.IsConfigured) throw new InvalidOperationException("Maileinstellungen unvollständig.");
+            if (!cfg.IsConfigured) throw new InvalidOperationException("Maileinstellungen unvollstÃ¤ndig.");
 
             var mail = new MailMessage();
             mail.From = new MailAddress(cfg.FromAddress, cfg.FromDisplayName);
@@ -41,7 +42,7 @@ namespace Geldautomat
             if (string.IsNullOrWhiteSpace(email)) throw new InvalidOperationException("Keine E-Mail-Adresse hinterlegt.");
 
             var cfg = MailSettings.Load();
-            if (!cfg.IsConfigured) throw new InvalidOperationException("Maileinstellungen unvollständig.");
+            if (!cfg.IsConfigured) throw new InvalidOperationException("Maileinstellungen unvollstÃ¤ndig.");
 
             var mail = new MailMessage();
             mail.From = new MailAddress(cfg.FromAddress, cfg.FromDisplayName);
@@ -65,14 +66,14 @@ namespace Geldautomat
             try { AppLogger.Log($"Mail gesendet: Quittung+Anhang ('{attachmentFileName}') an '{email}' (Betreff='{mail.Subject}')"); } catch { }
         }
 
-        // Support-/Fehler-Meldung versenden – mehrere Empfänger via ';' erlaubt; Support kann per INI deaktiviert werden
+        // Support-/Fehler-Meldung versenden ï¿½ mehrere Empfï¿½nger via ';' erlaubt; Support kann per INI deaktiviert werden
         public static void SendSupportAlert(string subjectSuffix, string message)
         {
             var cfg = MailSettings.Load();
             if (!cfg.IsConfigured) return;
 
             string device = (AppSettings.AutomatenName ?? string.Empty).Trim();
-            string subject = string.IsNullOrWhiteSpace(device) ? $"Automat – Meldung {subjectSuffix}" : $"{device} – Meldung {subjectSuffix}";
+            string subject = string.IsNullOrWhiteSpace(device) ? $"Automat ï¿½ Meldung {subjectSuffix}" : $"{device} ï¿½ Meldung {subjectSuffix}";
             string body = (message ?? string.Empty);
 
             var mail = new MailMessage();
@@ -141,12 +142,26 @@ namespace Geldautomat
         public bool EnableSsl { get; set; } = true;
         public string Username { get; set; }
         public string Password { get; set; }
-        public string AlertEmail { get; set; } // mehrere Empfänger per ';'
-        public bool DisableSupportMail { get; set; } // NEU: Support-Mail unterdrücken
+        public string AlertEmail { get; set; } // mehrere Empfï¿½nger per ';'
+        public bool DisableSupportMail { get; set; } // NEU: Support-Mail unterdrï¿½cken
 
         public bool IsConfigured => !string.IsNullOrWhiteSpace(FromAddress) && !string.IsNullOrWhiteSpace(SmtpHost);
 
         private const string IniSection = "Mail";
+
+        private static string DecryptSecret(string stored)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(stored)) return string.Empty;
+                if (!stored.StartsWith("enc:", StringComparison.Ordinal)) return stored; // backward plaintext
+                var b64 = stored.Substring(4);
+                var protectedBytes = Convert.FromBase64String(b64);
+                var unprotected = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
+                return Encoding.UTF8.GetString(unprotected);
+            }
+            catch { return string.Empty; }
+        }
 
         public static MailSettings Load()
         {
@@ -159,7 +174,8 @@ namespace Geldautomat
                 int port; if (int.TryParse(IniHelper.ReadValue(IniSection, "SmtpPort", AppSettings.IniPath), out port)) s.SmtpPort = port;
                 bool ssl; if (bool.TryParse(IniHelper.ReadValue(IniSection, "EnableSsl", AppSettings.IniPath), out ssl)) s.EnableSsl = ssl;
                 s.Username = IniHelper.ReadValue(IniSection, "Username", AppSettings.IniPath);
-                s.Password = IniHelper.ReadValue(IniSection, "Password", AppSettings.IniPath);
+                var storedPwd = IniHelper.ReadValue(IniSection, "Password", AppSettings.IniPath);
+                s.Password = DecryptSecret(storedPwd ?? string.Empty);
                 s.AlertEmail = IniHelper.ReadValue(IniSection, "AlertEmail", AppSettings.IniPath);
                 bool disableSupport; s.DisableSupportMail = bool.TryParse(IniHelper.ReadValue(IniSection, "DisableSupportMail", AppSettings.IniPath), out disableSupport) ? disableSupport : false;
             }

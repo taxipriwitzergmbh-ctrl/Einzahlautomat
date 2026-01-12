@@ -1,8 +1,10 @@
-using System;
+ï»¿using System;
 using System.Drawing;
 using System.Net;
 using System.Net.Mail;
 using System.Windows.Forms;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Geldautomat
 {
@@ -20,6 +22,32 @@ namespace Geldautomat
         private Button btnTest;
         private TextBox txtAlertEmail;
         private CheckBox chkDisableSupport; // nur sichtbar bei Entwickler-Admin (mpr)
+
+        // Simple DPAPI helpers
+        private static string EncryptSecret(string plain)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(plain)) return string.Empty;
+                var data = Encoding.UTF8.GetBytes(plain);
+                var protectedBytes = ProtectedData.Protect(data, null, DataProtectionScope.CurrentUser);
+                return "enc:" + Convert.ToBase64String(protectedBytes);
+            }
+            catch { return plain ?? string.Empty; }
+        }
+        private static string DecryptSecret(string stored)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(stored)) return string.Empty;
+                if (!stored.StartsWith("enc:", StringComparison.Ordinal)) return stored; // backward plaintext
+                var b64 = stored.Substring(4);
+                var protectedBytes = Convert.FromBase64String(b64);
+                var unprotected = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
+                return Encoding.UTF8.GetString(unprotected);
+            }
+            catch { return string.Empty; }
+        }
 
         public MailSettingsForm()
         {
@@ -53,7 +81,7 @@ namespace Geldautomat
 
             chkDisableSupport = new CheckBox { Text = "Mailversand an Support unterbinden", Location = new Point(20, 330), Size = new Size(470, 24) };
 
-            btnTest = new Button { Text = "Verbindung prüfen", Location = new Point(20, 370), Size = new Size(180, 30) };
+            btnTest = new Button { Text = "Verbindung prï¿½fen", Location = new Point(20, 370), Size = new Size(180, 30) };
             btnSave = new Button { Text = "Speichern", Location = new Point(230, 370), Size = new Size(120, 30) };
             btnCancel = new Button { Text = "Abbrechen", Location = new Point(370, 370), Size = new Size(120, 30) };
 
@@ -87,7 +115,8 @@ namespace Geldautomat
                 if (int.TryParse(IniHelper.ReadValue("Mail", "SmtpPort", ini), out port)) nudPort.Value = Math.Max(1, Math.Min(65535, port)); else nudPort.Value = 587;
                 bool ssl; chkSsl.Checked = bool.TryParse(IniHelper.ReadValue("Mail", "EnableSsl", ini), out ssl) ? ssl : true;
                 txtUser.Text = IniHelper.ReadValue("Mail", "Username", ini) ?? string.Empty;
-                txtPassword.Text = IniHelper.ReadValue("Mail", "Password", ini) ?? string.Empty;
+                var storedPwd = IniHelper.ReadValue("Mail", "Password", ini) ?? string.Empty;
+                txtPassword.Text = DecryptSecret(storedPwd);
                 bool disableSupport;
                 chkDisableSupport.Checked = bool.TryParse(IniHelper.ReadValue("Mail", "DisableSupportMail", ini), out disableSupport) ? disableSupport : false;
             }
@@ -105,9 +134,11 @@ namespace Geldautomat
                 IniHelper.WriteValue("Mail", "SmtpPort", ((int)nudPort.Value).ToString(), ini);
                 IniHelper.WriteValue("Mail", "EnableSsl", chkSsl.Checked ? "True" : "False", ini);
                 IniHelper.WriteValue("Mail", "Username", txtUser.Text?.Trim() ?? string.Empty, ini);
-                IniHelper.WriteValue("Mail", "Password", txtPassword.Text ?? string.Empty, ini);
+                // Encrypt password before saving
+                var enc = EncryptSecret(txtPassword.Text ?? string.Empty);
+                IniHelper.WriteValue("Mail", "Password", enc, ini);
                 IniHelper.WriteValue("Mail", "AlertEmail", txtAlertEmail.Text?.Trim() ?? string.Empty, ini);
-                // nur persistieren, wenn Checkbox sichtbar (Entwickler-Admin), sonst unverändert lassen
+                // nur persistieren, wenn Checkbox sichtbar (Entwickler-Admin), sonst unverï¿½ndert lassen
                 if (chkDisableSupport.Visible)
                     IniHelper.WriteValue("Mail", "DisableSupportMail", chkDisableSupport.Checked ? "True" : "False", ini);
                 MessageBox.Show(this, "Maileinstellungen gespeichert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -128,7 +159,7 @@ namespace Geldautomat
                 int port = (int)nudPort.Value;
                 bool ssl = chkSsl.Checked;
                 string user = txtUser.Text?.Trim();
-                string pwd = txtPassword.Text;
+                string pwd = txtPassword.Text; // already decrypted in UI
 
                 if (string.IsNullOrWhiteSpace(host) || port <= 0)
                 {
@@ -141,7 +172,7 @@ namespace Geldautomat
                     return;
                 }
 
-                var ask = MessageBox.Show(this, "Es wird eine Testmail an die Absender-Adresse gesendet. Fortfahren?", "Verbindung prüfen", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                var ask = MessageBox.Show(this, "Es wird eine Testmail an die Absender-Adresse gesendet. Fortfahren?", "Verbindung prÃ¼fen", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                 if (ask != DialogResult.Yes) return;
 
                 Cursor prev = Cursor.Current;
@@ -155,7 +186,7 @@ namespace Geldautomat
                     {
                         msg.Subject = "Testverbindung Geldautomat";
                         string device = (AppSettings.AutomatenName ?? string.Empty).Trim();
-                        msg.Body = "Dies ist eine Testnachricht zur Überprüfung der SMTP-Verbindung.\r\nGerät: " + device + "\r\nZeit: " + DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
+                        msg.Body = "Dies ist eine Testnachricht zur ÃœberprÃ¼fung der SMTP-Verbindung.\r\nGerÃ¤t: " + device + "\r\nZeit: " + DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
                         using (var client = new SmtpClient(host, port))
                         {
                             client.EnableSsl = ssl;
@@ -166,7 +197,7 @@ namespace Geldautomat
                             client.Send(msg);
                         }
                     }
-                    MessageBox.Show(this, "Verbindung OK – Testmail wurde gesendet.", "Erfolg", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(this, "Verbindung OK â€“ Testmail wurde gesendet.", "Erfolg", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {

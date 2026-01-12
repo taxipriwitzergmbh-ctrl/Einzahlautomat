@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
@@ -23,7 +23,7 @@ namespace Geldautomat
         // NEU: Referenz auf NV200 (optional)
         private NV200_SSP _ssp;
 
-        // NEU: Referenzen auf die Hardware-Zeilen zur späteren Aktualisierung
+        // NEU: Referenzen auf die Hardware-Zeilen zur spï¿½teren Aktualisierung
         private ListViewItem _itemSmartCoin;
         private ListViewItem _itemSmartCoin2;
         private ListViewItem _itemNv200;
@@ -52,7 +52,7 @@ namespace Geldautomat
         // NEU: RM5 Zeile
         private ListViewItem _itemRm5;
 
-        // Prüft ob in INI der RM5 als aktiver Münzprüfer konfiguriert ist
+        // Prï¿½ft ob in INI der RM5 als aktiver Mï¿½nzprï¿½fer konfiguriert ist
         private bool IsRm5Active()
         {
             try
@@ -68,7 +68,7 @@ namespace Geldautomat
             InitializeLayout();
         }
 
-        // NEU: überladener Ctor, um NV200-Instanz zu übergeben
+        // NEU: ï¿½berladener Ctor, um NV200-Instanz zu ï¿½bergeben
         public KassenbestandForm(NV200_SSP ssp)
         {
             _ssp = ssp;
@@ -110,14 +110,14 @@ namespace Geldautomat
             // NEU: Kassendifferenz rechts anzeigen
             lblDiff = new Label
             {
-                Text = "Kassendifferenz: 0,00 €",
+                Text = "Kassendifferenz: 0,00 ï¿½",
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleRight,
                 Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
                 ForeColor = Color.White,
                 BackColor = Color.Transparent,
                 Location = new Point(420, 0), // weiter nach links
-                Size = new Size(220, 60), // schmaler, damit Platz für Buttons
+                Size = new Size(220, 60), // schmaler, damit Platz fï¿½r Buttons
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             headerPanel.Controls.Add(lblDiff);
@@ -163,7 +163,7 @@ namespace Geldautomat
                 loadingLabel.Visible = false;
                 btnRefresh.Enabled = true;
             };
-            headerPanel.Controls.Add(btnRefresh); // Button zuletzt hinzufügen, damit er oben liegt
+            headerPanel.Controls.Add(btnRefresh); // Button zuletzt hinzufï¿½gen, damit er oben liegt
     
             try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24)); } catch { }
 
@@ -253,7 +253,7 @@ namespace Geldautomat
                     }
                 }
 
-                // Jetzt ListView atomar neu befüllen
+                // Jetzt ListView atomar neu befï¿½llen
                 lvKassenbestand.BeginUpdate();
                 lvKassenbestand.Items.Clear();
                 _itemAutomatSum = null; _itemKassenSum = null; _itemRm5 = null;
@@ -261,11 +261,11 @@ namespace Geldautomat
                 foreach (var item in newKassenItems) lvKassenbestand.Items.Add(item);
                 lvKassenbestand.EndUpdate();
 
-                // Summen jetzt einfügen
+                // Summen jetzt einfï¿½gen
                 _sumKassenEuro = sumKassen;
                 // Automatenbestand (Hardware) async aktualisieren
                 await RefreshHardwareAsync(autoName, rm5);
-                // Summenzeilen nach Hardware-Update immer am Ende einfügen
+                // Summenzeilen nach Hardware-Update immer am Ende einfï¿½gen
                 UpsertAutomatSumItem(autoName);
                 UpsertKassenSumItem(autoName);
             }
@@ -331,7 +331,7 @@ namespace Geldautomat
             decimal sumAutomat = 0m;
             if (rm5)
             {
-                // RM5 aktiv: SmartCoin-Zeilen ausblenden, RM5 Zeile befüllen
+                // RM5 aktiv: SmartCoin-Zeilen ausblenden, RM5 Zeile befï¿½llen
                 if (_itemSmartCoin != null) _itemSmartCoin.ForeColor = Color.LightGray;
                 if (_itemSmartCoin2 != null) _itemSmartCoin2.ForeColor = Color.LightGray;
                 if (_itemRm5 != null)
@@ -381,7 +381,7 @@ namespace Geldautomat
                 }
             }
 
-            // NV200 Geräte unverändert (immer berücksichtigen)
+            // NV200 Gerï¿½te unverï¿½ndert (immer berï¿½cksichtigen)
             try
             {
                 SetValue(_itemNv200, "-"); SetValue(_itemNv2002, "-"); SetValue(_itemNv200Cashbox, "-"); SetValue(_itemNv2002Cashbox, "-");
@@ -475,14 +475,14 @@ namespace Geldautomat
             try { KassenSummary.Update(_sumAutomatEuro, _sumKassenEuro); } catch { }
         }
 
-        // Sechs Zeilen hinzufügen und referenzieren
+        // Sechs Zeilen hinzufï¿½gen und referenzieren
         private void AppendHardwareRows(string autoName)
         { AppendHardwareRows(autoName, IsRm5Active()); }
         private void AppendHardwareRows(string autoName, bool rm5)
         {
             if (rm5)
             {
-                _itemRm5 = new ListViewItem("RM5 Münzenbestand");
+                _itemRm5 = new ListViewItem("RM5 Mï¿½nzenbestand");
                 _itemRm5.SubItems.Add("-");
                 _itemRm5.SubItems.Add("");
                 _itemRm5.SubItems.Add(autoName);
@@ -516,7 +516,7 @@ namespace Geldautomat
             _itemNv2002Cashbox = new ListViewItem("NV200/2 Cashbox"); _itemNv2002Cashbox.SubItems.Add("-"); _itemNv2002Cashbox.SubItems.Add(""); _itemNv2002Cashbox.SubItems.Add(autoName); _itemNv2002Cashbox.ForeColor = Color.FromArgb(46,125,50); _itemNv2002Cashbox.Group = _grpAutomat; lvKassenbestand.Items.Add(_itemNv2002Cashbox);
         }
 
-        // Münzsumme in Euro aus Level-Array
+        // Mï¿½nzsumme in Euro aus Level-Array
         // Index 0..7 = {1,2,5,10,20,50,100,200} Cent; -1 = unbekannt
         private decimal SumSmartCoinEuro(int[] lv)
         {
