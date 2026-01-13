@@ -1494,9 +1494,13 @@ namespace Geldautomat
             _coinEventsAttached = false;
         }
 
+        // Request coin levels throttled
         private void RequestCoinLevels()
         {
-            var now = DateTime.UtcNow; if ((now - _lastCoinLevelsRequestUtc).TotalMilliseconds < 1200) return; _lastCoinLevelsRequestUtc = now; try { SmartCoinV1.RequestLevelsGlobal(); } catch { }
+            var now = DateTime.UtcNow;
+            if ((now - _lastCoinLevelsRequestUtc).TotalMilliseconds < 1200) return;
+            _lastCoinLevelsRequestUtc = now;
+            try { SmartCoinV1.RequestLevelsGlobal(); } catch { }
         }
 
         private void OnCoinLevelsUpdated(int[] levels)
@@ -1765,6 +1769,42 @@ namespace Geldautomat
                         await db.InsertKassenbuchAsync(entry); _personalGuthaben = neuerSaldo; _eingezahltSession = 0m; lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; UpdateMaxVerfuegbar();
                     }
                 }
+                else if (_eingezahltSession < 0m)
+                {
+                    // Negative manuelle Eingabe: Personalguthaben bei Abmeldung reduzieren
+                    int manId = _details?.ManId ?? (_currentAuszahlungRow != null && _currentAuszahlungRow.Table.Columns.Contains("FirmenID") && _currentAuszahlungRow["FirmenID"] != DBNull.Value ? Convert.ToInt32(_currentAuszahlungRow["FirmenID"]) : 0);
+                    int schichtId = _details?.SchichtId ?? 0;
+                    using (var db = new DatabaseHelper())
+                    {
+                        decimal alterSaldo = await db.GetLastPersonalGuthabenSaldoAsync(_personal.PID);
+                        decimal betrag = Math.Abs(Math.Round(_eingezahltSession, 2)); // zu reduzierender Betrag
+                        decimal neuerSaldo = Math.Round(alterSaldo - betrag, 2);
+                        var zpg = AccountingRules.GetPersonalguthabenKontierung(manId);
+                        var entry = new KassenbuchEntry
+                        {
+                            PersId = _personal.PID,
+                            SchichtId = schichtId,
+                            Typ = "Personalguthaben",
+                            Buchungstext = AccountingRules.ComposePgEinzahlungText(_personal),
+                            Kost1 = zpg.Kost1,
+                            Kost2 = zpg.Kost2,
+                            Konto = zpg.Konto,
+                            Betrag19 = 0m,
+                            Betrag7 = 0m,
+                            Betrag0 = -betrag, // Abzug
+                            SaldoPersonalguthaben = neuerSaldo,
+                            FirmenId = -1,
+                            AutomatenName = AppSettings.AutomatenName,
+                            Kassenbestand = GetCurrentKassenbestandEuro()
+                        };
+                        await db.InsertKassenbuchAsync(entry);
+                        _personalGuthaben = neuerSaldo;
+                        _eingezahltSession = 0m;
+                        lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}";
+                        lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}";
+                        UpdateMaxVerfuegbar();
+                    }
+                }
             }
             catch (Exception ex) { if (!ignoreAdminMode) MessageBox.Show(this, $"Fehler beim Abmelden:\r\n{ex.Message}", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             finally
@@ -1869,7 +1909,14 @@ namespace Geldautomat
         }
         private void BtnPlus_Click(object sender, EventArgs e)
         {
-            int idx = (int)((Button)sender).Tag; int avail = GetAvailByIndex(idx); if (auswahlAnzahl[idx] < avail) { auswahlAnzahl[idx]++; lblAnzahl[idx].Text = auswahlAnzahl[idx].ToString(); UpdateSummeAuszahlung(); }
+            int idx = (int)((Button)sender).Tag;
+            int avail = GetAvailByIndex(idx);
+            if (auswahlAnzahl[idx] < avail)
+            {
+                auswahlAnzahl[idx]++;
+                lblAnzahl[idx].Text = auswahlAnzahl[idx].ToString();
+                UpdateSummeAuszahlung();
+            }
             UpdatePlusMinusEnabled();
         }
         private void BtnMinusMuenzen_Click(object sender, EventArgs e)
@@ -1878,7 +1925,15 @@ namespace Geldautomat
         }
         private void BtnPlusMuenzen_Click(object sender, EventArgs e)
         {
-            int idx = (int)((Button)sender).Tag; int avail = GetCombinedCoinAvail(idx); bool canIncrease = avail < 0 || auswahlAnzahlMuenzen[idx] < avail; if (canIncrease) { auswahlAnzahlMuenzen[idx]++; lblAnzahlMuenzen[idx].Text = auswahlAnzahlMuenzen[idx].ToString(); UpdateSummeAuszahlung(); }
+            int idx = (int)((Button)sender).Tag;
+            int avail = GetCombinedCoinAvail(idx);
+            bool canIncrease = avail < 0 || auswahlAnzahlMuenzen[idx] < avail;
+            if (canIncrease)
+            {
+                auswahlAnzahlMuenzen[idx]++;
+                lblAnzahlMuenzen[idx].Text = auswahlAnzahlMuenzen[idx].ToString();
+                UpdateSummeAuszahlung();
+            }
             UpdatePlusMinusEnabled();
         }
 
@@ -1889,7 +1944,8 @@ namespace Geldautomat
             decimal sumNotes = 0m; for (int i = 0; i < scheinWerte.Length; i++) sumNotes += scheinWerte[i] * auswahlAnzahl[i];
             decimal sumCoins = 0m; for (int i = 0; i < muenzWerte.Length; i++) sumCoins += (muenzWerte[i] * auswahlAnzahlMuenzen[i]) / 100m;
             if (sumNotes <= 0m && sumCoins <= 0m) { MessageBox.Show(this, "Bitte Auswahl treffen.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
-            decimal maxVerfuegbar = _eingezahltSession + _personalGuthaben; decimal gesamt = sumNotes + sumCoins;
+            decimal maxVerfuegbar = _eingezahltSession + _personalGuthaben;
+            decimal gesamt = sumNotes + sumCoins;
             if (sumNotes > 0m)
             {
                 var ssp1 = _ssp; var ssp2 = Program.NV2002Instance; if (ssp1 == null && ssp2 == null) { MessageBox.Show(this, "Kein NV200 verbunden.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
