@@ -122,6 +122,9 @@ namespace Geldautomat
         private Panel _summaryPanel;
         private Label lblSumArbeit, lblSumShortPause, lblSumPause, lblNetto, lblSumUrlaub, lblSumKrank;
         private Label lblIstStunden;
+        // stamp button
+        private Button _btnStamp;
+        private int? _openWorkEntryId;
 
         public HoursOverviewForm(PersonalInfo personal)
         {
@@ -217,6 +220,14 @@ namespace Geldautomat
             lblIstStunden = new Label { Text = "Ist-Stunden: 0:00", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(640, 44), AutoSize = true, ForeColor = Color.FromArgb(33,37,41), BackColor = Color.Transparent };
             _summaryPanel.Controls.Add(lblIstStunden);
 
+            // Stamp button: shown at top-right, next to Netto label
+            _btnStamp = new Button { Text = "Anstempeln", AutoSize = false, Size = new Size(160, 36), BackColor = Color.FromArgb(76, 175, 80), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            _btnStamp.FlatAppearance.BorderSize = 0;
+            _btnStamp.Click += async (s, e) => await OnStampClickAsync();
+            _summaryPanel.Controls.Add(_btnStamp);
+            _summaryPanel.Resize += (s, e) => PositionStampButton();
+            PositionStampButton();
+
             _grid = new DataGridView
             {
                 Location = new Point(16, _summaryPanel.Bottom + 8),
@@ -240,6 +251,67 @@ namespace Geldautomat
             Controls.Add(_grid);
 
             try { _header.BringToFront(); _title.BringToFront(); _btnClose.BringToFront(); _cbMonth.BringToFront(); _cbYear.BringToFront(); _btnPrev.BringToFront(); _btnNext.BringToFront(); _btnHelp.BringToFront(); } catch { }
+        }
+
+        private void PositionStampButton()
+        {
+            try
+            {
+                if (_btnStamp == null || _summaryPanel == null) return;
+                int margin = 12;
+                _btnStamp.Location = new Point(Math.Max(margin, _summaryPanel.ClientSize.Width - _btnStamp.Width - margin), 8);
+            }
+            catch { }
+        }
+
+        private async System.Threading.Tasks.Task UpdateStampButtonAsync()
+        {
+            try
+            {
+                using (var db = new DatabaseHelper())
+                {
+                    var id = await db.GetRecentOpenWorkEntryIdAsync(_personal.PID, 14);
+                    _openWorkEntryId = id;
+                    bool isOpen = id.HasValue;
+                    _btnStamp.Text = isOpen ? "Abstempeln" : "Anstempeln";
+                    _btnStamp.BackColor = isOpen ? Color.FromArgb(229, 57, 53) : Color.FromArgb(76, 175, 80);
+                    PositionStampButton();
+                }
+            }
+            catch { }
+        }
+
+        private async System.Threading.Tasks.Task OnStampClickAsync()
+        {
+            if (_btnStamp == null) return;
+            Cursor prev = Cursor.Current;
+            try
+            {
+                _btnStamp.Enabled = false;
+                Cursor.Current = Cursors.WaitCursor;
+                using (var db = new DatabaseHelper())
+                {
+                    if (_openWorkEntryId.HasValue)
+                    {
+                        await db.UpdateWorkStopAsync(_openWorkEntryId.Value);
+                    }
+                    else
+                    {
+                        await db.InsertWorkStartAsync(_personal.PID);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                try { MessageBox.Show(this, "Aktion fehlgeschlagen: " + ex.Message, "Zeiterfassung", MessageBoxButtons.OK, MessageBoxIcon.Error); } catch { }
+            }
+            finally
+            {
+                try { Cursor.Current = prev; } catch { }
+                _btnStamp.Enabled = true;
+            }
+            try { Reload(); } catch { }
+            try { await UpdateStampButtonAsync(); } catch { }
         }
 
         private void ShowHelp()
@@ -319,6 +391,8 @@ namespace Geldautomat
                     uiDt.DefaultView.Sort = "Datum ASC, SortTyp ASC, ZeitVon ASC";
                     BindGrid(uiDt.DefaultView);
                 }
+                // update stamp button based on current open entry
+                try { await UpdateStampButtonAsync(); } catch { }
             }
             catch (Exception ex)
             {
