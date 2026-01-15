@@ -99,7 +99,7 @@ namespace Geldautomat
 
             var data = PaymentSettingsStore.Load();
             var felder = data.Felder.ToList();
-            // Platzhalter f�r Zahlungsfeld hinzuf�gen
+            // Platzhalter für Zahlungsfeld hinzufügen
             try
             {
                 felder.Insert(0, new PaymentFieldSetting { Bezeichnung = "Bitte Auswahl treffen", MaxBetrag = 0m, Typ = 2, MwSt = MwStType.Mwst0 });
@@ -120,7 +120,7 @@ namespace Geldautomat
             btnPickFirma.FlatAppearance.BorderSize = 0;
             lblPickedFirma = new Label { Text = "Bitte Auswahl treffen", Location = new Point(btnPickFirma.Right + 12, top + 118), AutoSize = false, Size = new Size(240, 34), Font = new Font("Segoe UI", 12F, FontStyle.Regular), ForeColor = Color.DimGray, Visible = false };
 
-            // Firmenliste aus DB lesen (Helper) + Platzhalter einf�gen
+            // Firmenliste aus DB lesen (Helper) + Platzhalter einfügen
             Load += async (s, e) =>
             {
                 try
@@ -166,17 +166,82 @@ namespace Geldautomat
                         cboFirma.DisplayMember = "ManName";
                         cboFirma.ValueMember = "ManID";
                         cboFirma.DataSource = table;
-                        try { cboFirma.SelectedIndex = 0; } catch { }
-                        try { cboFirma.SelectedValue = DBNull.Value; } catch { }
-                        // Button-Text initial auf "Firma w�hlen" setzen
-                        try { if (btnPickFirma != null) btnPickFirma.Text = "Firma wählen"; } catch { }
-                        // Update touch label
+
+                        // Vorauswahl robust: über gebundene Items zählen und bei genau einem echten Mandanten auswählen
+                        try
+                        {
+                            int realCount = 0; int onlyIndex = -1; object onlyId = null; string onlyName = null;
+                            for (int i = 0; i < cboFirma.Items.Count; i++)
+                            {
+                                var drv = cboFirma.Items[i] as DataRowView;
+                                if (drv == null) continue;
+                                if (drv.Row == null || !drv.Row.Table.Columns.Contains("ManID")) continue;
+                                if (drv.Row["ManID"] == DBNull.Value) continue; // Platzhalter
+                                realCount++;
+                                if (onlyIndex < 0)
+                                {
+                                    onlyIndex = i;
+                                    onlyId = drv.Row["ManID"];
+                                    if (drv.Row.Table.Columns.Contains("ManName"))
+                                        onlyName = Convert.ToString(drv.Row["ManName"]) ?? null;
+                                }
+                                if (realCount > 1) break;
+                            }
+                            if (realCount == 1 && onlyIndex >= 0)
+                            {
+                                // Direkt setzen
+                                cboFirma.SelectedIndex = onlyIndex;
+                                try { if (onlyId != null) cboFirma.SelectedValue = onlyId; } catch { }
+                                try { if (!string.IsNullOrWhiteSpace(onlyName) && btnPickFirma != null) btnPickFirma.Text = onlyName; } catch { }
+                                try { ValidateMaxAmount(); } catch { }
+
+                                // Fallback: nach Binding-Cycle nochmal setzen
+                                try
+                                {
+                                    BeginInvoke((Action)(() =>
+                                    {
+                                        try
+                                        {
+                                            if (onlyIndex >= 0) cboFirma.SelectedIndex = onlyIndex;
+                                            if (onlyId != null) cboFirma.SelectedValue = onlyId;
+                                            if (!string.IsNullOrWhiteSpace(onlyName) && btnPickFirma != null) btnPickFirma.Text = onlyName;
+                                        }
+                                        catch { }
+                                        try { ValidateMaxAmount(); } catch { }
+                                    }));
+                                }
+                                catch { }
+                            }
+                            else
+                            {
+                                cboFirma.SelectedIndex = 0;
+                                try { cboFirma.SelectedValue = DBNull.Value; } catch { }
+                                try { if (btnPickFirma != null) btnPickFirma.Text = "Firma wählen"; } catch { }
+                            }
+                        }
+                        catch { try { cboFirma.SelectedIndex = 0; } catch { } }
+
+                        // Button-Text initial setzen
+                        try
+                        {
+                            if (btnPickFirma != null)
+                            {
+                                if (cboFirma.SelectedIndex > 0 && cboFirma.SelectedItem is DataRowView drv && drv.Row.Table.Columns.Contains("ManName"))
+                                    btnPickFirma.Text = Convert.ToString(drv.Row["ManName"]) ?? "Firma wählen";
+                                else
+                                    btnPickFirma.Text = "Firma wählen";
+                            }
+                        }
+                        catch { }
+
+                        // Update touch label (bleibt Hinweistext)
                         try { lblPickedFirma.Text = Convert.ToString((table.Rows[0]["ManName"])) ?? "Bitte Auswahl treffen"; } catch { }
                     }
                 }
                 catch { }
                 PositionActionButtons();
                 try { ValidateMaxAmount(); } catch { }
+                try { BeginInvoke((Action)(() => ValidateMaxAmount())); } catch { }
             };
 
             btnSave = new Button { Text = "Zahlung anlegen", Location = new Point(ClientSize.Width - 240, ClientSize.Height - 80), Size = new Size(220, 46), BackColor = Color.FromArgb(46, 125, 50), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 14F, FontStyle.Bold), Anchor = AnchorStyles.Right | AnchorStyles.Bottom };
@@ -200,7 +265,27 @@ namespace Geldautomat
                     MessageBox.Show(this, $"Maximal erlaubter Betrag: {feld.MaxBetrag:N2}");
                     return;
                 }
-                if (cboFirma.SelectedValue == null || cboFirma.SelectedIndex == 0)
+
+                // Firma valide ausgewählt?
+                bool firmaOk = false; int firmIdFromItem = 0;
+                try
+                {
+                    if (cboFirma.SelectedIndex > 0)
+                    {
+                        var val = cboFirma.SelectedValue;
+                        if (val != null && val != DBNull.Value && !string.IsNullOrWhiteSpace(Convert.ToString(val)))
+                        {
+                            firmaOk = true;
+                        }
+                        else if (cboFirma.SelectedItem is DataRowView drv && drv.Row != null && drv.Row.Table.Columns.Contains("ManID") && drv.Row["ManID"] != DBNull.Value)
+                        {
+                            int.TryParse(Convert.ToString(drv.Row["ManID"]), out firmIdFromItem);
+                            firmaOk = firmIdFromItem > 0;
+                        }
+                    }
+                }
+                catch { }
+                if (!firmaOk)
                 {
                     MessageBox.Show(this, "Bitte Firma wählen.");
                     return;
@@ -210,8 +295,8 @@ namespace Geldautomat
                 switch (feld.MwSt)
                 {
                     case MwStType.Mwst19: b19 = betrag; break;
-                    case MwStType.Mwst7: b7 = betrag; break;
-                    case MwStType.Mwst0: b0 = betrag; break;
+                    case MwStType.Mwst7:  b7  = betrag; break;
+                    case MwStType.Mwst0:  b0  = betrag; break;
                 }
 
                 try
@@ -234,11 +319,22 @@ namespace Geldautomat
                     string vorgabe = !string.IsNullOrWhiteSpace(feld.Buchungstext) ? feld.Buchungstext.Trim() : (feld.Bezeichnung ?? string.Empty).Trim();
                     string buchungstext = string.IsNullOrWhiteSpace(mitarbeiter) ? vorgabe : ($"{mitarbeiter}-{vorgabe}");
 
-                    // Insert via DatabaseHelper
+                    // Firmen-ID robust bestimmen
+                    int firmenId = 0;
+                    try
+                    {
+                        var val = cboFirma.SelectedValue;
+                        if (val != null && val != DBNull.Value && !string.IsNullOrWhiteSpace(Convert.ToString(val)))
+                            firmenId = Convert.ToInt32(val);
+                        else if (firmIdFromItem > 0) firmenId = firmIdFromItem;
+                        else if (cboFirma.SelectedItem is DataRowView drv2 && drv2.Row != null && drv2.Row.Table.Columns.Contains("ManID") && drv2.Row["ManID"] != DBNull.Value)
+                            firmenId = Convert.ToInt32(drv2.Row["ManID"]);
+                    }
+                    catch { }
+
                     using (var db = new DatabaseHelper())
                     {
                         byte typ = (feld.Typ == 3) ? (byte)3 : (byte)2;
-                        int firmenId = Convert.ToInt32(cboFirma.SelectedValue);
                         int? k1 = ToNullableInt(feld.Kost1);
                         int? k2 = ToNullableInt(feld.Kost2);
                         int? kto = ToNullableInt(feld.Konto);
@@ -255,11 +351,11 @@ namespace Geldautomat
                 }
             };
             
-            // Validierung bei �nderungen
+            // Validierung bei Änderungen
             cboFelder.SelectedIndexChanged += (s, e) => ValidateMaxAmount();
             numBetrag.ValueChanged += (s, e) => ValidateMaxAmount();
             cboFirma.SelectedIndexChanged += (s, e) => ValidateMaxAmount();
-            // Initial pr�fen
+            // Initial prüfen
             ValidateMaxAmount();
 
             // Buttons nach Resize korrekt positionieren
@@ -268,14 +364,14 @@ namespace Geldautomat
             Controls.Add(lblFeld);
             Controls.Add(cboFelder);
             Controls.Add(btnPickFeld);
-            // Hinweis-Label f�r Feld-Auswahl wird nicht mehr verwendet
+            // Hinweis-Label für Feld-Auswahl wird nicht mehr verwendet
             Controls.Add(lblBetrag);
             Controls.Add(numBetrag);
             Controls.Add(btnKeypad);
             Controls.Add(lblFirma);
             Controls.Add(cboFirma);
             Controls.Add(btnPickFirma);
-            // Hinweis-Label f�r Firma wird nicht mehr angezeigt
+            // Hinweis-Label für Firma wird nicht mehr angezeigt
             Controls.Add(btnSave);
 
             // Touch pick handlers
@@ -289,7 +385,6 @@ namespace Geldautomat
                 {
                     var feld = cboFelder.SelectedItem as PaymentFieldSetting;
                     bool hasSelection = feld != null && cboFelder.SelectedIndex > 0;
-                    // Update button caption to selected value
                     if (btnPickFeld != null)
                     {
                         btnPickFeld.Text = hasSelection ? (feld?.Bezeichnung ?? "Feld wählen") : "Feld wählen";
@@ -345,7 +440,7 @@ namespace Geldautomat
             catch { return null; }
         }
 
-        // Ziffernfeld mit Komma � Eingabe in Euro (5 = 5,00 �)
+        // Ziffernfeld mit Komma – Eingabe in Euro (5 = 5,00 €)
 
         private int? ToNullableInt(string s)
         {
@@ -389,7 +484,6 @@ namespace Geldautomat
                         var input = txt.Text?.Trim();
                         if (!string.IsNullOrEmpty(input))
                         {
-                            // Akzeptiere sowohl Komma als auch Punkt als Dezimaltrenner
                             input = input.Replace('.', ',');
                             if (decimal.TryParse(input, out var euro))
                             {
@@ -412,14 +506,25 @@ namespace Geldautomat
                 var feld = cboFelder.SelectedItem as PaymentFieldSetting;
                 if (feld == null) { btnSave.Enabled = false; return; }
                 var betrag = numBetrag.Value;
-                bool ok = betrag > 0 && betrag <= (cboFelder.SelectedIndex > 0 ? feld.MaxBetrag : 0m);
-                // Firma muss gew�hlt sein (nicht Platzhalter an Index 0)
-                if (cboFirma.SelectedIndex == 0 || cboFirma.SelectedValue == null)
-                    ok = false;
-                // Zahlungsfeld muss gew�hlt sein
-                if (cboFelder.SelectedIndex == 0)
-                    ok = false;
-                btnSave.Enabled = ok;
+
+                bool fieldOk = cboFelder.SelectedIndex > 0 && feld != null;
+                bool amountOk = betrag > 0 && (fieldOk ? betrag <= feld.MaxBetrag : false);
+
+                // Firma ausgewählt prüfen (robust gegen DBNull / leere Strings / temporäre Binding-Zustände)
+                bool firmaOk = false;
+                try
+                {
+                    if (cboFirma.SelectedIndex > 0)
+                    {
+                        var val = cboFirma.SelectedValue;
+                        if (val != null && val != DBNull.Value && !string.IsNullOrWhiteSpace(Convert.ToString(val))) firmaOk = true;
+                        else if (cboFirma.SelectedItem is DataRowView drv && drv.Row != null && drv.Row.Table.Columns.Contains("ManID") && drv.Row["ManID"] != DBNull.Value)
+                            firmaOk = true;
+                    }
+                }
+                catch { }
+
+                btnSave.Enabled = fieldOk && amountOk && firmaOk;
             }
             catch { }
         }
@@ -625,7 +730,7 @@ namespace Geldautomat
                     }
                     else
                     {
-                        // W�hle explizit den Index der Firma im Combo (nicht nur SelectedValue)
+                        // Wähle explizit den Index der Firma im Combo (nicht nur SelectedValue)
                         try
                         {
                             int targetIndex = -1;
@@ -648,7 +753,7 @@ namespace Geldautomat
                                     }
                                 }
                             }
-                            // Fallback: �ber Namen suchen
+                            // Fallback: über Namen suchen
                             if (targetIndex < 0)
                             {
                                 for (int i = 0; i < cboFirma.Items.Count; i++)
@@ -665,7 +770,7 @@ namespace Geldautomat
                                     }
                                 }
                             }
-                            // Setze nur wenn g�ltig (>0, nicht Platzhalter)
+                            // Setze nur wenn gültig (>0, nicht Platzhalter)
                             cboFirma.SelectedIndex = (targetIndex <= 0) ? Math.Max(1, targetIndex) : targetIndex;
                         }
                         catch { cboFirma.SelectedValue = id; }
