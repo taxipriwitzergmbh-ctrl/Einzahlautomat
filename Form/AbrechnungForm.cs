@@ -2245,7 +2245,8 @@ namespace Geldautomat
             decimal raw19 = Math.Abs(Convert.ToDecimal(row["Betrag19"])); decimal raw7 = Math.Abs(Convert.ToDecimal(row["Betrag7"])); decimal raw0 = Math.Abs(Convert.ToDecimal(row["Betrag0"]));
             if (_currentZahlungIstEinzahlung)
             {
-                decimal summe = raw19 + raw7 + raw0; lblB19.Text = $"19%: {raw19:C2}"; lblB7.Text = $"7%: {raw7:C2}"; lblB0.Text = $"0%: {raw0:C2}"; lblSumme.Text = $"Summe: {summe:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}";
+                decimal summe = raw19 + raw7 + raw0;
+                lblB19.Text = $"19%: {raw19:C2}"; lblB7.Text = $"7%: {raw7:C2}"; lblB0.Text = $"0%: {raw0:C2}"; lblSumme.Text = $"Summe: {summe:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}";
                 var rest = Math.Max(0m, summe - _eingezahltSession); var noch = Math.Max(0m, rest - _personalGuthaben);
                 lblNoch.Text = $"Noch zu zahlen: {noch:C2}"; try { lblNoch.ForeColor = (noch > 0m) ? Color.Red : Color.Green; } catch { }
                 UpdateBuchenEnabled();
@@ -2355,10 +2356,27 @@ namespace Geldautomat
                     try
                     {
                         btnSchichtAuswahl.Visible = _auswahlItems != null && _auswahlItems.Count > 1; if (_auswahlItems == null || _auswahlItems.Count == 0) { _details = null; _currentAuszahlungRow = null; lblBelegInfo.Text = string.Empty; lblB19.Text = "19%: 0,00 €"; lblB7.Text = "7%: 0,00 €"; lblB0.Text = "0%: 0,00 €"; lblSumme.Text = "Summe: 0,00 €"; lblNoch.Text = "Noch zu zahlen: 0,00 €"; UpdateBuchenEnabled(); return; }
-                        var nextShift = _auswahlItems.Where(a => a.Schicht != null).OrderBy(a => a.Schicht.StartZeit).FirstOrDefault(); if (nextShift != null) { LadeSchicht(nextShift.Schicht); return; }
-                        DataRow nextPay = null; DateTime? min = null; foreach (var ai in _auswahlItems.Where(a => a.Auszahlung != null)) { var row = ai.Auszahlung; DateTime t = (row.Table.Columns.Contains("ErfasstAm") && row["ErfasstAm"] != DBNull.Value) ? Convert.ToDateTime(row["ErfasstAm"]) : DateTime.MinValue; if (!min.HasValue || t < min.Value) { min = t; nextPay = row; } }
-                        if (nextPay != null) { _currentAuszahlungRow = nextPay; _currentZahlungIstEinzahlung = false; return; }
-                        lblBelegInfo.Text = string.Empty; UpdateBuchenEnabled();
+                        var nextShift = _auswahlItems.Where(a => a.Schicht != null).OrderBy(a => a.Schicht.StartZeit).FirstOrDefault();
+                        if (nextShift != null)
+                        {
+                            LadeSchicht(nextShift.Schicht);
+                            return;
+                        }
+                        DataRow nextPay = null; DateTime? min = null;
+                        foreach (var ai in _auswahlItems.Where(a => a.Auszahlung != null))
+                        {
+                            var row = ai.Auszahlung;
+                            DateTime t = (row.Table.Columns.Contains("ErfasstAm") && row["ErfasstAm"] != DBNull.Value) ? Convert.ToDateTime(row["ErfasstAm"]) : DateTime.MinValue;
+                            if (!min.HasValue || t < min.Value) { min = t; nextPay = row; }
+                        }
+                        if (nextPay != null)
+                        {
+                            // WICHTIG: korrekt laden, damit Typ (Einzahlung/Auszahlung) gesetzt wird
+                            LadeAuszahlung(nextPay);
+                            return;
+                        }
+                        lblBelegInfo.Text = string.Empty;
+                        UpdateBuchenEnabled();
                     }
                     catch { try { lblBelegInfo.Text = string.Empty; } catch { } }
                 }
