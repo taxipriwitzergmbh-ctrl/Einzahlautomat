@@ -266,26 +266,8 @@ namespace Geldautomat
                     return;
                 }
 
-                // Firma valide ausgewählt?
-                bool firmaOk = false; int firmIdFromItem = 0;
-                try
-                {
-                    if (cboFirma.SelectedIndex > 0)
-                    {
-                        var val = cboFirma.SelectedValue;
-                        if (val != null && val != DBNull.Value && !string.IsNullOrWhiteSpace(Convert.ToString(val)))
-                        {
-                            firmaOk = true;
-                        }
-                        else if (cboFirma.SelectedItem is DataRowView drv && drv.Row != null && drv.Row.Table.Columns.Contains("ManID") && drv.Row["ManID"] != DBNull.Value)
-                        {
-                            int.TryParse(Convert.ToString(drv.Row["ManID"]), out firmIdFromItem);
-                            firmaOk = firmIdFromItem > 0;
-                        }
-                    }
-                }
-                catch { }
-                if (!firmaOk)
+                // Firma muss mind. ausgewählt sein (Index > 0)
+                if (cboFirma.SelectedIndex <= 0)
                 {
                     MessageBox.Show(this, "Bitte Firma wählen.");
                     return;
@@ -301,7 +283,6 @@ namespace Geldautomat
 
                 try
                 {
-                    // PersId und Mitarbeitername ermitteln
                     int persId = 0; string mitarbeiter = null;
                     try { persId = AbrechnungForm.CurrentPersonalId; } catch { }
                     try
@@ -315,7 +296,6 @@ namespace Geldautomat
                     }
                     catch { }
 
-                    // Buchungstext: Mitarbeiter - Vorgabe (nur Vorgabetext; Bezeichnung dient nur der Auswahl)
                     string vorgabe = !string.IsNullOrWhiteSpace(feld.Buchungstext) ? feld.Buchungstext.Trim() : (feld.Bezeichnung ?? string.Empty).Trim();
                     string buchungstext = string.IsNullOrWhiteSpace(mitarbeiter) ? vorgabe : ($"{mitarbeiter}-{vorgabe}");
 
@@ -326,7 +306,6 @@ namespace Geldautomat
                         var val = cboFirma.SelectedValue;
                         if (val != null && val != DBNull.Value && !string.IsNullOrWhiteSpace(Convert.ToString(val)))
                             firmenId = Convert.ToInt32(val);
-                        else if (firmIdFromItem > 0) firmenId = firmIdFromItem;
                         else if (cboFirma.SelectedItem is DataRowView drv2 && drv2.Row != null && drv2.Row.Table.Columns.Contains("ManID") && drv2.Row["ManID"] != DBNull.Value)
                             firmenId = Convert.ToInt32(drv2.Row["ManID"]);
                     }
@@ -397,7 +376,7 @@ namespace Geldautomat
                 try
                 {
                     if (btnPickFirma == null) return;
-                    // Platzhalter (Index 0) -> "Firma w�hlen"
+                    // Platzhalter (Index 0) -> "Firma wählen"
                     if (cboFirma.SelectedIndex <= 0)
                     {
                         btnPickFirma.Text = "Firma wählen";
@@ -510,19 +489,32 @@ namespace Geldautomat
                 bool fieldOk = cboFelder.SelectedIndex > 0 && feld != null;
                 bool amountOk = betrag > 0 && (fieldOk ? betrag <= feld.MaxBetrag : false);
 
-                // Firma ausgewählt prüfen (robust gegen DBNull / leere Strings / temporäre Binding-Zustände)
+                // Firma gilt als gewählt, sobald ein Eintrag >0 selektiert ist (Binding-Zwischenzustände ignorieren)
+                // Zusätzlich: Wenn SelectedItem einen gültigen ManID-Wert hat, auch dann als gewählt behandeln
                 bool firmaOk = false;
-                try
+                if (cboFirma != null)
                 {
                     if (cboFirma.SelectedIndex > 0)
                     {
-                        var val = cboFirma.SelectedValue;
-                        if (val != null && val != DBNull.Value && !string.IsNullOrWhiteSpace(Convert.ToString(val))) firmaOk = true;
-                        else if (cboFirma.SelectedItem is DataRowView drv && drv.Row != null && drv.Row.Table.Columns.Contains("ManID") && drv.Row["ManID"] != DBNull.Value)
+                        firmaOk = true;
+                    }
+                    else
+                    {
+                        var drv = cboFirma.SelectedItem as DataRowView;
+                        if (drv != null && drv.Row != null && drv.Row.Table.Columns.Contains("ManID") && drv.Row["ManID"] != DBNull.Value)
+                        {
+                            // SelectedItem hat gültige ManID (z.B. wenn Binding den Index temporär auf 0 setzt)
                             firmaOk = true;
+                        }
+                        else
+                        {
+                            // Prüfe SelectedValue direkt
+                            var val = cboFirma.SelectedValue;
+                            if (val != null && val != DBNull.Value && !string.IsNullOrWhiteSpace(Convert.ToString(val)))
+                                firmaOk = true;
+                        }
                     }
                 }
-                catch { }
 
                 btnSave.Enabled = fieldOk && amountOk && firmaOk;
             }
