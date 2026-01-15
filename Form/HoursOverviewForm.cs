@@ -125,6 +125,9 @@ namespace Geldautomat
         // stamp button
         private Button _btnStamp;
         private int? _openWorkEntryId;
+        // pause button
+        private Button _btnPause;
+        private int? _openPauseEntryId;
 
         public HoursOverviewForm(PersonalInfo personal)
         {
@@ -225,8 +228,15 @@ namespace Geldautomat
             _btnStamp.FlatAppearance.BorderSize = 0;
             _btnStamp.Click += async (s, e) => await OnStampClickAsync();
             _summaryPanel.Controls.Add(_btnStamp);
-            _summaryPanel.Resize += (s, e) => PositionStampButton();
-            PositionStampButton();
+
+            // Pause button: visible only when work is running (Abstempeln shown)
+            _btnPause = new Button { Text = "Pause starten", AutoSize = false, Size = new Size(160, 36), BackColor = Color.FromArgb(255, 167, 38), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Anchor = AnchorStyles.Top | AnchorStyles.Right, Visible = false };
+            _btnPause.FlatAppearance.BorderSize = 0;
+            _btnPause.Click += async (s, e) => await OnPauseClickAsync();
+            _summaryPanel.Controls.Add(_btnPause);
+
+            _summaryPanel.Resize += (s, e) => { PositionStampButton(); PositionPauseButton(); };
+            PositionStampButton(); PositionPauseButton();
 
             _grid = new DataGridView
             {
@@ -264,6 +274,25 @@ namespace Geldautomat
             catch { }
         }
 
+        private void PositionPauseButton()
+        {
+            try
+            {
+                if (_btnPause == null || _summaryPanel == null) return;
+                // place to the left of stamp button
+                int spacing = 8;
+                if (_btnStamp != null)
+                {
+                    _btnPause.Location = new Point(Math.Max(12, _btnStamp.Left - spacing - _btnPause.Width), _btnStamp.Top);
+                }
+                else
+                {
+                    _btnPause.Location = new Point(Math.Max(12, _summaryPanel.ClientSize.Width - _btnPause.Width - 12), 8);
+                }
+            }
+            catch { }
+        }
+
         private async System.Threading.Tasks.Task UpdateStampButtonAsync()
         {
             try
@@ -275,7 +304,29 @@ namespace Geldautomat
                     bool isOpen = id.HasValue;
                     _btnStamp.Text = isOpen ? "Abstempeln" : "Anstempeln";
                     _btnStamp.BackColor = isOpen ? Color.FromArgb(229, 57, 53) : Color.FromArgb(76, 175, 80);
-                    PositionStampButton();
+                    // pause button visible only when work is open
+                    _btnPause.Visible = isOpen;
+                    PositionStampButton(); PositionPauseButton();
+                }
+            }
+            catch { }
+            await UpdatePauseButtonAsync();
+        }
+
+        private async System.Threading.Tasks.Task UpdatePauseButtonAsync()
+        {
+            try
+            {
+                if (_btnPause == null || !_btnPause.Visible) return;
+                using (var db = new DatabaseHelper())
+                {
+                    var pid = _personal.PID;
+                    var id = await db.GetRecentOpenPauseEntryIdAsync(pid, 14);
+                    _openPauseEntryId = id;
+                    bool pauseOpen = id.HasValue;
+                    _btnPause.Text = pauseOpen ? "Pause beenden" : "Pause starten";
+                    _btnPause.BackColor = pauseOpen ? Color.FromArgb(229, 57, 53) : Color.FromArgb(255, 167, 38);
+                    PositionPauseButton();
                 }
             }
             catch { }
@@ -312,6 +363,39 @@ namespace Geldautomat
             }
             try { Reload(); } catch { }
             try { await UpdateStampButtonAsync(); } catch { }
+        }
+
+        private async System.Threading.Tasks.Task OnPauseClickAsync()
+        {
+            if (_btnPause == null) return;
+            Cursor prev = Cursor.Current;
+            try
+            {
+                _btnPause.Enabled = false;
+                Cursor.Current = Cursors.WaitCursor;
+                using (var db = new DatabaseHelper())
+                {
+                    if (_openPauseEntryId.HasValue)
+                    {
+                        await db.UpdatePauseStopAsync(_openPauseEntryId.Value);
+                    }
+                    else
+                    {
+                        await db.InsertPauseStartAsync(_personal.PID);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                try { MessageBox.Show(this, "Aktion fehlgeschlagen: " + ex.Message, "Zeiterfassung", MessageBoxButtons.OK, MessageBoxIcon.Error); } catch { }
+            }
+            finally
+            {
+                try { Cursor.Current = prev; } catch { }
+                _btnPause.Enabled = true;
+            }
+            try { Reload(); } catch { }
+            try { await UpdatePauseButtonAsync(); } catch { }
         }
 
         private void ShowHelp()

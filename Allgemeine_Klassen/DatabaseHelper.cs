@@ -409,6 +409,49 @@ namespace Geldautomat
             }
         }
 
+        // NEW: Pause stempeln (Typ=106)
+        public async Task<int?> GetRecentOpenPauseEntryIdAsync(int pid, int hours)
+        {
+            await EnsureOpenAsync().ConfigureAwait(false);
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = @"SELECT TOP 1 AutoID FROM THistoryZeiterfassung WITH (NOLOCK)
+                                    WHERE PID=@PID AND Typ=106 AND ZeitVon >= DATEADD(HOUR, -@HOURS, SYSDATETIME())
+                                      AND (ZeitBis IS NULL OR ZeitBis <= '19000101')
+                                    ORDER BY ZeitVon DESC";
+                cmd.Parameters.AddWithValue("@PID", pid);
+                cmd.Parameters.AddWithValue("@HOURS", hours);
+                var o = await cmd.ExecuteScalarAsync().ConfigureAwait(false);
+                if (o == null || o == DBNull.Value) return null;
+                try { return Convert.ToInt32(o); } catch { return null; }
+            }
+        }
+
+        public async Task<int> InsertPauseStartAsync(int pid)
+        {
+            await EnsureOpenAsync().ConfigureAwait(false);
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = @"INSERT INTO THistoryZeiterfassung (Typ,ZeitVon,ZeitBis,PID,FID,Bemerkung,ZeitAnlage,UserAnlage,ZeitBearbeitet,UserBearbeitet)
+                                    VALUES (106,SYSDATETIME(),'19000101',@PID,0,'Automat',SYSDATETIME(),0,SYSDATETIME(),0);
+                                    SELECT SCOPE_IDENTITY();";
+                cmd.Parameters.AddWithValue("@PID", pid);
+                var o = await cmd.ExecuteScalarAsync().ConfigureAwait(false);
+                return Convert.ToInt32(Convert.ToDecimal(o));
+            }
+        }
+
+        public async Task<int> UpdatePauseStopAsync(int autoId)
+        {
+            await EnsureOpenAsync().ConfigureAwait(false);
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = @"UPDATE THistoryZeiterfassung SET ZeitBis=SYSDATETIME(), ZeitBearbeitet=SYSDATETIME(), UserBearbeitet=0 WHERE AutoID=@ID";
+                cmd.Parameters.AddWithValue("@ID", autoId);
+                return await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+            }
+        }
+
         public async Task MarkZahlungAlsVerbuchtAsync(int belegnummer)
         { await EnsureOpenAsync().ConfigureAwait(false); using (var cmd=_connection.CreateCommand()) { cmd.CommandText="UPDATE TKassenbuchZahlungen SET Verbucht=1, DeviceID=@DID WHERE Belegnummer=@bnr"; cmd.Parameters.AddWithValue("@DID", CurrentDeviceId); cmd.Parameters.AddWithValue("@bnr", belegnummer); await cmd.ExecuteNonQueryAsync().ConfigureAwait(false); } }
 
