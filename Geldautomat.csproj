@@ -330,24 +330,25 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Geldautomat_Win11.ico" />
-    <Content Include="Resources\100euro.jpg" />
-    <Content Include="Resources\10cent.bmp" />
-    <Content Include="Resources\10euro.jpg" />
-    <Content Include="Resources\1euro.bmp" />
-    <Content Include="Resources\20cent.bmp" />
-    <Content Include="Resources\20euro.jpg" />
-    <Content Include="Resources\2cent.png" />
-    <Content Include="Resources\2cent1.png" />
-    <Content Include="Resources\2euro.bmp" />
-    <Content Include="Resources\500euro.jpg" />
-    <Content Include="Resources\50cent.bmp" />
-    <Content Include="Resources\50euro.jpg" />
-    <Content Include="Resources\5cent.png" />
-    <Content Include="Resources\5cent1.png" />
-    <Content Include="Resources\5euro.jpg" />
-    <Content Include="Resources\Geldautomat_Win11.ico" />
-    <Content Include="Resources\Hintergrund.png" />
-    <Content Include="Resources\NFC.png" />
+    <Content Include="Ressourcen\100euro.jpg" />
+    <Content Include="Ressourcen\10cent.bmp" />
+    <Content Include="Ressourcen\10euro.jpg" />
+    <Content Include="Ressourcen\1cent.png" />
+    <Content Include="Ressourcen\1euro.bmp" />
+    <Content Include="Ressourcen\20cent.bmp" />
+    <Content Include="Ressourcen\20euro.jpg" />
+    <Content Include="Ressourcen\2cent.png" />
+    <Content Include="Ressourcen\2cent1.png" />
+    <Content Include="Ressourcen\2euro.bmp" />
+    <Content Include="Ressourcen\500euro.jpg" />
+    <Content Include="Ressourcen\50cent.bmp" />
+    <Content Include="Ressourcen\50euro.jpg" />
+    <Content Include="Ressourcen\5cent.png" />
+    <Content Include="Ressourcen\5cent1.png" />
+    <Content Include="Ressourcen\5euro.jpg" />
+    <Content Include="Ressourcen\Geldautomat_Win11.ico" />
+    <Content Include="Ressourcen\Hintergrund.png" />
+    <Content Include="Ressourcen\NFC.png" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Kassenclient Version 1.0\Version 1.0\TaMi-Kassenclient.csproj">
