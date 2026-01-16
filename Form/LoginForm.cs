@@ -94,8 +94,18 @@ namespace Geldautomat
                 if (!stored.StartsWith("enc:", StringComparison.Ordinal)) return stored; // backward plaintext
                 var b64 = stored.Substring(4);
                 var protectedBytes = Convert.FromBase64String(b64);
-                var unprotected = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
-                return Encoding.UTF8.GetString(unprotected);
+                // First try LocalMachine (current format)
+                try
+                {
+                    var unprotectedLm = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.LocalMachine);
+                    return Encoding.UTF8.GetString(unprotectedLm);
+                }
+                catch
+                {
+                    // Fallback: try CurrentUser for legacy values
+                    var unprotectedCu = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
+                    return Encoding.UTF8.GetString(unprotectedCu);
+                }
             }
             catch { return string.Empty; }
         }

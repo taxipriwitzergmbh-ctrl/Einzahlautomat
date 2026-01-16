@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -49,7 +49,7 @@ namespace Geldautomat
         {
             _personal = personal ?? throw new ArgumentNullException(nameof(personal));
             BuildUi();
-            try { AppLogger.Log($"Dokumente geöffnet: PID={_personal.PID}, Name={_personal.Vorname} {_personal.Name}"); } catch { }
+            try { AppLogger.Log($"Dokumente geï¿½ffnet: PID={_personal.PID}, Name={_personal.Vorname} {_personal.Name}"); } catch { }
             _root = GetDocStoreRoot();
             if (string.IsNullOrWhiteSpace(_root))
             {
@@ -117,7 +117,7 @@ namespace Geldautomat
                 { e.Graphics.FillRectangle(brush, _previewHeader.ClientRectangle); }
             };
             _previewOverlay.Controls.Add(_previewHeader);
-            _btnClosePreview = new Button { Text = "Schließen", Dock = DockStyle.Right, Width = 120, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(229,57,53), ForeColor = Color.White };
+            _btnClosePreview = new Button { Text = "Schlieï¿½en", Dock = DockStyle.Right, Width = 120, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(229,57,53), ForeColor = Color.White };
             _btnClosePreview.FlatAppearance.BorderSize = 0;
             _btnClosePreview.Click += (s, e) => HidePreview();
             _previewHeader.Controls.Add(_btnClosePreview);
@@ -141,7 +141,7 @@ namespace Geldautomat
                     try { loaded = _pdfViewer.ReadyState == WebBrowserReadyState.Complete && _pdfViewer.Document != null; } catch { loaded = false; }
                     if (!loaded && !string.IsNullOrEmpty(_currentPreviewPath))
                     {
-                        // Fallback: extern öffnen
+                        // Fallback: extern ï¿½ffnen
                         HidePreview();
                         OpenExternal(_currentPreviewPath);
                     }
@@ -423,7 +423,7 @@ namespace Geldautomat
             var lblDate = new Label { Text = dt.ToString("dd.MM.yyyy HH:mm"), AutoSize = false, Location = new Point(12, 80), Size = new Size(216, 22), Font = new Font("Segoe UI", 10F), ForeColor = Color.Gray };
             pnl.Controls.Add(lblDate);
 
-            var btnOpen = new Button { Text = "Öffnen", Location = new Point(12, 110), Size = new Size(104, 36), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Tag = filePath, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
+            var btnOpen = new Button { Text = "ï¿½ffnen", Location = new Point(12, 110), Size = new Size(104, 36), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Tag = filePath, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
             btnOpen.FlatAppearance.BorderSize = 0; btnOpen.Click += (s, e) => OpenPath((string)((Button)s).Tag);
             pnl.Controls.Add(btnOpen);
             var btnPrint = new Button { Text = "Drucken", Location = new Point(124, 110), Size = new Size(104, 36), BackColor = Color.FromArgb(76, 175, 80), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Tag = filePath, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
@@ -453,7 +453,7 @@ namespace Geldautomat
                 if (mailCfg == null || !mailCfg.IsConfigured) { MessageBox.Show(this, "Maileinstellungen sind nicht konfiguriert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                 if (!ShowMailConsentDialog(employeeMail)) return;
 
-                try { AppLogger.Log($"Dokumente: E-Mail-Versand gestartet – Datei='{Path.GetFileName(path)}' an '{employeeMail}'"); } catch { }
+                try { AppLogger.Log($"Dokumente: E-Mail-Versand gestartet ï¿½ Datei='{Path.GetFileName(path)}' an '{employeeMail}'"); } catch { }
                 Cursor prev = Cursor.Current; Cursor.Current = Cursors.WaitCursor;
                 try
                 {
@@ -476,7 +476,7 @@ namespace Geldautomat
                             client.Send(msg);
                         }
                     }
-                    try { AppLogger.Log($"Dokumente: E-Mail gesendet – Datei='{Path.GetFileName(path)}' an '{employeeMail}'"); } catch { }
+                    try { AppLogger.Log($"Dokumente: E-Mail gesendet ï¿½ Datei='{Path.GetFileName(path)}' an '{employeeMail}'"); } catch { }
                     MessageBox.Show(this, "E-Mail wurde gesendet.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
@@ -557,13 +557,13 @@ namespace Geldautomat
                 var body = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(20, 20 + topOffset, 20, 20), AutoScroll = true };
                 dlg.Controls.Add(body);
 
-                var lblMail = new Label { Text = "Empfänger: " + email, AutoSize = true, Font = new Font("Segoe UI", 12.5F), Dock = DockStyle.Top, Padding = new Padding(0, 0, 0, 10) };
+                var lblMail = new Label { Text = "Empfï¿½nger: " + email, AutoSize = true, Font = new Font("Segoe UI", 12.5F), Dock = DockStyle.Top, Padding = new Padding(0, 0, 0, 10) };
                 body.Controls.Add(lblMail);
 
                 int calcWidth() { return Math.Max(320, body.ClientSize.Width - body.Padding.Horizontal); }
                 var info = new Label
                 {
-                    Text = "Hinweis: Der Versand per E-Mail kann Datenschutzrisiken bergen (Weiterleitung, ungesicherte Postfächer). Ich bin einverstanden, dass mir das Dokument an die oben angezeigte Adresse zugesendet wird.",
+                    Text = "Hinweis: Der Versand per E-Mail kann Datenschutzrisiken bergen (Weiterleitung, ungesicherte Postfï¿½cher). Ich bin einverstanden, dass mir das Dokument an die oben angezeigte Adresse zugesendet wird.",
                     AutoSize = true,
                     MaximumSize = new Size(640, 0),
                     Font = new Font("Segoe UI", 11.5F),
@@ -656,7 +656,7 @@ namespace Geldautomat
         private static string Truncate(string s, int max)
         {
             if (string.IsNullOrEmpty(s) || s.Length <= max) return s;
-            return s.Substring(0, Math.Max(0, max - 1)) + "…";
+            return s.Substring(0, Math.Max(0, max - 1)) + "ï¿½";
         }
 
         private string GetDocStoreRoot()
@@ -688,7 +688,7 @@ namespace Geldautomat
                 if (string.IsNullOrWhiteSpace(path)) return;
                 string full = Path.GetFullPath(path);
                 string rootFull = Path.GetFullPath(_root);
-                if (!full.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase)) return; // nicht über Root
+                if (!full.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase)) return; // nicht ï¿½ber Root
                 if (!Directory.Exists(full)) return;
                 _currentPath = full;
                 HidePreview();
@@ -879,7 +879,7 @@ namespace Geldautomat
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "Öffnen fehlgeschlagen: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, "ï¿½ffnen fehlgeschlagen: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -888,7 +888,7 @@ namespace Geldautomat
             try
             {
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
-                try { AppLogger.Log($"Dokument geöffnet: '{Path.GetFileName(path)}'"); } catch { }
+                try { AppLogger.Log($"Dokument geï¿½ffnet: '{Path.GetFileName(path)}'"); } catch { }
                 if (IsPdf(path) || IsImage(path))
                 {
                     ShowPreview(path);
@@ -898,7 +898,7 @@ namespace Geldautomat
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "Öffnen fehlgeschlagen: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, "ï¿½ffnen fehlgeschlagen: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -918,7 +918,7 @@ namespace Geldautomat
                         var ps = new PrinterSettings { PrinterName = printer };
                         if (!ps.IsValid)
                         {
-                            MessageBox.Show(this, "Der konfigurierte Drucker ist ungültig oder nicht erreichbar: " + printer, "Drucker", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            MessageBox.Show(this, "Der konfigurierte Drucker ist ungï¿½ltig oder nicht erreichbar: " + printer, "Drucker", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             return;
                         }
                     }
@@ -948,7 +948,7 @@ namespace Geldautomat
                 }
 
                 // Unknown types are not supported
-                MessageBox.Show(this, "Dieser Dateityp wird zum Drucken nicht unterstützt.", "Druckfehler", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, "Dieser Dateityp wird zum Drucken nicht unterstï¿½tzt.", "Druckfehler", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             catch (Exception ex)
             {
@@ -980,7 +980,7 @@ namespace Geldautomat
 
                 var title = new Label
                 {
-                    Text = "PDF-Drucker benötigt",
+                    Text = "PDF-Drucker benï¿½tigt",
                     AutoSize = false,
                     TextAlign = ContentAlignment.MiddleLeft,
                     Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
@@ -994,7 +994,7 @@ namespace Geldautomat
                 dlg.Controls.Add(body);
                 var info = new Label
                 {
-                    Text = "Für den direkten PDF-Druck wird SumatraPDF benötigt.\r\nKlicken Sie auf 'Herunterladen', um die offizielle Download-Seite zu öffnen.",
+                    Text = "Fï¿½r den direkten PDF-Druck wird SumatraPDF benï¿½tigt.\r\nKlicken Sie auf 'Herunterladen', um die offizielle Download-Seite zu ï¿½ffnen.",
                     AutoSize = false,
                     Location = new Point(16, 20),
                     Size = new Size(520, 60),
@@ -1035,7 +1035,7 @@ namespace Geldautomat
 
                 var btnClose = new Button
                 {
-                    Text = "Schließen",
+                    Text = "Schlieï¿½en",
                     Width = 120,
                     Height = 44,
                     FlatStyle = FlatStyle.Flat,
