@@ -22,18 +22,6 @@ namespace Geldautomat
     {
         // Global zugängliche aktuelle Personal-ID (für andere Dialoge wie CreatePaymentForm)
         public static int CurrentPersonalId { get; private set; }
-
-        // NEW: helper to check if a shift is currently loaded/running in the open AbrechnungForm
-        public static bool IsShiftRunning()
-        {
-            try
-            {
-                var inst = FindOpenInstance();
-                return inst != null && inst._details != null;
-            }
-            catch { return false; }
-        }
-
         // Singleton-Helper: nur eine Instanz zulassen
         public static AbrechnungForm FindOpenInstance()
         {
@@ -1504,6 +1492,18 @@ namespace Geldautomat
                 try { rm5.CoinDispenseComplete -= OnCoinDispenseComplete; } catch { }
             }
             _coinEventsAttached = false;
+        }
+
+        // Request coin levels throttled
+        private void RequestCoinLevels()
+        {
+            var now = DateTime.UtcNow;
+            if ((now - _lastCoinLevelsRequestUtc).TotalMilliseconds < 1200) return;
+            _lastCoinLevelsRequestUtc = now;
+            try { SmartCoinV1.RequestLevelsGlobal(); } catch { }
+        }
+
+        private void OnCoinLevelsUpdated(int[] levels)
         {
             if (levels == null || levels.Length < 8) return;
             try

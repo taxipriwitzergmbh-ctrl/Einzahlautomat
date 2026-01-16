@@ -7,8 +7,8 @@ using System.Windows.Forms;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Collections.Generic;
-using System.Security.Cryptography; // DPAPI + AES
-using System.Text; // DPAPI + AES
+using System.Security.Cryptography; // DPAPI
+using System.Text; // DPAPI
 
 namespace Geldautomat
 {
@@ -85,93 +85,17 @@ namespace Geldautomat
         private DateTime _uiFaultFirstSeenUtc = DateTime.MinValue;
         private string _uiFaultCodes = string.Empty;
 
-        // AES helper for enc3 support (same logic as GeneralSettingsForm)
-        private const string AppSecretConst = "Geldautomat.Secret.v1";
-        private static void GetAesKeyIv(out byte[] key, out byte[] iv)
-        {
-            var keyMaterial = Encoding.UTF8.GetBytes(AppSecretConst + "|" + Environment.MachineName);
-            using (var sha = SHA256.Create()) key = sha.ComputeHash(keyMaterial);
-            using (var md5 = MD5.Create()) iv = md5.ComputeHash(Encoding.UTF8.GetBytes("IV|" + AppSecretConst + "|" + Environment.MachineName));
-        }
-        private static string DecryptAes(string stored)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(stored) || !stored.StartsWith("enc3:", StringComparison.Ordinal)) return null;
-                var b64 = stored.Substring(5);
-                GetAesKeyIv(out var key, out var iv);
-                using (var aes = Aes.Create())
-                {
-                    aes.Key = key; aes.IV = iv; aes.Mode = CipherMode.CBC; aes.Padding = PaddingMode.PKCS7;
-                    using (var dec = aes.CreateDecryptor())
-                    {
-                        var cipher = Convert.FromBase64String(b64);
-                        var data = dec.TransformFinalBlock(cipher, 0, cipher.Length);
-                        return Encoding.UTF8.GetString(data);
-                    }
-                }
-            }
-            catch { return string.Empty; }
-        }
-
-        // Simple DPAPI helpers to handle encrypted values from INI (extended)
+        // Simple DPAPI helpers to handle encrypted values from INI
         private static string DecryptSecret(string stored)
         {
             try
             {
                 if (string.IsNullOrEmpty(stored)) return string.Empty;
-
-                // Try AES enc3 first
-                var enc3 = DecryptAes(stored);
-                if (enc3 != null) return enc3;
-
-                // enc2: dual DPAPI (CU|LM)
-                if (stored.StartsWith("enc2:", StringComparison.Ordinal))
-                {
-                    var payload = stored.Substring(5);
-                    var parts = payload.Split('|');
-                    foreach (var p in parts)
-                    {
-                        if (string.IsNullOrWhiteSpace(p)) continue;
-                        try
-                        {
-                            var bytes = Convert.FromBase64String(p);
-                            var cu = ProtectedData.Unprotect(bytes, null, DataProtectionScope.CurrentUser);
-                            return Encoding.UTF8.GetString(cu);
-                        }
-                        catch
-                        {
-                            try
-                            {
-                                var bytes = Convert.FromBase64String(p);
-                                var lm = ProtectedData.Unprotect(bytes, null, DataProtectionScope.LocalMachine);
-                                return Encoding.UTF8.GetString(lm);
-                            }
-                            catch { }
-                        }
-                    }
-                    return string.Empty;
-                }
-
-                // enc: single DPAPI
-                if (stored.StartsWith("enc:", StringComparison.Ordinal))
-                {
-                    var b64 = stored.Substring(4);
-                    var protectedBytes = Convert.FromBase64String(b64);
-                    try
-                    {
-                        var unprotectedLm = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.LocalMachine);
-                        return Encoding.UTF8.GetString(unprotectedLm);
-                    }
-                    catch
-                    {
-                        var unprotectedCu = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
-                        return Encoding.UTF8.GetString(unprotectedCu);
-                    }
-                }
-
-                // plaintext legacy
-                return stored;
+                if (!stored.StartsWith("enc:", StringComparison.Ordinal)) return stored; // backward plaintext
+                var b64 = stored.Substring(4);
+                var protectedBytes = Convert.FromBase64String(b64);
+                var unprotected = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
+                return Encoding.UTF8.GetString(unprotected);
             }
             catch { return string.Empty; }
         }
@@ -754,19 +678,14 @@ namespace Geldautomat
         {
             var maintPwd = GetConfiguredMaintenancePassword();
             var adminNumeric = GetConfiguredAdminNumericBackdoor();
-            var entered = _maintPwdBuffer ?? string.Empty;
-
-            // Accept either configured or default constants
-            bool isMaint = string.Equals(entered, maintPwd, StringComparison.Ordinal) || string.Equals(entered, MaintenancePassword, StringComparison.Ordinal);
-            bool isAdminNum = string.Equals(entered, adminNumeric, StringComparison.Ordinal) || string.Equals(entered, AdminNumericBackdoor, StringComparison.Ordinal);
-
-            if (isMaint)
+            if (_maintPwdBuffer == maintPwd)
             {
                 CloseMaintenanceUnlockPanel();
                 EnterMaintenanceMode();
             }
-            else if (isAdminNum)
+            else if (_maintPwdBuffer == adminNumeric)
             {
+                // Direkt als Admin anmelden – kein Wartungsmodus
                 CloseMaintenanceUnlockPanel();
                 _maintPwdBuffer = string.Empty;
                 PerformAdminLogin("Admin-Backdoor (numerisch) erkannt – öffne Abrechnung als Admin.", false);
