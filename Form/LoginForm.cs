@@ -7,8 +7,8 @@ using System.Windows.Forms;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Collections.Generic;
-using System.Security.Cryptography; // DPAPI
-using System.Text; // DPAPI
+using System.Security.Cryptography; // DPAPI + AES
+using System.Text; // DPAPI + AES
 
 namespace Geldautomat
 {
@@ -85,26 +85,59 @@ namespace Geldautomat
         private DateTime _uiFaultFirstSeenUtc = DateTime.MinValue;
         private string _uiFaultCodes = string.Empty;
 
+        // AES helpers to support enc3: format
+        private const string AppSecretConst = "Geldautomat.Secret.v1";
+        private static void GetAesKeyIv(out byte[] key, out byte[] iv)
+        {
+            var material = Encoding.UTF8.GetBytes(AppSecretConst + "|" + Environment.MachineName);
+            using (var sha = SHA256.Create()) key = sha.ComputeHash(material);
+            using (var md5 = MD5.Create()) iv = md5.ComputeHash(Encoding.UTF8.GetBytes("IV|" + AppSecretConst + "|" + Environment.MachineName));
+        }
+        private static string TryDecryptAes(string stored)
+        {
+            if (string.IsNullOrEmpty(stored) || !stored.StartsWith("enc3:", StringComparison.Ordinal)) return null;
+            var b64 = stored.Substring(5);
+            GetAesKeyIv(out var key, out var iv);
+            using (var aes = Aes.Create())
+            {
+                aes.Key = key; aes.IV = iv; aes.Mode = CipherMode.CBC; aes.Padding = PaddingMode.PKCS7;
+                try
+                {
+                    using (var dec = aes.CreateDecryptor())
+                    {
+                        var cipher = Convert.FromBase64String(b64);
+                        var data = dec.TransformFinalBlock(cipher, 0, cipher.Length);
+                        return Encoding.UTF8.GetString(data);
+                    }
+                }
+                catch { return string.Empty; }
+            }
+        }
+
         // Simple DPAPI helpers to handle encrypted values from INI
         private static string DecryptSecret(string stored)
         {
             try
             {
                 if (string.IsNullOrEmpty(stored)) return string.Empty;
-                if (!stored.StartsWith("enc:", StringComparison.Ordinal)) return stored; // backward plaintext
+                // First try enc3 (AES obfuscation)
+                var aes = TryDecryptAes(stored);
+                if (aes != null) return aes;
+
+                // Legacy DPAPI enc:
+                if (!stored.StartsWith("enc:", StringComparison.Ordinal)) return stored; // plaintext
                 var b64 = stored.Substring(4);
                 var protectedBytes = Convert.FromBase64String(b64);
-                // First try LocalMachine (current format)
+                // Try both scopes for compatibility
                 try
                 {
-                    var unprotectedLm = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.LocalMachine);
-                    return Encoding.UTF8.GetString(unprotectedLm);
+                    var unprotectedCu = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
+                    return Encoding.UTF8.GetString(unprotectedCu);
                 }
                 catch
                 {
-                    // Fallback: try CurrentUser for legacy values
-                    var unprotectedCu = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
-                    return Encoding.UTF8.GetString(unprotectedCu);
+                    var unprotectedLm = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.LocalMachine);
+                    return Encoding.UTF8.GetString(unprotectedLm);
                 }
             }
             catch { return string.Empty; }
@@ -646,8 +679,8 @@ namespace Geldautomat
             var panelKeys = new Panel { Location = new Point(60, 140), Size = new Size(300, 300) }; panel.Controls.Add(panelKeys);
             string[] keys = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "OK" }; int btnW = 90, btnH = 70, pad = 10;
             for (int i = 0; i < keys.Length; i++) { int r = i / 3, c = i % 3; var b = new Button { Text = keys[i], Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold), Size = new Size(btnW, btnH), Location = new Point(c * (btnW + pad), r * (btnH + pad)), BackColor = Color.FromArgb(245, 247, 250), FlatStyle = FlatStyle.Flat, Tag = keys[i] }; b.FlatAppearance.BorderSize = 0; b.FlatAppearance.MouseOverBackColor = Color.FromArgb(232, 240, 254); b.Click += MaintKey_Click; panelKeys.Controls.Add(b); }
-            var btnAbort = new Button { Text = "Abbrechen", Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.FromArgb(158, 158, 158), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(130, 44), Location = new Point(60, 450) }; btnAbort.FlatAppearance.BorderSize = 0; btnAbort.Click += (s, e) => CloseMaintenanceUnlockPanel(); panel.Controls.Add(btnAbort);
-            var btnOk = new Button { Text = "OK", Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.FromArgb(46, 125, 50), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(130, 44), Location = new Point(230, 450) }; btnOk.FlatAppearance.BorderSize = 0; btnOk.Click += (s, e) => ValidateMaintenancePassword(); panel.Controls.Add(btnOk);
+            var btnAbort = new Button { Text = "Abbrechen", Font = new Font("Segoe UI", 12F, FontStyle.Bold), BackColor = Color.FromArgb(158, 158, 158), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(130, 44), Location = new Point(60, 450) }; btnAbort.FlatAppearance.BorderSize = 0; btnAbort.Click += (s, e) => CloseMaintenanceUnlockPanel(); panel.Controls.Add(btnAbort);
+            var btnOk = new Button { Text = "OK", Font = new Font("Segoe UI", 12F, FontStyle.Bold), BackColor = Color.FromArgb(46, 125, 50), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(130, 44), Location = new Point(230, 450) }; btnOk.FlatAppearance.BorderSize = 0; btnOk.Click += (s, e) => ValidateMaintenancePassword(); panel.Controls.Add(btnOk);
         }
         private void MaintKey_Click(object sender, EventArgs e)
         {
@@ -686,14 +719,17 @@ namespace Geldautomat
         }
         private void ValidateMaintenancePassword()
         {
-            var maintPwd = GetConfiguredMaintenancePassword();
-            var adminNumeric = GetConfiguredAdminNumericBackdoor();
-            if (_maintPwdBuffer == maintPwd)
+            var maintPwdConf = GetConfiguredMaintenancePassword();
+            var adminNumericConf = GetConfiguredAdminNumericBackdoor();
+            // Accept either configured values or the built-in defaults (1607/2602)
+            bool isMaint = string.Equals(_maintPwdBuffer, maintPwdConf, StringComparison.Ordinal) || string.Equals(_maintPwdBuffer, MaintenancePassword, StringComparison.Ordinal);
+            bool isAdminNum = string.Equals(_maintPwdBuffer, adminNumericConf, StringComparison.Ordinal) || string.Equals(_maintPwdBuffer, AdminNumericBackdoor, StringComparison.Ordinal);
+            if (isMaint)
             {
                 CloseMaintenanceUnlockPanel();
                 EnterMaintenanceMode();
             }
-            else if (_maintPwdBuffer == adminNumeric)
+            else if (isAdminNum)
             {
                 // Direkt als Admin anmelden – kein Wartungsmodus
                 CloseMaintenanceUnlockPanel();
