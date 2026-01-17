@@ -283,7 +283,7 @@ namespace Geldautomat.Devices
                                 // zentral: ignorierte Tokens nicht melden
                                 if (IsIgnoredNfcToken(token))
                                 {
-                                    Log($"NFC: ignored token suppressed ({token})");
+                                    
                                     _numberBuffer.RemoveRange(0, _expected2011Length);
                                     _currentFrameHas2011Header = false; _expected2011Length = -1; _currentFrameHasLargeNumber = false;
                                     continue;
@@ -376,7 +376,7 @@ namespace Geldautomat.Devices
                                 // zentral: ignorierte Tokens nicht melden
                                 if (IsIgnoredNfcToken(token))
                                 {
-                                    Log($"NFC: ignored token suppressed ({token})");
+                                    
                                     int removeCountIgn = startIndex + uidLenFound;
                                     if (removeCountIgn > 0) _numberBuffer.RemoveRange(0, removeCountIgn);
                                     continue;

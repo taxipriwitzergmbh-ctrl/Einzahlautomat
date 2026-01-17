@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,6 +30,12 @@ namespace Geldautomat.Coins
         private static DateTime _lastNoTypeLogUtc = DateTime.MinValue; // throttle for "None" log
         private const int NoTypeRepeatMinutes = 10; // only repeat info every 10 minutes
         private static bool _loggedNoTypeOnce = false;
+
+        // NEW: respect Admin form global disable
+        private static bool IsGloballyDisabled()
+        {
+            try { return Geldautomat.AdminCoin2Form.DeviceDisabled; } catch { return false; }
+        }
 
         public static bool IsDisabledByConfig => _disabledByConfig;
 
@@ -74,7 +80,7 @@ namespace Geldautomat.Coins
             {
                 if (!_disabledByConfig) return; // already enabled
                 _disabledByConfig = false;
-                Log("Konfig-Deaktivierung aufgehoben – Re-Init wird gestartet");
+                Log("Konfig-Deaktivierung aufgehoben ï¿½ Re-Init wird gestartet");
                 // Reset spam flags so we can log meaningful first message again if still None
                 _loggedNoTypeOnce = false;
                 _lastNoTypeLogUtc = DateTime.MinValue;
@@ -91,6 +97,8 @@ namespace Geldautomat.Coins
                     // completely disabled: do nothing
                     return;
                 }
+                // also respect global UI-disabled flag
+                if (IsGloballyDisabled()) return;
                 if (_finalized) { /* nach Programmende keine Logs mehr erzeugen */ return; }
                 if (_initialized && Instance != null) return;
                 _shuttingDown = false;
@@ -115,7 +123,7 @@ namespace Geldautomat.Coins
                         if (shouldLog)
                         {
                             _lastNoTypeLogUtc = DateTime.UtcNow;
-                            Log("[SmartCoin/2] Typ leer oder 'None' – zweite Instanz deaktiviert");
+                            Log("[SmartCoin/2] Typ leer oder 'None' ï¿½ zweite Instanz deaktiviert");
                         }
                         _initialized = false; Instance = null; return;
                     }
@@ -126,13 +134,13 @@ namespace Geldautomat.Coins
                     var inst = CoinValidatorFactory.Create(type);
                     if (inst == null)
                     {
-                        Log("Kein gültiger Typ – Fallback auf SmartCoinV1");
+                        Log("Kein gï¿½ltiger Typ ï¿½ Fallback auf SmartCoinV1");
                         inst = new SmartCoinV1();
                     }
                     if (!string.IsNullOrWhiteSpace(com)) inst.ComPort = com; else Log("WARN: Kein ComPort in [SmartCoin/2] gefunden.");
-                    if (int.TryParse(addrStr, out var addr) && addr > 0) inst.SspAddress = addr; else Log("INFO: Keine/ungültige SSPAddress – Standard wird verwendet.");
+                    if (int.TryParse(addrStr, out var addr) && addr > 0) inst.SspAddress = addr; else Log("INFO: Keine/ungï¿½ltige SSPAddress ï¿½ Standard wird verwendet.");
                     if (inst is SmartCoinV1 sc1) sc1.StatusChanged += OnStatusChanged;
-                    try { inst.Connect(); Log("Connect() auf Gerät 2 initiiert."); } catch (Exception ex) { Log("Connect-Fehler initial: " + ex.Message); }
+                    try { inst.Connect(); Log("Connect() auf Gerï¿½t 2 initiiert."); } catch (Exception ex) { Log("Connect-Fehler initial: " + ex.Message); }
                     Instance = inst;
                     _disabledByConfig = false; // active now
                     StartWatchdog();
@@ -153,6 +161,7 @@ namespace Geldautomat.Coins
                 while (!ct.IsCancellationRequested && !_shuttingDown && !_finalized)
                 {
                     if (_disabledByConfig) break; // stop if disabled
+                    if (IsGloballyDisabled()) break; // stop if globally disabled by UI
                     try
                     {
                         var inst = Instance as SmartCoinV1;
@@ -193,6 +202,7 @@ namespace Geldautomat.Coins
         private static void OnStatusChanged(string status)
         {
             if (_disabledByConfig) return; // ignore when disabled by config
+            if (IsGloballyDisabled()) return; // ignore when globally disabled via UI
             if (_shuttingDown || _finalized) return;
             if (string.IsNullOrWhiteSpace(status)) return;
             var s = status.ToLowerInvariant();
@@ -217,13 +227,13 @@ namespace Geldautomat.Coins
                         var inst = Instance as SmartCoinV1;
                         if (inst == null) return;
                         await Task.Delay(800, token).ConfigureAwait(false);
-                        if (token.IsCancellationRequested || _shuttingDown || _finalized || _disabledByConfig) return;
+                        if (token.IsCancellationRequested || _shuttingDown || _finalized || _disabledByConfig || IsGloballyDisabled()) return;
                         try { inst.HardDisconnect(); Log("Auto-Reconnect: HardDisconnect"); } catch { }
                         await Task.Delay(700, token).ConfigureAwait(false);
-                        if (token.IsCancellationRequested || _shuttingDown || _finalized || _disabledByConfig) return;
+                        if (token.IsCancellationRequested || _shuttingDown || _finalized || _disabledByConfig || IsGloballyDisabled()) return;
                         try { inst.Connect(); Log("Auto-Reconnect: Connect"); } catch (System.Exception ex) { Log("Auto-Reconnect Connect-Fehler: " + ex.Message); }
                         await Task.Delay(800, token).ConfigureAwait(false);
-                        if (token.IsCancellationRequested || _shuttingDown || _finalized || _disabledByConfig) return;
+                        if (token.IsCancellationRequested || _shuttingDown || _finalized || _disabledByConfig || IsGloballyDisabled()) return;
                         try { inst.Enable(true); Log("Auto-Reconnect: Enable"); } catch { }
                     }
                     finally
@@ -236,14 +246,14 @@ namespace Geldautomat.Coins
 
         public static void Enable(bool enable)
         {
-            try { if (!_shuttingDown && !_finalized && !_disabledByConfig) Instance?.Enable(enable); } catch { }
+            try { if (!_shuttingDown && !_finalized && !_disabledByConfig && !IsGloballyDisabled()) Instance?.Enable(enable); } catch { }
         }
 
         public static void EnsureReconnect()
         {
             try
             {
-                if (_shuttingDown || _finalized || _disabledByConfig) return;
+                if (_shuttingDown || _finalized || _disabledByConfig || IsGloballyDisabled()) return;
                 if (Instance is SmartCoinV1 sc && !sc.Connected)
                     OnStatusChanged("verbindung unterbrochen (manual ensure)");
             }
