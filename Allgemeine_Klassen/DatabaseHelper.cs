@@ -691,5 +691,47 @@ namespace Geldautomat
                 return dt;
             }
         }
+
+        public class DienstkontoInfo
+        {
+            public int ID { get; set; }
+            public byte? Typ { get; set; }
+            public string Name { get; set; }
+            public string Host { get; set; }
+            public string Port { get; set; }
+            public string Benutzername { get; set; }
+            public string Passwort { get; set; }
+            public string Absender { get; set; }
+            public override string ToString() { return Name ?? (Absender ?? Benutzername ?? (Host ?? "")); }
+        }
+
+        public async System.Threading.Tasks.Task<List<DienstkontoInfo>> GetDienstkontenAsync()
+        {
+            var list = new List<DienstkontoInfo>();
+            await EnsureOpenAsync().ConfigureAwait(false);
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = "SELECT ID, Typ, Name, Host, Port, Benutzername, Passwort, Absender FROM TDienstkonten WITH (NOLOCK) ORDER BY Name";
+                using (var rdr = await cmd.ExecuteReaderAsync().ConfigureAwait(false))
+                {
+                    while (await rdr.ReadAsync().ConfigureAwait(false))
+                    {
+                        var info = new DienstkontoInfo
+                        {
+                            ID = rdr.IsDBNull(rdr.GetOrdinal("ID")) ? 0 : Convert.ToInt32(rdr["ID"]),
+                            Typ = rdr.IsDBNull(rdr.GetOrdinal("Typ")) ? (byte?)null : Convert.ToByte(rdr["Typ"]),
+                            Name = rdr.IsDBNull(rdr.GetOrdinal("Name")) ? null : Convert.ToString(rdr["Name"]),
+                            Host = rdr.IsDBNull(rdr.GetOrdinal("Host")) ? null : Convert.ToString(rdr["Host"]),
+                            Port = rdr.IsDBNull(rdr.GetOrdinal("Port")) ? null : Convert.ToString(rdr["Port"]),
+                            Benutzername = rdr.IsDBNull(rdr.GetOrdinal("Benutzername")) ? null : Convert.ToString(rdr["Benutzername"]),
+                            Passwort = rdr.IsDBNull(rdr.GetOrdinal("Passwort")) ? null : Convert.ToString(rdr["Passwort"]),
+                            Absender = rdr.IsDBNull(rdr.GetOrdinal("Absender")) ? null : Convert.ToString(rdr["Absender"]),
+                        };
+                        list.Add(info);
+                    }
+                }
+            }
+            return list;
+        }
     }
 }
