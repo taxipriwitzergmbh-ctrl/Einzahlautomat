@@ -159,14 +159,7 @@ namespace Geldautomat
 
         private static MailAddress BuildFrom(DienstkontoCfg cfg)
         {
-            return new MailAddress(cfg.FromAddress, cfg.FromName, Encoding.UTF8);
-        }
-
-        private static void ApplyCommonEncodings(MailMessage m)
-        {
-            try { m.SubjectEncoding = Encoding.UTF8; } catch { }
-            try { m.BodyEncoding = Encoding.UTF8; } catch { }
-            try { m.HeadersEncoding = Encoding.UTF8; } catch { }
+            return new MailAddress(cfg.FromAddress, cfg.FromName);
         }
 
         public static void SendReceiptToEmployee(PersonalInfo personal, string subjectPrefix, string body)
@@ -180,14 +173,11 @@ namespace Geldautomat
             if (TryGetDienstkonto2Cfg(out dk2))
             {
                 var mail = new MailMessage();
-                var from = BuildFrom(dk2);
-                mail.From = from;
-                mail.Sender = from;
+                mail.From = BuildFrom(dk2);
                 mail.To.Add(email);
                 mail.Subject = $"{subjectPrefix} Quittung";
                 mail.Body = body;
                 mail.IsBodyHtml = false;
-                ApplyCommonEncodings(mail);
                 using (var client = BuildClient(dk2)) client.Send(mail);
                 try { AppLogger.Log($"Mail gesendet (DK2): Quittung an '{email}' (Betreff='{mail.Subject}')"); } catch { }
                 return;
@@ -197,13 +187,11 @@ namespace Geldautomat
             if (!cfg.IsConfigured) throw new InvalidOperationException("Maileinstellungen unvollständig.");
 
             var mailFallback = new MailMessage();
-            mailFallback.From = new MailAddress(cfg.FromAddress, cfg.FromDisplayName, Encoding.UTF8);
-            mailFallback.Sender = mailFallback.From;
+            mailFallback.From = new MailAddress(cfg.FromAddress, cfg.FromDisplayName);
             mailFallback.To.Add(email);
             mailFallback.Subject = $"{subjectPrefix} Quittung";
             mailFallback.Body = body;
             mailFallback.IsBodyHtml = false;
-            ApplyCommonEncodings(mailFallback);
             using (var client = new SmtpClient(cfg.SmtpHost, cfg.SmtpPort)) { client.EnableSsl = cfg.EnableSsl; if (!string.IsNullOrWhiteSpace(cfg.Username)) client.Credentials = new NetworkCredential(cfg.Username, cfg.Password); else client.UseDefaultCredentials = true; client.Send(mailFallback); }
             try { AppLogger.Log($"Mail gesendet (INI): Quittung an '{email}' (Betreff='{mailFallback.Subject}')"); } catch { }
         }
@@ -218,14 +206,11 @@ namespace Geldautomat
             if (TryGetDienstkonto2Cfg(out dk2))
             {
                 var mail = new MailMessage();
-                var from = BuildFrom(dk2);
-                mail.From = from;
-                mail.Sender = from;
+                mail.From = BuildFrom(dk2);
                 mail.To.Add(email);
                 mail.Subject = $"{subjectPrefix} Quittung";
                 mail.Body = body;
                 mail.IsBodyHtml = false;
-                ApplyCommonEncodings(mail);
                 var html = BuildSimpleReceiptHtml(attachmentPlainText ?? string.Empty);
                 var bytes = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(html);
                 var ms = new MemoryStream(bytes);
@@ -240,13 +225,11 @@ namespace Geldautomat
             if (!cfg.IsConfigured) throw new InvalidOperationException("Maileinstellungen unvollständig.");
 
             var mailFallback = new MailMessage();
-            mailFallback.From = new MailAddress(cfg.FromAddress, cfg.FromDisplayName, Encoding.UTF8);
-            mailFallback.Sender = mailFallback.From;
+            mailFallback.From = new MailAddress(cfg.FromAddress, cfg.FromDisplayName);
             mailFallback.To.Add(email);
             mailFallback.Subject = $"{subjectPrefix} Quittung";
             mailFallback.Body = body;
             mailFallback.IsBodyHtml = false;
-            ApplyCommonEncodings(mailFallback);
             var html2 = BuildSimpleReceiptHtml(attachmentPlainText ?? string.Empty);
             var bytes2 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(html2);
             var ms2 = new MemoryStream(bytes2);
@@ -276,17 +259,9 @@ namespace Geldautomat
 
             var mail = new MailMessage();
             if (useDienstkonto)
-            {
-                var from = BuildFrom(dk);
-                mail.From = from;
-                mail.Sender = from;
-            }
+                mail.From = BuildFrom(dk);
             else
-            {
-                var from = new MailAddress(cfg.FromAddress, cfg.FromDisplayName, Encoding.UTF8);
-                mail.From = from;
-                mail.Sender = from;
-            }
+                mail.From = new MailAddress(cfg.FromAddress, cfg.FromDisplayName);
 
             var toLog = new System.Collections.Generic.List<string>();
             // Ziel 1: konfigurierte Fehler-Mails (mehrere via ';')
@@ -310,7 +285,6 @@ namespace Geldautomat
             mail.Subject = subject;
             mail.Body = body;
             mail.IsBodyHtml = false;
-            ApplyCommonEncodings(mail);
 
             if (useDienstkonto)
             {
