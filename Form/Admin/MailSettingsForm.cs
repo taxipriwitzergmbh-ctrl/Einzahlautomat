@@ -7,6 +7,10 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Net.Sockets;
+using System.Security.Authentication;
+using System.Net;
+using System.Linq;
 
 namespace Geldautomat
 {
@@ -179,91 +183,144 @@ namespace Geldautomat
             }
         }
 
+        private static string BuildDetailedError(Exception ex)
+        {
+            var sb = new StringBuilder();
+            int depth = 0;
+            Exception cur = ex;
+            while (cur != null && depth < 6)
+            {
+                sb.AppendLine((depth == 0 ? "Fehler:" : "Inner:") + " " + cur.GetType().FullName + ": " + cur.Message);
+                if (cur is SmtpException smt) sb.AppendLine("SmtpStatusCode: " + smt.StatusCode);
+                if (cur is SocketException sox) sb.AppendLine("SocketError: " + sox.SocketErrorCode + " (" + sox.ErrorCode + ")");
+                cur = cur.InnerException; depth++;
+            }
+            sb.AppendLine();
+            sb.AppendLine("StackTrace:");
+            sb.AppendLine(ex.ToString());
+            return sb.ToString().TrimEnd();
+        }
+
+        private static string ResolveHostInfo(string host)
+        {
+            try
+            {
+                var ips = Dns.GetHostAddresses(host).Select(ip => ip.ToString()).ToArray();
+                return string.Join(", ", ips);
+            }
+            catch { return "(DNS-Auflösung fehlgeschlagen)"; }
+        }
+
+        private static (bool ok, string note) TryTcpConnect(string host, int port, int timeoutMs)
+        {
+            try
+            {
+                using (var tcp = new TcpClient())
+                {
+                    var task = tcp.ConnectAsync(host, port);
+                    if (!task.Wait(timeoutMs)) return (false, "TCP Connect Timeout");
+                    if (tcp.Connected) return (true, "TCP Connected");
+                    return (false, "TCP Not connected");
+                }
+            }
+            catch (Exception ex) { return (false, ex.GetType().Name + ": " + ex.Message); }
+        }
+
         private async Task TestConnectionAsync()
         {
             try
             {
                 var sel = cboAccount.SelectedItem as DatabaseHelper.DienstkontoInfo;
-                if (sel == null)
-                {
-                    MessageBox.Show(this, "Bitte ein Dienstkonto auswählen.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-
+                if (sel == null) { MessageBox.Show(this, "Bitte ein Dienstkonto auswählen.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
                 var ask = MessageBox.Show(this, "Es wird eine Testmail an die Absender-Adresse des Dienstkontos gesendet. Fortfahren?", "Verbindung prüfen", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                 if (ask != DialogResult.Yes) return;
 
-                Cursor prev = Cursor.Current;
-                Cursor.Current = Cursors.WaitCursor;
-                btnTest.Enabled = false; btnSave.Enabled = false; btnCancel.Enabled = false;
+                Cursor prev = Cursor.Current; Cursor.Current = Cursors.WaitCursor; btnTest.Enabled = false; btnSave.Enabled = false; btnCancel.Enabled = false;
                 try
                 {
+                    try { ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12; } catch { }
+
                     var fromAddr = sel.Absender ?? sel.Benutzername ?? string.Empty;
                     var displayName = (txtFromName1.Text ?? string.Empty).Trim();
                     var from = new MailAddress(fromAddr, string.IsNullOrWhiteSpace(displayName) ? sel.Name : displayName, Encoding.UTF8);
                     var to = new MailAddress(fromAddr);
+                    int port = 25; int.TryParse(sel.Port, out port);
+
+                    // Preflight diagnostics
+                    var dnsInfo = ResolveHostInfo(sel.Host);
+                    var tcp = TryTcpConnect(sel.Host, port, 7000);
+
                     using (var msg = new MailMessage(from, to))
                     {
-                        msg.Sender = from; // sicherstellen, dass Absendername übernommen wird
+                        msg.Sender = from;
                         msg.Subject = "Testverbindung Geldautomat";
                         string device = (AppSettings.AutomatenName ?? string.Empty).Trim();
                         msg.Body = "Dies ist eine Testnachricht zur Überprüfung der SMTP-Verbindung.\r\nGerät: " + device + "\r\nZeit: " + DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
-                        int port = 25;
-                        int.TryParse(sel.Port, out port);
-                        using (var client = new SmtpClient(sel.Host, port))
+
+                        string decryptedPwd = EmailReceiptService.TinyDecrypt(sel.Passwort ?? string.Empty);
+
+                        bool TrySend(int usePort, out Exception error)
                         {
-                            bool ssl = true;
-                            if (sel.Typ.HasValue) ssl = sel.Typ.Value != 0;
-                            client.EnableSsl = ssl;
-                            string decryptedPwd = EmailReceiptService.TinyDecrypt(sel.Passwort ?? string.Empty);
-                            if (!string.IsNullOrWhiteSpace(sel.Benutzername))
+                            error = null;
+                            try
                             {
-                                client.Credentials = new NetworkCredential(sel.Benutzername, decryptedPwd);
+                                using (var client = new SmtpClient(sel.Host, usePort))
+                                {
+                                    client.EnableSsl = true; // sowohl für Implicit-SSL (465) als auch STARTTLS (587)
+                                    client.Timeout = 30000;
+                                    client.DeliveryMethod = SmtpDeliveryMethod.Network;
+                                    client.UseDefaultCredentials = false;
+                                    if (!string.IsNullOrWhiteSpace(sel.Benutzername)) client.Credentials = new NetworkCredential(sel.Benutzername, decryptedPwd); else client.UseDefaultCredentials = true;
+                                    client.Send(msg);
+                                    return true;
+                                }
                             }
-                            else
+                            catch (Exception ex)
                             {
-                                client.UseDefaultCredentials = true;
+                                error = ex; return false;
                             }
-                            client.Send(msg);
+                        }
+
+                        // Erst mit konfiguriertem Port probieren, danach mit alternativen Standard-Ports (465/587)
+                        Exception lastError = null;
+                        int[] portsToTry = new int[]
+                        {
+                            port,
+                            port == 465 ? 587 : 465,
+                            587,
+                            465
+                        };
+                        foreach (var p in portsToTry.Distinct())
+                        {
+                            if (TrySend(p, out lastError))
+                            {
+                                MessageBox.Show(this, "Verbindung OK – Testmail wurde gesendet.\r\nDNS: " + dnsInfo + "\r\nTCP: " + tcp.note + "\r\nPort verwendet: " + p, "Erfolg", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                lastError = null; break;
+                            }
+                        }
+
+                        if (lastError != null)
+                        {
+                            var details = BuildDetailedError(lastError);
+                            MessageBox.Show(this,
+                                "Verbindung fehlgeschlagen:\r\n" + details +
+                                "\r\rVerwendete Zugangsdaten:" +
+                                "\rSMTP-Host: " + sel.Host +
+                                "\rDNS-IP(s): " + dnsInfo +
+                                "\rTCP-Check: " + tcp.note +
+                                "\rPort (versucht): " + string.Join(", ", portsToTry.Distinct()) +
+                                "\rSSL: an" +
+                                "\rBenutzer: " + (sel.Benutzername ?? string.Empty) +
+                                "\rFrom: " + fromAddr +
+                                "\rPasswort (entschlüsselt): " + (string.IsNullOrEmpty(decryptedPwd) ? "(leer)" : decryptedPwd),
+                                "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            try { AppLogger.Log("Mail-Test fehlgeschlagen: " + lastError.ToString()); } catch { }
                         }
                     }
-                    MessageBox.Show(this, "Verbindung OK – Testmail wurde gesendet.", "Erfolg", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-                catch (Exception ex)
-                {
-                    try
-                    {
-                        // Debug-Ausgabe ohne Passwort im Klartext
-                        var sel2 = cboAccount.SelectedItem as DatabaseHelper.DienstkontoInfo;
-                        string host = sel2?.Host ?? string.Empty;
-                        string port = sel2?.Port ?? string.Empty;
-                        string user = sel2?.Benutzername ?? string.Empty;
-                        string fromAddr = sel2?.Absender ?? sel2?.Benutzername ?? string.Empty;
-                        MessageBox.Show(this,
-                            "Verbindung fehlgeschlagen:\r\n" + ex.Message +
-                            "\r\n\r\nVerwendete Zugangsdaten:" +
-                            "\r\nSMTP-Host: " + host +
-                            "\r\nPort: " + port +
-                            "\r\nBenutzer: " + user +
-                            "\r\nFrom: " + fromAddr +
-                            "\r\nPasswort: (versteckt)",
-                            "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                    catch
-                    {
-                        MessageBox.Show(this, "Verbindung fehlgeschlagen:\r\n" + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-                finally
-                {
-                    Cursor.Current = prev;
-                    btnTest.Enabled = true; btnSave.Enabled = true; btnCancel.Enabled = true;
-                }
+                finally { Cursor.Current = prev; btnTest.Enabled = true; btnSave.Enabled = true; btnCancel.Enabled = true; }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this, "Unerwarteter Fehler:\r\n" + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            catch (Exception ex) { MessageBox.Show(this, "Unerwarteter Fehler:\r\n" + ex.ToString(), "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
     }
 }
