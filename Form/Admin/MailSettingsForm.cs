@@ -12,7 +12,10 @@ namespace Geldautomat
 {
     public class MailSettingsForm : Form
     {
-        private ComboBox cboAccount;
+        private ComboBox cboAccount;          // Dienstkonto für Fehler/Support
+        private ComboBox cboAccount2;         // Dienstkonto für Dokumente/Quittungen/Zeiterfassung
+        private TextBox txtFromName1;         // Absendername Dienstkonto 1
+        private TextBox txtFromName2;         // Absendername Dienstkonto 2
         private Button btnSave;
         private Button btnCancel;
         private Button btnTest;
@@ -52,26 +55,43 @@ namespace Geldautomat
         {
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(520, 240);
+            ClientSize = new Size(560, 320);
             Text = "Maileinstellungen";
 
-            var lblAccount = new Label { Text = "Dienstkonto", Location = new Point(20, 20), Size = new Size(200, 24) };
-            cboAccount = new ComboBox { Location = new Point(230, 20), Size = new Size(260, 24), DropDownStyle = ComboBoxStyle.DropDownList };
+            int xLabel = 20, xField = 230, wField = 300; int y = 20, h = 24, gap = 10;
 
-            var lblAlert = new Label { Text = "Fehler-Mail an", Location = new Point(20, 60), Size = new Size(200, 24) };
-            txtAlertEmail = new TextBox { Location = new Point(230, 60), Size = new Size(260, 24) };
+            var lblAccount = new Label { Text = "Dienstkonto (Fehler/Support)", Location = new Point(xLabel, y), Size = new Size(200, h) };
+            cboAccount = new ComboBox { Location = new Point(xField, y), Size = new Size(wField, h), DropDownStyle = ComboBoxStyle.DropDownList };
+            y += h + gap;
 
-            chkDisableSupport = new CheckBox { Text = "Mailversand an Support unterbinden", Location = new Point(20, 100), Size = new Size(470, 24) };
+            var lblFromName1 = new Label { Text = "Absendername (Fehler/Support)", Location = new Point(xLabel, y), Size = new Size(200, h) };
+            txtFromName1 = new TextBox { Location = new Point(xField, y), Size = new Size(wField, h) };
+            y += h + gap + 6;
 
-            btnTest = new Button { Text = "Verbindung prüfen", Location = new Point(20, 140), Size = new Size(180, 30) };
-            btnSave = new Button { Text = "Speichern", Location = new Point(230, 140), Size = new Size(120, 30) };
-            btnCancel = new Button { Text = "Abbrechen", Location = new Point(370, 140), Size = new Size(120, 30) };
+            var lblAccount2 = new Label { Text = "Dienstkonto (Dok./Quitt./Zeit)", Location = new Point(xLabel, y), Size = new Size(200, h) };
+            cboAccount2 = new ComboBox { Location = new Point(xField, y), Size = new Size(wField, h), DropDownStyle = ComboBoxStyle.DropDownList };
+            y += h + gap;
+
+            var lblFromName2 = new Label { Text = "Absendername (Dok./Quitt./Zeit)", Location = new Point(xLabel, y), Size = new Size(200, h) };
+            txtFromName2 = new TextBox { Location = new Point(xField, y), Size = new Size(wField, h) };
+            y += h + gap + 6;
+
+            var lblAlert = new Label { Text = "Fehler-Mail an", Location = new Point(xLabel, y), Size = new Size(200, h) };
+            txtAlertEmail = new TextBox { Location = new Point(xField, y), Size = new Size(wField, h) };
+            y += h + gap;
+
+            chkDisableSupport = new CheckBox { Text = "Mailversand an Support unterbinden", Location = new Point(xLabel, y), Size = new Size(470, h) };
+            y += h + gap + 8;
+
+            btnTest = new Button { Text = "Verbindung prüfen", Location = new Point(xLabel, y), Size = new Size(180, 30) };
+            btnSave = new Button { Text = "Speichern", Location = new Point(xField, y), Size = new Size(120, 30) };
+            btnCancel = new Button { Text = "Abbrechen", Location = new Point(xField + 130, y), Size = new Size(120, 30) };
 
             btnTest.Click += async (s, e) => await TestConnectionAsync();
             btnSave.Click += (s, e) => SaveSettings();
             btnCancel.Click += (s, e) => Close();
 
-            Controls.AddRange(new Control[] { lblAccount, cboAccount, lblAlert, txtAlertEmail, chkDisableSupport, btnTest, btnSave, btnCancel });
+            Controls.AddRange(new Control[] { lblAccount, cboAccount, lblFromName1, txtFromName1, lblAccount2, cboAccount2, lblFromName2, txtFromName2, lblAlert, txtAlertEmail, chkDisableSupport, btnTest, btnSave, btnCancel });
 
             LoadSettingsAsync();
 
@@ -95,22 +115,37 @@ namespace Geldautomat
                     _konten = await db.GetDienstkontenAsync().ConfigureAwait(false);
                 }
                 cboAccount.Items.Clear();
+                cboAccount2.Items.Clear();
                 if (_konten != null)
                 {
                     foreach (var k in _konten)
+                    {
                         cboAccount.Items.Add(k);
+                        cboAccount2.Items.Add(k);
+                    }
                     cboAccount.DisplayMember = nameof(DatabaseHelper.DienstkontoInfo.Name);
+                    cboAccount2.DisplayMember = nameof(DatabaseHelper.DienstkontoInfo.Name);
                 }
 
                 string ini = AppSettings.IniPath;
-                // Vorauswahl aus INI (Dienstkonto-ID)
-                int dkId = 0; int.TryParse(IniHelper.ReadValue("Mail", "DienstkontoID", ini), out dkId);
-                if (dkId > 0 && _konten != null)
+                // Vorauswahl aus INI (Dienstkonto-IDs)
+                int dk1 = 0; int.TryParse(IniHelper.ReadValue("Mail", "DienstkontoID", ini), out dk1);
+                int dk2 = 0; int.TryParse(IniHelper.ReadValue("Mail", "Dienstkonto2ID", ini), out dk2);
+                if (dk1 > 0 && _konten != null)
                 {
-                    var sel = _konten.Find(x => x.ID == dkId);
-                    if (sel != null) cboAccount.SelectedItem = sel;
+                    var sel1 = _konten.Find(x => x.ID == dk1);
+                    if (sel1 != null) cboAccount.SelectedItem = sel1;
                 }
                 if (cboAccount.SelectedIndex < 0 && cboAccount.Items.Count > 0) cboAccount.SelectedIndex = 0;
+                if (dk2 > 0 && _konten != null)
+                {
+                    var sel2 = _konten.Find(x => x.ID == dk2);
+                    if (sel2 != null) cboAccount2.SelectedItem = sel2;
+                }
+                if (cboAccount2.SelectedIndex < 0 && cboAccount2.Items.Count > 0) cboAccount2.SelectedIndex = 0;
+
+                txtFromName1.Text = IniHelper.ReadValue("Mail", "DienstkontoFromName", ini) ?? string.Empty;
+                txtFromName2.Text = IniHelper.ReadValue("Mail", "Dienstkonto2FromName", ini) ?? string.Empty;
 
                 txtAlertEmail.Text = IniHelper.ReadValue("Mail", "AlertEmail", ini) ?? string.Empty;
                 bool disableSupport;
@@ -124,9 +159,14 @@ namespace Geldautomat
             try
             {
                 string ini = AppSettings.IniPath;
-                var sel = cboAccount.SelectedItem as DatabaseHelper.DienstkontoInfo;
-                int id = sel != null ? sel.ID : 0;
-                IniHelper.WriteValue("Mail", "DienstkontoID", id.ToString(), ini);
+                var sel1 = cboAccount.SelectedItem as DatabaseHelper.DienstkontoInfo;
+                var sel2 = cboAccount2.SelectedItem as DatabaseHelper.DienstkontoInfo;
+                int id1 = sel1 != null ? sel1.ID : 0;
+                int id2 = sel2 != null ? sel2.ID : 0;
+                IniHelper.WriteValue("Mail", "DienstkontoID", id1.ToString(), ini);
+                IniHelper.WriteValue("Mail", "Dienstkonto2ID", id2.ToString(), ini);
+                IniHelper.WriteValue("Mail", "DienstkontoFromName", (txtFromName1.Text ?? string.Empty).Trim(), ini);
+                IniHelper.WriteValue("Mail", "Dienstkonto2FromName", (txtFromName2.Text ?? string.Empty).Trim(), ini);
                 IniHelper.WriteValue("Mail", "AlertEmail", txtAlertEmail.Text?.Trim() ?? string.Empty, ini);
                 if (chkDisableSupport.Visible)
                     IniHelper.WriteValue("Mail", "DisableSupportMail", chkDisableSupport.Checked ? "True" : "False", ini);
@@ -158,10 +198,13 @@ namespace Geldautomat
                 btnTest.Enabled = false; btnSave.Enabled = false; btnCancel.Enabled = false;
                 try
                 {
-                    var from = new MailAddress(sel.Absender ?? sel.Benutzername ?? string.Empty, sel.Name);
-                    var to = new MailAddress(sel.Absender ?? sel.Benutzername ?? string.Empty);
+                    var fromAddr = sel.Absender ?? sel.Benutzername ?? string.Empty;
+                    var displayName = (txtFromName1.Text ?? string.Empty).Trim();
+                    var from = new MailAddress(fromAddr, string.IsNullOrWhiteSpace(displayName) ? sel.Name : displayName, Encoding.UTF8);
+                    var to = new MailAddress(fromAddr);
                     using (var msg = new MailMessage(from, to))
                     {
+                        msg.Sender = from; // sicherstellen, dass Absendername übernommen wird
                         msg.Subject = "Testverbindung Geldautomat";
                         string device = (AppSettings.AutomatenName ?? string.Empty).Trim();
                         msg.Body = "Dies ist eine Testnachricht zur Überprüfung der SMTP-Verbindung.\r\nGerät: " + device + "\r\nZeit: " + DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
@@ -169,14 +212,18 @@ namespace Geldautomat
                         int.TryParse(sel.Port, out port);
                         using (var client = new SmtpClient(sel.Host, port))
                         {
-                            // SSL abhängig von Typ (optional: Typ==1 -> SSL). Standard: SSL an.
                             bool ssl = true;
                             if (sel.Typ.HasValue) ssl = sel.Typ.Value != 0;
                             client.EnableSsl = ssl;
+                            string decryptedPwd = EmailReceiptService.TinyDecrypt(sel.Passwort ?? string.Empty);
                             if (!string.IsNullOrWhiteSpace(sel.Benutzername))
-                                client.Credentials = new NetworkCredential(sel.Benutzername, sel.Passwort);
+                            {
+                                client.Credentials = new NetworkCredential(sel.Benutzername, decryptedPwd);
+                            }
                             else
+                            {
                                 client.UseDefaultCredentials = true;
+                            }
                             client.Send(msg);
                         }
                     }
@@ -184,7 +231,28 @@ namespace Geldautomat
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(this, "Verbindung fehlgeschlagen:\r\n" + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    try
+                    {
+                        // Debug-Ausgabe ohne Passwort im Klartext
+                        var sel2 = cboAccount.SelectedItem as DatabaseHelper.DienstkontoInfo;
+                        string host = sel2?.Host ?? string.Empty;
+                        string port = sel2?.Port ?? string.Empty;
+                        string user = sel2?.Benutzername ?? string.Empty;
+                        string fromAddr = sel2?.Absender ?? sel2?.Benutzername ?? string.Empty;
+                        MessageBox.Show(this,
+                            "Verbindung fehlgeschlagen:\r\n" + ex.Message +
+                            "\r\n\r\nVerwendete Zugangsdaten:" +
+                            "\r\nSMTP-Host: " + host +
+                            "\r\nPort: " + port +
+                            "\r\nBenutzer: " + user +
+                            "\r\nFrom: " + fromAddr +
+                            "\r\nPasswort: (versteckt)",
+                            "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    catch
+                    {
+                        MessageBox.Show(this, "Verbindung fehlgeschlagen:\r\n" + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
                 }
                 finally
                 {
