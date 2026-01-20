@@ -7,66 +7,66 @@
       <PdfSharpToMove Include="$(TargetDir)PdfSharp*.xml" />
 
       <!-- Microsoft.Extensions dependencies used by PdfSharp (dll/pdb/xml) -->
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Bcl.AsyncInterfaces.dll" />
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Bcl.AsyncInterfaces.pdb" />
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Bcl.AsyncInterfaces.xml" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Bcl.AsyncInterfaces.dll" Condition="Exists('$(TargetDir)Microsoft.Bcl.AsyncInterfaces.dll')" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Bcl.AsyncInterfaces.pdb" Condition="Exists('$(TargetDir)Microsoft.Bcl.AsyncInterfaces.pdb')" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Bcl.AsyncInterfaces.xml" Condition="Exists('$(TargetDir)Microsoft.Bcl.AsyncInterfaces.xml')" />
 
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.DependencyInjection.dll" />
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.DependencyInjection.pdb" />
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.DependencyInjection.xml" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.DependencyInjection.dll" Condition="Exists('$(TargetDir)Microsoft.Extensions.DependencyInjection.dll')" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.DependencyInjection.pdb" Condition="Exists('$(TargetDir)Microsoft.Extensions.DependencyInjection.pdb')" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.DependencyInjection.xml" Condition="Exists('$(TargetDir)Microsoft.Extensions.DependencyInjection.xml')" />
 
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.DependencyInjection.Abstractions.dll" />
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.DependencyInjection.Abstractions.pdb" />
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.DependencyInjection.Abstractions.xml" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.DependencyInjection.Abstractions.dll" Condition="Exists('$(TargetDir)Microsoft.Extensions.DependencyInjection.Abstractions.dll')" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.DependencyInjection.Abstractions.pdb" Condition="Exists('$(TargetDir)Microsoft.Extensions.DependencyInjection.Abstractions.pdb')" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.DependencyInjection.Abstractions.xml" Condition="Exists('$(TargetDir)Microsoft.Extensions.DependencyInjection.Abstractions.xml')" />
 
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Logging.dll" />
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Logging.pdb" />
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Logging.xml" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Logging.dll" Condition="Exists('$(TargetDir)Microsoft.Extensions.Logging.dll')" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Logging.pdb" Condition="Exists('$(TargetDir)Microsoft.Extensions.Logging.pdb')" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Logging.xml" Condition="Exists('$(TargetDir)Microsoft.Extensions.Logging.xml')" />
 
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Logging.Abstractions.dll" />
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Logging.Abstractions.pdb" />
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Logging.Abstractions.xml" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Logging.Abstractions.dll" Condition="Exists('$(TargetDir)Microsoft.Extensions.Logging.Abstractions.dll')" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Logging.Abstractions.pdb" Condition="Exists('$(TargetDir)Microsoft.Extensions.Logging.Abstractions.pdb')" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Logging.Abstractions.xml" Condition="Exists('$(TargetDir)Microsoft.Extensions.Logging.Abstractions.xml')" />
 
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Options.dll" />
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Options.pdb" />
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Options.xml" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Options.dll" Condition="Exists('$(TargetDir)Microsoft.Extensions.Options.dll')" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Options.pdb" Condition="Exists('$(TargetDir)Microsoft.Extensions.Options.pdb')" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Options.xml" Condition="Exists('$(TargetDir)Microsoft.Extensions.Options.xml')" />
 
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Primitives.dll" />
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Primitives.pdb" />
-      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Primitives.xml" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Primitives.dll" Condition="Exists('$(TargetDir)Microsoft.Extensions.Primitives.dll')" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Primitives.pdb" Condition="Exists('$(TargetDir)Microsoft.Extensions.Primitives.pdb')" />
+      <PdfSharpToMove Include="$(TargetDir)Microsoft.Extensions.Primitives.xml" Condition="Exists('$(TargetDir)Microsoft.Extensions.Primitives.xml')" />
 
       <!-- System.* dependencies (dll/pdb/xml) -->
-      <PdfSharpToMove Include="$(TargetDir)System.Buffers.dll" />
-      <PdfSharpToMove Include="$(TargetDir)System.Buffers.pdb" />
-      <PdfSharpToMove Include="$(TargetDir)System.Buffers.xml" />
+      <PdfSharpToMove Include="$(TargetDir)System.Buffers.dll" Condition="Exists('$(TargetDir)System.Buffers.dll')" />
+      <PdfSharpToMove Include="$(TargetDir)System.Buffers.pdb" Condition="Exists('$(TargetDir)System.Buffers.pdb')" />
+      <PdfSharpToMove Include="$(TargetDir)System.Buffers.xml" Condition="Exists('$(TargetDir)System.Buffers.xml')" />
 
-      <PdfSharpToMove Include="$(TargetDir)System.Diagnostics.DiagnosticSource.dll" />
-      <PdfSharpToMove Include="$(TargetDir)System.Diagnostics.DiagnosticSource.pdb" />
-      <PdfSharpToMove Include="$(TargetDir)System.Diagnostics.DiagnosticSource.xml" />
+      <PdfSharpToMove Include="$(TargetDir)System.Diagnostics.DiagnosticSource.dll" Condition="Exists('$(TargetDir)System.Diagnostics.DiagnosticSource.dll')" />
+      <PdfSharpToMove Include="$(TargetDir)System.Diagnostics.DiagnosticSource.pdb" Condition="Exists('$(TargetDir)System.Diagnostics.DiagnosticSource.pdb')" />
+      <PdfSharpToMove Include="$(TargetDir)System.Diagnostics.DiagnosticSource.xml" Condition="Exists('$(TargetDir)System.Diagnostics.DiagnosticSource.xml')" />
 
-      <PdfSharpToMove Include="$(TargetDir)System.Memory.dll" />
-      <PdfSharpToMove Include="$(TargetDir)System.Memory.pdb" />
-      <PdfSharpToMove Include="$(TargetDir)System.Memory.xml" />
+      <PdfSharpToMove Include="$(TargetDir)System.Memory.dll" Condition="Exists('$(TargetDir)System.Memory.dll')" />
+      <PdfSharpToMove Include="$(TargetDir)System.Memory.pdb" Condition="Exists('$(TargetDir)System.Memory.pdb')" />
+      <PdfSharpToMove Include="$(TargetDir)System.Memory.xml" Condition="Exists('$(TargetDir)System.Memory.xml')" />
 
-      <PdfSharpToMove Include="$(TargetDir)System.Numerics.Vectors.dll" />
-      <PdfSharpToMove Include="$(TargetDir)System.Numerics.Vectors.pdb" />
-      <PdfSharpToMove Include="$(TargetDir)System.Numerics.Vectors.xml" />
+      <PdfSharpToMove Include="$(TargetDir)System.Numerics.Vectors.dll" Condition="Exists('$(TargetDir)System.Numerics.Vectors.dll')" />
+      <PdfSharpToMove Include="$(TargetDir)System.Numerics.Vectors.pdb" Condition="Exists('$(TargetDir)System.Numerics.Vectors.pdb')" />
+      <PdfSharpToMove Include="$(TargetDir)System.Numerics.Vectors.xml" Condition="Exists('$(TargetDir)System.Numerics.Vectors.xml')" />
 
-      <PdfSharpToMove Include="$(TargetDir)System.Runtime.CompilerServices.Unsafe.dll" />
-      <PdfSharpToMove Include="$(TargetDir)System.Runtime.CompilerServices.Unsafe.pdb" />
-      <PdfSharpToMove Include="$(TargetDir)System.Runtime.CompilerServices.Unsafe.xml" />
+      <PdfSharpToMove Include="$(TargetDir)System.Runtime.CompilerServices.Unsafe.dll" Condition="Exists('$(TargetDir)System.Runtime.CompilerServices.Unsafe.dll')" />
+      <PdfSharpToMove Include="$(TargetDir)System.Runtime.CompilerServices.Unsafe.pdb" Condition="Exists('$(TargetDir)System.Runtime.CompilerServices.Unsafe.pdb')" />
+      <PdfSharpToMove Include="$(TargetDir)System.Runtime.CompilerServices.Unsafe.xml" Condition="Exists('$(TargetDir)System.Runtime.CompilerServices.Unsafe.xml')" />
 
-      <PdfSharpToMove Include="$(TargetDir)System.Security.Cryptography.Pkcs.dll" />
-      <PdfSharpToMove Include="$(TargetDir)System.Security.Cryptography.Pkcs.pdb" />
-      <PdfSharpToMove Include="$(TargetDir)System.Security.Cryptography.Pkcs.xml" />
+      <PdfSharpToMove Include="$(TargetDir)System.Security.Cryptography.Pkcs.dll" Condition="Exists('$(TargetDir)System.Security.Cryptography.Pkcs.dll')" />
+      <PdfSharpToMove Include="$(TargetDir)System.Security.Cryptography.Pkcs.pdb" Condition="Exists('$(TargetDir)System.Security.Cryptography.Pkcs.pdb')" />
+      <PdfSharpToMove Include="$(TargetDir)System.Security.Cryptography.Pkcs.xml" Condition="Exists('$(TargetDir)System.Security.Cryptography.Pkcs.xml')" />
 
-      <PdfSharpToMove Include="$(TargetDir)System.Threading.Tasks.Extensions.dll" />
-      <PdfSharpToMove Include="$(TargetDir)System.Threading.Tasks.Extensions.pdb" />
-      <PdfSharpToMove Include="$(TargetDir)System.Threading.Tasks.Extensions.xml" />
+      <PdfSharpToMove Include="$(TargetDir)System.Threading.Tasks.Extensions.dll" Condition="Exists('$(TargetDir)System.Threading.Tasks.Extensions.dll')" />
+      <PdfSharpToMove Include="$(TargetDir)System.Threading.Tasks.Extensions.pdb" Condition="Exists('$(TargetDir)System.Threading.Tasks.Extensions.pdb')" />
+      <PdfSharpToMove Include="$(TargetDir)System.Threading.Tasks.Extensions.xml" Condition="Exists('$(TargetDir)System.Threading.Tasks.Extensions.xml')" />
 
-      <PdfSharpToMove Include="$(TargetDir)System.ValueTuple.dll" />
-      <PdfSharpToMove Include="$(TargetDir)System.ValueTuple.pdb" />
-      <PdfSharpToMove Include="$(TargetDir)System.ValueTuple.xml" />
+      <PdfSharpToMove Include="$(TargetDir)System.ValueTuple.dll" Condition="Exists('$(TargetDir)System.ValueTuple.dll')" />
+      <PdfSharpToMove Include="$(TargetDir)System.ValueTuple.pdb" Condition="Exists('$(TargetDir)System.ValueTuple.pdb')" />
+      <PdfSharpToMove Include="$(TargetDir)System.ValueTuple.xml" Condition="Exists('$(TargetDir)System.ValueTuple.xml')" />
     </ItemGroup>
     <MakeDir Directories="$(TargetDir)PDFsharp" Condition=" '@(PdfSharpToMove)' != '' " />
     <Move SourceFiles="@(PdfSharpToMove)" DestinationFolder="$(TargetDir)PDFsharp" Condition=" '@(PdfSharpToMove)' != '' " />
