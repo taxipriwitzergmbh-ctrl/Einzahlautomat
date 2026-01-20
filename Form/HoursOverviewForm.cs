@@ -106,6 +106,64 @@ namespace Geldautomat
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
 
+        // Pfad für Abhängigkeits-Assemblies (konfigurierbar über INI, sonst Standardpfad)
+        private static readonly string AssemblyBasePath = InitAssemblyBasePath();
+
+        static HoursOverviewForm()
+        {
+            try { AppDomain.CurrentDomain.AssemblyResolve += ResolveExternalAssemblies; } catch { }
+        }
+
+        private static string InitAssemblyBasePath()
+        {
+            try
+            {
+                // Optional aus INI übersteuerbar
+                string cfgPath = null;
+                try { cfgPath = IniHelper.ReadValue("UI", "PdfSharpPath", AppSettings.IniPath); } catch { }
+                if (!string.IsNullOrWhiteSpace(cfgPath) && Directory.Exists(cfgPath)) return cfgPath;
+
+                // Vorgeschlagener Installationspfad
+                string defaultPath = @"C:\\Program Files (x86)\\SuE-Software\\SuE-TaMi Client SQL\\PDFsharp";
+                return defaultPath;
+            }
+            catch { return @"C:\\Program Files (x86)\\SuE-Software\\SuE-TaMi Client SQL\\PDFsharp"; }
+        }
+
+        // Löst sowohl PdfSharp.* als auch Microsoft.Extensions.* und andere Abhängigkeiten aus dem angegebenen Ordner
+        private static Assembly ResolveExternalAssemblies(object sender, ResolveEventArgs args)
+        {
+            try
+            {
+                var name = new AssemblyName(args.Name).Name;
+                string dll = name + ".dll";
+
+                // Direkt im Basisordner
+                string candidate = Path.Combine(AssemblyBasePath, dll);
+                if (File.Exists(candidate)) return Assembly.LoadFrom(candidate);
+
+                // Häufige Unterordner prüfen
+                string[] subDirs = new[] { "", "lib", "lib\\net40", "lib\\net48", "bin", "bin\\Release", "runtimes\\win" };
+                foreach (var sub in subDirs)
+                {
+                    string p = string.IsNullOrEmpty(sub) ? AssemblyBasePath : Path.Combine(AssemblyBasePath, sub);
+                    string f = Path.Combine(p, dll);
+                    if (File.Exists(f)) return Assembly.LoadFrom(f);
+                }
+
+                // Letzter Versuch: neben der EXE
+                try
+                {
+                    string exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                    string local = Path.Combine(exeDir, dll);
+                    if (File.Exists(local)) return Assembly.LoadFrom(local);
+                }
+                catch { }
+            }
+            catch { }
+            return null;
+        }
+
         private Panel _header;
         private Label _title;
         private Button _btnClose;
@@ -116,16 +174,12 @@ namespace Geldautomat
         private Button _btnHelp;
         private DataGridView _grid;
         private Label _lblInfo;
-        private Label lblPeriod; // shows selected month/year
-
-        // summary
+        private Label lblPeriod;
         private Panel _summaryPanel;
         private Label lblSumArbeit, lblSumShortPause, lblSumPause, lblNetto, lblSumUrlaub, lblSumKrank;
         private Label lblIstStunden;
-        // stamp button
         private Button _btnStamp;
         private int? _openWorkEntryId;
-        // pause button
         private Button _btnPause;
         private int? _openPauseEntryId;
 
@@ -801,27 +855,30 @@ namespace Geldautomat
                 if (mailCfg == null || !mailCfg.IsConfigured) { MessageBox.Show(this, "Maileinstellungen sind nicht konfiguriert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                 if (!ShowMailConsentDialog(employeeMail)) return;
 
-                // determine selected month/year for logging
-                string monthYear = string.Empty;
-                try { monthYear = lblPeriod?.Text ?? string.Empty; } catch { }
+                string monthYear = string.Empty; try { monthYear = lblPeriod?.Text ?? string.Empty; } catch { }
                 try { AppLogger.Log($"Zeiterfassung: E-Mail-Versand gestartet für PID={_personal.PID}, Zeitraum='{monthYear}' an '{employeeMail}'"); } catch { }
 
-                // generate PDF of the current view and attach
+                // Trigger load of possible dependencies
+                try { Assembly.Load("PdfSharp"); } catch { }
+                try { Assembly.Load("PdfSharp.Charting"); } catch { }
+                try { Assembly.Load("PdfSharp.System"); } catch { }
+                // In neueren PdfSharp-Versionen werden Microsoft.Extensions.* benötigt
+                try { Assembly.Load("Microsoft.Extensions.Logging.Abstractions"); } catch { }
+                try { Assembly.Load("Microsoft.Extensions.Logging"); } catch { }
+                try { Assembly.Load("Microsoft.Extensions.Configuration"); } catch { }
+
                 string tmpPdf = Path.Combine(Path.GetTempPath(), $"Zeiterfassung_{_personal.PID}_{DateTime.Now.Ticks}.pdf");
                 bool pdfOk = false;
                 try
                 {
                     string printer = string.Empty; try { printer = IniHelper.ReadValue("UI", "DocumentPrinter", AppSettings.IniPath) ?? string.Empty; } catch { }
-                    // attempt to create PDF
                     var tryOk = PrintReportToPdf(table, tmpPdf, printer);
-                    // additionally verify that a non-empty file was produced
                     try
                     {
                         if (File.Exists(tmpPdf))
                         {
                             var fi = new FileInfo(tmpPdf);
                             pdfOk = tryOk && fi.Length > 0;
-                            // if PrintReportToPdf returned false but file exists and has content, accept it
                             if (!pdfOk && fi.Length > 0) pdfOk = true;
                         }
                         else
@@ -838,46 +895,45 @@ namespace Geldautomat
                 {
                     if (!pdfOk || !File.Exists(tmpPdf))
                     {
-                        // try to surface error details from PdfSharp (if available)
                         try
                         {
                             var logPath = Path.ChangeExtension(tmpPdf, ".pdf.err.txt");
                             if (File.Exists(logPath))
                             {
                                 var txt = File.ReadAllText(logPath);
-                                // limit length
                                 var show = txt.Length > 2000 ? txt.Substring(0, 2000) + "\r\n... (truncated)" : txt;
                                 MessageBox.Show(this, "PDF-Erzeugung fehlgeschlagen. Details:\r\n\r\n" + show + "\r\n\r\n(ganzer Log: " + logPath + ")\r\nE-Mail wurde nicht gesendet.", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             }
                             else
                             {
-                                MessageBox.Show(this, "PDF-Erzeugung fehlgeschlagen (keine Logdatei gefunden). E-Mail wurde nicht gesendet.\r\nPfad: " + tmpPdf, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                MessageBox.Show(this, "PDF-Erzeugung fehlgeschlagen. E-Mail wurde nicht gesendet.\r\nPfad: " + tmpPdf + "\r\nAssemblies-Ordner: " + AssemblyBasePath, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             }
                         }
                         catch
                         {
                             MessageBox.Show(this, "PDF-Erzeugung fehlgeschlagen. E-Mail wurde nicht gesendet.", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
-                        try { File.Delete(tmpPdf); } catch { }
+                        try { if (File.Exists(tmpPdf)) File.Delete(tmpPdf); } catch { }
                         return;
                     }
 
                     using (var msg = new System.Net.Mail.MailMessage())
                     {
-                        var from = new System.Net.Mail.MailAddress(mailCfg.FromAddress, mailCfg.FromDisplayName);
+                        var from = new System.Net.Mail.MailAddress(string.IsNullOrWhiteSpace(mailCfg.Username) ? mailCfg.FromAddress : mailCfg.Username, mailCfg.FromDisplayName);
                         msg.From = from;
                         msg.To.Add(new System.Net.Mail.MailAddress(employeeMail));
                         msg.Subject = "Zeiterfassung - Bericht";
-                        msg.Body = "Anbei die angeforderte Zeiterfassung als Anhang.";
+                        msg.Body = "Anbei die angeforderte Zeiterfassung als PDF-Anhang.";
                         msg.IsBodyHtml = false;
+                        msg.SubjectEncoding = Encoding.UTF8; msg.BodyEncoding = Encoding.UTF8;
                         var att = new System.Net.Mail.Attachment(tmpPdf);
                         msg.Attachments.Add(att);
 
                         using (var client = new System.Net.Mail.SmtpClient(mailCfg.SmtpHost, mailCfg.SmtpPort))
                         {
                             client.EnableSsl = mailCfg.EnableSsl;
+                            client.UseDefaultCredentials = false;
                             if (!string.IsNullOrWhiteSpace(mailCfg.Username)) client.Credentials = new System.Net.NetworkCredential(mailCfg.Username, mailCfg.Password);
-                            else client.UseDefaultCredentials = true;
                             client.Send(msg);
                         }
                     }
@@ -888,7 +944,7 @@ namespace Geldautomat
                 {
                     MessageBox.Show(this, "E-Mail Versand fehlgeschlagen:\r\n" + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
-                finally { try { Cursor.Current = prev; } catch { } try { File.Delete(tmpPdf); } catch { } }
+                finally { try { Cursor.Current = prev; } catch { } try { if (File.Exists(tmpPdf)) File.Delete(tmpPdf); } catch { } }
             }
             catch (Exception ex) { MessageBox.Show(this, "Unerwarteter Fehler:\r\n" + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
@@ -1053,7 +1109,7 @@ namespace Geldautomat
                 y += 22 + 12;
 
                 // draw separator (gray bar under month/year)
-                gfx.DrawRectangle(new XSolidBrush(XColor.FromArgb(240, 240, 240)), margin, y, contentWidth, 28);
+                gfx.DrawRectangle(new XSolidBrush(XColor.FromArgb(240,240,240)), margin, y, contentWidth, 28);
                 y += 28 + 6;
 
                 // header row
