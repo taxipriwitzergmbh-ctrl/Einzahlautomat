@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Security.Authentication;
-using System.Net;
 using System.Linq;
 
 namespace Geldautomat
@@ -240,7 +239,9 @@ namespace Geldautomat
                 {
                     try { ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12; } catch { }
 
-                    var fromAddr = sel.Absender ?? sel.Benutzername ?? string.Empty;
+                    // Einige Provider (z.B. Strato) verlangen, dass der From/Envelope-Absender exakt dem Login entspricht
+                    var loginAddr = sel.Benutzername ?? string.Empty;
+                    var fromAddr = !string.IsNullOrWhiteSpace(loginAddr) ? loginAddr : (sel.Absender ?? string.Empty);
                     var displayName = (txtFromName1.Text ?? string.Empty).Trim();
                     var from = new MailAddress(fromAddr, string.IsNullOrWhiteSpace(displayName) ? sel.Name : displayName, Encoding.UTF8);
                     var to = new MailAddress(fromAddr);
@@ -250,12 +251,18 @@ namespace Geldautomat
                     var dnsInfo = ResolveHostInfo(sel.Host);
                     var tcp = TryTcpConnect(sel.Host, port, 7000);
 
-                    using (var msg = new MailMessage(from, to))
+                    using (var msg = new MailMessage())
                     {
-                        msg.Sender = from;
+                        // Strikter Aufbau: Absender/Empfänger
+                        msg.From = from;
+                        msg.To.Add(to);
+                        // Kein Sender setzen – manche Server (Strato) lehnen ab, wenn Sender != From
+                        // msg.Sender = from;
                         msg.Subject = "Testverbindung Geldautomat";
+                        msg.SubjectEncoding = Encoding.UTF8;
                         string device = (AppSettings.AutomatenName ?? string.Empty).Trim();
                         msg.Body = "Dies ist eine Testnachricht zur Überprüfung der SMTP-Verbindung.\r\nGerät: " + device + "\r\nZeit: " + DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
+                        msg.BodyEncoding = Encoding.UTF8;
 
                         string decryptedPwd = EmailReceiptService.TinyDecrypt(sel.Passwort ?? string.Empty);
 
@@ -266,11 +273,15 @@ namespace Geldautomat
                             {
                                 using (var client = new SmtpClient(sel.Host, usePort))
                                 {
-                                    client.EnableSsl = true; // sowohl für Implicit-SSL (465) als auch STARTTLS (587)
-                                    client.Timeout = 30000;
                                     client.DeliveryMethod = SmtpDeliveryMethod.Network;
+                                    client.Timeout = 30000;
+                                    // Immer explizite Credentials verwenden
                                     client.UseDefaultCredentials = false;
-                                    if (!string.IsNullOrWhiteSpace(sel.Benutzername)) client.Credentials = new NetworkCredential(sel.Benutzername, decryptedPwd); else client.UseDefaultCredentials = true;
+                                    client.Credentials = new NetworkCredential(loginAddr, decryptedPwd);
+
+                                    // STARTTLS für 587, Implicit SSL für 465 – SmtpClient verwaltet das intern über EnableSsl
+                                    client.EnableSsl = (usePort == 465 || usePort == 587);
+
                                     client.Send(msg);
                                     return true;
                                 }
@@ -281,14 +292,13 @@ namespace Geldautomat
                             }
                         }
 
-                        // Erst mit konfiguriertem Port probieren, danach mit alternativen Standard-Ports (465/587)
+                        // Bevorzugt 587 (STARTTLS), danach 465 (Implicit SSL), zuletzt konfigurierter Port
                         Exception lastError = null;
                         int[] portsToTry = new int[]
                         {
-                            port,
-                            port == 465 ? 587 : 465,
                             587,
-                            465
+                            465,
+                            port
                         };
                         foreach (var p in portsToTry.Distinct())
                         {
@@ -309,8 +319,8 @@ namespace Geldautomat
                                 "\rDNS-IP(s): " + dnsInfo +
                                 "\rTCP-Check: " + tcp.note +
                                 "\rPort (versucht): " + string.Join(", ", portsToTry.Distinct()) +
-                                "\rSSL: an" +
-                                "\rBenutzer: " + (sel.Benutzername ?? string.Empty) +
+                                "\rSSL: auto (587 STARTTLS, 465 Implicit)" +
+                                "\rBenutzer: " + (loginAddr ?? string.Empty) +
                                 "\rFrom: " + fromAddr +
                                 "\rPasswort (entschlüsselt): " + (string.IsNullOrEmpty(decryptedPwd) ? "(leer)" : decryptedPwd),
                                 "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);

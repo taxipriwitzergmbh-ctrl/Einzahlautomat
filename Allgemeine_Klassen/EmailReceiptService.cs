@@ -150,16 +150,38 @@ namespace Geldautomat
             return new string(result);
         }
 
-        private static SmtpClient BuildClient(DienstkontoCfg cfg)
-        {
-            var client = new SmtpClient(cfg.Host, cfg.Port) { EnableSsl = cfg.EnableSsl };
-            if (!string.IsNullOrWhiteSpace(cfg.User)) client.Credentials = new NetworkCredential(cfg.User, cfg.Password); else client.UseDefaultCredentials = true;
-            return client;
-        }
-
         private static MailAddress BuildFrom(DienstkontoCfg cfg)
         {
-            return new MailAddress(cfg.FromAddress, cfg.FromName);
+            // From soll Login entsprechen, um Provider-Anforderungen zu erfüllen
+            string loginAddr = string.IsNullOrWhiteSpace(cfg.User) ? cfg.FromAddress : cfg.User;
+            return new MailAddress(loginAddr, cfg.FromName, Encoding.UTF8);
+        }
+
+        private static bool TrySendWithPorts(string host, string user, string pass, MailMessage mail, int configuredPort, out Exception error)
+        {
+            error = null;
+            int[] portsToTry = new[] { 587, 465, configuredPort };
+            foreach (var p in portsToTry.Distinct())
+            {
+                try
+                {
+                    using (var client = new SmtpClient(host, p))
+                    {
+                        client.DeliveryMethod = SmtpDeliveryMethod.Network;
+                        client.Timeout = 30000;
+                        client.UseDefaultCredentials = false;
+                        if (!string.IsNullOrWhiteSpace(user)) client.Credentials = new NetworkCredential(user, pass);
+                        client.EnableSsl = (p == 465 || p == 587);
+                        client.Send(mail);
+                        return true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    error = ex;
+                }
+            }
+            return false;
         }
 
         public static void SendReceiptToEmployee(PersonalInfo personal, string subjectPrefix, string body)
@@ -168,7 +190,6 @@ namespace Geldautomat
             var email = personal.EMail;
             if (string.IsNullOrWhiteSpace(email)) throw new InvalidOperationException("Keine E-Mail-Adresse hinterlegt.");
 
-            // Versuche Dienstkonto2, sonst INI
             DienstkontoCfg dk2;
             if (TryGetDienstkonto2Cfg(out dk2))
             {
@@ -176,9 +197,16 @@ namespace Geldautomat
                 mail.From = BuildFrom(dk2);
                 mail.To.Add(email);
                 mail.Subject = $"{subjectPrefix} Quittung";
+                mail.SubjectEncoding = Encoding.UTF8;
                 mail.Body = body;
+                mail.BodyEncoding = Encoding.UTF8;
                 mail.IsBodyHtml = false;
-                using (var client = BuildClient(dk2)) client.Send(mail);
+                Exception err;
+                if (!TrySendWithPorts(dk2.Host, dk2.User, dk2.Password, mail, dk2.Port, out err))
+                {
+                    try { AppLogger.Log("Quittung senden (DK2) fehlgeschlagen: " + err?.ToString()); } catch { }
+                    throw new SmtpException("Versand fehlgeschlagen.", err);
+                }
                 try { AppLogger.Log($"Mail gesendet (DK2): Quittung an '{email}' (Betreff='{mail.Subject}')"); } catch { }
                 return;
             }
@@ -187,12 +215,20 @@ namespace Geldautomat
             if (!cfg.IsConfigured) throw new InvalidOperationException("Maileinstellungen unvollständig.");
 
             var mailFallback = new MailMessage();
-            mailFallback.From = new MailAddress(cfg.FromAddress, cfg.FromDisplayName);
+            string loginAddr = string.IsNullOrWhiteSpace(cfg.Username) ? cfg.FromAddress : cfg.Username;
+            mailFallback.From = new MailAddress(loginAddr, cfg.FromDisplayName, Encoding.UTF8);
             mailFallback.To.Add(email);
             mailFallback.Subject = $"{subjectPrefix} Quittung";
+            mailFallback.SubjectEncoding = Encoding.UTF8;
             mailFallback.Body = body;
+            mailFallback.BodyEncoding = Encoding.UTF8;
             mailFallback.IsBodyHtml = false;
-            using (var client = new SmtpClient(cfg.SmtpHost, cfg.SmtpPort)) { client.EnableSsl = cfg.EnableSsl; if (!string.IsNullOrWhiteSpace(cfg.Username)) client.Credentials = new NetworkCredential(cfg.Username, cfg.Password); else client.UseDefaultCredentials = true; client.Send(mailFallback); }
+            Exception err2;
+            if (!TrySendWithPorts(cfg.SmtpHost, cfg.Username, cfg.Password, mailFallback, cfg.SmtpPort, out err2))
+            {
+                try { AppLogger.Log("Quittung senden (INI) fehlgeschlagen: " + err2?.ToString()); } catch { }
+                throw new SmtpException("Versand fehlgeschlagen.", err2);
+            }
             try { AppLogger.Log($"Mail gesendet (INI): Quittung an '{email}' (Betreff='{mailFallback.Subject}')"); } catch { }
         }
 
@@ -209,14 +245,21 @@ namespace Geldautomat
                 mail.From = BuildFrom(dk2);
                 mail.To.Add(email);
                 mail.Subject = $"{subjectPrefix} Quittung";
+                mail.SubjectEncoding = Encoding.UTF8;
                 mail.Body = body;
+                mail.BodyEncoding = Encoding.UTF8;
                 mail.IsBodyHtml = false;
                 var html = BuildSimpleReceiptHtml(attachmentPlainText ?? string.Empty);
                 var bytes = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(html);
                 var ms = new MemoryStream(bytes);
                 var attachment = new Attachment(ms, attachmentFileName, "text/html");
                 mail.Attachments.Add(attachment);
-                using (var client = BuildClient(dk2)) client.Send(mail);
+                Exception err;
+                if (!TrySendWithPorts(dk2.Host, dk2.User, dk2.Password, mail, dk2.Port, out err))
+                {
+                    try { AppLogger.Log("Quittung+Anhang senden (DK2) fehlgeschlagen: " + err?.ToString()); } catch { }
+                    throw new SmtpException("Versand fehlgeschlagen.", err);
+                }
                 try { AppLogger.Log($"Mail gesendet (DK2): Quittung+Anhang ('{attachmentFileName}') an '{email}' (Betreff='{mail.Subject}')"); } catch { }
                 return;
             }
@@ -225,17 +268,25 @@ namespace Geldautomat
             if (!cfg.IsConfigured) throw new InvalidOperationException("Maileinstellungen unvollständig.");
 
             var mailFallback = new MailMessage();
-            mailFallback.From = new MailAddress(cfg.FromAddress, cfg.FromDisplayName);
+            string loginAddr = string.IsNullOrWhiteSpace(cfg.Username) ? cfg.FromAddress : cfg.Username;
+            mailFallback.From = new MailAddress(loginAddr, cfg.FromDisplayName, Encoding.UTF8);
             mailFallback.To.Add(email);
             mailFallback.Subject = $"{subjectPrefix} Quittung";
+            mailFallback.SubjectEncoding = Encoding.UTF8;
             mailFallback.Body = body;
+            mailFallback.BodyEncoding = Encoding.UTF8;
             mailFallback.IsBodyHtml = false;
             var html2 = BuildSimpleReceiptHtml(attachmentPlainText ?? string.Empty);
             var bytes2 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(html2);
             var ms2 = new MemoryStream(bytes2);
             var attachment2 = new Attachment(ms2, attachmentFileName, "text/html");
             mailFallback.Attachments.Add(attachment2);
-            using (var client = new SmtpClient(cfg.SmtpHost, cfg.SmtpPort)) { client.EnableSsl = cfg.EnableSsl; if (!string.IsNullOrWhiteSpace(cfg.Username)) client.Credentials = new NetworkCredential(cfg.Username, cfg.Password); else client.UseDefaultCredentials = true; client.Send(mailFallback); }
+            Exception err2;
+            if (!TrySendWithPorts(cfg.SmtpHost, cfg.Username, cfg.Password, mailFallback, cfg.SmtpPort, out err2))
+            {
+                try { AppLogger.Log("Quittung+Anhang senden (INI) fehlgeschlagen: " + err2?.ToString()); } catch { }
+                throw new SmtpException("Versand fehlgeschlagen.", err2);
+            }
             try { AppLogger.Log($"Mail gesendet (INI): Quittung+Anhang ('{attachmentFileName}') an '{email}' (Betreff='{mailFallback.Subject}')"); } catch { }
         }
 
@@ -259,9 +310,17 @@ namespace Geldautomat
 
             var mail = new MailMessage();
             if (useDienstkonto)
-                mail.From = BuildFrom(dk);
+            {
+                // Streng: From muss dem Login entsprechen (für Provider wie Strato)
+                string loginAddr = dk.User ?? dk.FromAddress;
+                mail.From = new MailAddress(string.IsNullOrWhiteSpace(loginAddr) ? dk.FromAddress : loginAddr, dk.FromName, Encoding.UTF8);
+            }
             else
-                mail.From = new MailAddress(cfg.FromAddress, cfg.FromDisplayName);
+            {
+                // Fallback INI
+                string loginAddr = string.IsNullOrWhiteSpace(cfg.Username) ? cfg.FromAddress : cfg.Username;
+                mail.From = new MailAddress(loginAddr, cfg.FromDisplayName, Encoding.UTF8);
+            }
 
             var toLog = new System.Collections.Generic.List<string>();
             // Ziel 1: konfigurierte Fehler-Mails (mehrere via ';')
@@ -283,23 +342,60 @@ namespace Geldautomat
             }
 
             mail.Subject = subject;
+            mail.SubjectEncoding = Encoding.UTF8;
             mail.Body = body;
+            mail.BodyEncoding = Encoding.UTF8;
             mail.IsBodyHtml = false;
 
+            // Senden mit robuster Port-/TLS-Logik (587 STARTTLS bevorzugt, dann 465 Implicit)
+            bool TrySend(string host, string user, string pass, int usePort, out Exception error)
+            {
+                error = null;
+                try
+                {
+                    using (var client = new SmtpClient(host, usePort))
+                    {
+                        client.DeliveryMethod = SmtpDeliveryMethod.Network;
+                        client.Timeout = 30000;
+                        client.UseDefaultCredentials = false;
+                        if (!string.IsNullOrWhiteSpace(user)) client.Credentials = new NetworkCredential(user, pass);
+                        client.EnableSsl = (usePort == 465 || usePort == 587);
+                        client.Send(mail);
+                        return true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    error = ex; return false;
+                }
+            }
+
+            Exception lastError = null;
             if (useDienstkonto)
             {
-                using (var client = BuildClient(dk)) client.Send(mail);
+                int[] portsToTry = new[] { 587, 465, dk.Port };
+                foreach (var p in portsToTry.Distinct())
+                {
+                    if (TrySend(dk.Host, dk.User, dk.Password, p, out lastError)) { lastError = null; break; }
+                }
             }
             else
             {
-                using (var client = new SmtpClient(cfg.SmtpHost, cfg.SmtpPort))
+                int[] portsToTry = new[] { 587, 465, cfg.SmtpPort };
+                foreach (var p in portsToTry.Distinct())
                 {
-                    client.EnableSsl = cfg.EnableSsl;
-                    if (!string.IsNullOrWhiteSpace(cfg.Username)) client.Credentials = new NetworkCredential(cfg.Username, cfg.Password); else client.UseDefaultCredentials = true;
-                    client.Send(mail);
+                    if (TrySend(cfg.SmtpHost, cfg.Username, cfg.Password, p, out lastError)) { lastError = null; break; }
                 }
             }
-            try { AppLogger.Log($"Support-Fehlermail gesendet (Betreff='{subject}') an: " + string.Join(", ", toLog.ToArray())); } catch { }
+
+            if (lastError != null)
+            {
+                try { AppLogger.Log("Support-Fehlermail Senden fehlgeschlagen: " + lastError.ToString()); } catch { }
+            }
+            else
+            {
+                try { AppLogger.Log($"Support-Fehlermail gesendet (Betreff='{subject}') an: " + string.Join(", ", toLog.ToArray())); } catch { }
+            }
         }
 
         private static string BuildSimpleReceiptHtml(string content)
