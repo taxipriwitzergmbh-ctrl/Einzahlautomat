@@ -36,6 +36,9 @@ namespace Geldautomat
         private Button _overlayClose;
         private Action<BigItem> _onOverlaySelect;
 
+        // Robust tracking of selected firm
+        private int? _selectedFirmaId;
+
         public CreatePaymentForm()
         {
             Text = "Zahlung anlegen";
@@ -193,6 +196,7 @@ namespace Geldautomat
                                 cboFirma.SelectedIndex = onlyIndex;
                                 try { if (onlyId != null) cboFirma.SelectedValue = onlyId; } catch { }
                                 try { if (!string.IsNullOrWhiteSpace(onlyName) && btnPickFirma != null) btnPickFirma.Text = onlyName; } catch { }
+                                _selectedFirmaId = (onlyId == null || onlyId == DBNull.Value) ? (int?)null : Convert.ToInt32(onlyId);
                                 try { ValidateMaxAmount(); } catch { }
 
                                 // Fallback: nach Binding-Cycle nochmal setzen
@@ -207,6 +211,7 @@ namespace Geldautomat
                                             if (!string.IsNullOrWhiteSpace(onlyName) && btnPickFirma != null) btnPickFirma.Text = onlyName;
                                         }
                                         catch { }
+                                        _selectedFirmaId = (onlyId == null || onlyId == DBNull.Value) ? (int?)null : Convert.ToInt32(onlyId);
                                         try { ValidateMaxAmount(); } catch { }
                                     }));
                                 }
@@ -216,10 +221,11 @@ namespace Geldautomat
                             {
                                 cboFirma.SelectedIndex = 0;
                                 try { cboFirma.SelectedValue = DBNull.Value; } catch { }
+                                _selectedFirmaId = null;
                                 try { if (btnPickFirma != null) btnPickFirma.Text = "Firma wählen"; } catch { }
                             }
                         }
-                        catch { try { cboFirma.SelectedIndex = 0; } catch { } }
+                        catch { try { cboFirma.SelectedIndex = 0; _selectedFirmaId = null; } catch { } }
 
                         // Button-Text initial setzen
                         try
@@ -266,8 +272,8 @@ namespace Geldautomat
                     return;
                 }
 
-                // Firma muss mind. ausgewählt sein (Index > 0)
-                if (cboFirma.SelectedIndex <= 0)
+                // Firma muss ausgewählt sein (über robusten Marker)
+                if (!_selectedFirmaId.HasValue || _selectedFirmaId.Value <= 0)
                 {
                     MessageBox.Show(this, "Bitte Firma wählen.");
                     return;
@@ -299,17 +305,7 @@ namespace Geldautomat
                     string vorgabe = !string.IsNullOrWhiteSpace(feld.Buchungstext) ? feld.Buchungstext.Trim() : (feld.Bezeichnung ?? string.Empty).Trim();
                     string buchungstext = string.IsNullOrWhiteSpace(mitarbeiter) ? vorgabe : ($"{mitarbeiter}-{vorgabe}");
 
-                    // Firmen-ID robust bestimmen
-                    int firmenId = 0;
-                    try
-                    {
-                        var val = cboFirma.SelectedValue;
-                        if (val != null && val != DBNull.Value && !string.IsNullOrWhiteSpace(Convert.ToString(val)))
-                            firmenId = Convert.ToInt32(val);
-                        else if (cboFirma.SelectedItem is DataRowView drv2 && drv2.Row != null && drv2.Row.Table.Columns.Contains("ManID") && drv2.Row["ManID"] != DBNull.Value)
-                            firmenId = Convert.ToInt32(drv2.Row["ManID"]);
-                    }
-                    catch { }
+                    int firmenId = _selectedFirmaId.GetValueOrDefault(0);
 
                     using (var db = new DatabaseHelper())
                     {
@@ -333,7 +329,26 @@ namespace Geldautomat
             // Validierung bei Änderungen
             cboFelder.SelectedIndexChanged += (s, e) => ValidateMaxAmount();
             numBetrag.ValueChanged += (s, e) => ValidateMaxAmount();
-            cboFirma.SelectedIndexChanged += (s, e) => ValidateMaxAmount();
+            cboFirma.SelectedIndexChanged += (s, e) =>
+            {
+                try
+                {
+                    // Update selection marker from ComboBox
+                    int? id = null;
+                    var val = cboFirma.SelectedValue;
+                    if (val != null && val != DBNull.Value && !string.IsNullOrWhiteSpace(Convert.ToString(val)))
+                    {
+                        int tmp; if (int.TryParse(Convert.ToString(val), out tmp) && tmp > 0) id = tmp;
+                    }
+                    else if (cboFirma.SelectedItem is DataRowView drv && drv.Row != null && drv.Row.Table.Columns.Contains("ManID") && drv.Row["ManID"] != DBNull.Value)
+                    {
+                        int tmp; if (int.TryParse(Convert.ToString(drv.Row["ManID"]), out tmp) && tmp > 0) id = tmp;
+                    }
+                    _selectedFirmaId = id;
+                }
+                catch { _selectedFirmaId = null; }
+                ValidateMaxAmount();
+            };
             // Initial prüfen
             ValidateMaxAmount();
 
@@ -343,14 +358,12 @@ namespace Geldautomat
             Controls.Add(lblFeld);
             Controls.Add(cboFelder);
             Controls.Add(btnPickFeld);
-            // Hinweis-Label für Feld-Auswahl wird nicht mehr verwendet
             Controls.Add(lblBetrag);
             Controls.Add(numBetrag);
             Controls.Add(btnKeypad);
             Controls.Add(lblFirma);
             Controls.Add(cboFirma);
             Controls.Add(btnPickFirma);
-            // Hinweis-Label für Firma wird nicht mehr angezeigt
             Controls.Add(btnSave);
 
             // Touch pick handlers
@@ -489,32 +502,7 @@ namespace Geldautomat
                 bool fieldOk = cboFelder.SelectedIndex > 0 && feld != null;
                 bool amountOk = betrag > 0 && (fieldOk ? betrag <= feld.MaxBetrag : false);
 
-                // Firma gilt als gewählt, sobald ein Eintrag >0 selektiert ist (Binding-Zwischenzustände ignorieren)
-                // Zusätzlich: Wenn SelectedItem einen gültigen ManID-Wert hat, auch dann als gewählt behandeln
-                bool firmaOk = false;
-                if (cboFirma != null)
-                {
-                    if (cboFirma.SelectedIndex > 0)
-                    {
-                        firmaOk = true;
-                    }
-                    else
-                    {
-                        var drv = cboFirma.SelectedItem as DataRowView;
-                        if (drv != null && drv.Row != null && drv.Row.Table.Columns.Contains("ManID") && drv.Row["ManID"] != DBNull.Value)
-                        {
-                            // SelectedItem hat gültige ManID (z.B. wenn Binding den Index temporär auf 0 setzt)
-                            firmaOk = true;
-                        }
-                        else
-                        {
-                            // Prüfe SelectedValue direkt
-                            var val = cboFirma.SelectedValue;
-                            if (val != null && val != DBNull.Value && !string.IsNullOrWhiteSpace(Convert.ToString(val)))
-                                firmaOk = true;
-                        }
-                    }
-                }
+                bool firmaOk = _selectedFirmaId.HasValue && _selectedFirmaId.Value > 0;
 
                 btnSave.Enabled = fieldOk && amountOk && firmaOk;
             }
@@ -719,6 +707,7 @@ namespace Geldautomat
                     if (!int.TryParse(idStr, out id))
                     {
                         cboFirma.SelectedIndex = 0;
+                        _selectedFirmaId = null;
                     }
                     else
                     {
@@ -764,8 +753,9 @@ namespace Geldautomat
                             }
                             // Setze nur wenn gültig (>0, nicht Platzhalter)
                             cboFirma.SelectedIndex = (targetIndex <= 0) ? Math.Max(1, targetIndex) : targetIndex;
+                            _selectedFirmaId = id;
                         }
-                        catch { cboFirma.SelectedValue = id; }
+                        catch { cboFirma.SelectedValue = id; _selectedFirmaId = id; }
                         // Button-Text sofort aktualisieren
                         try { if (btnPickFirma != null) btnPickFirma.Text = string.IsNullOrWhiteSpace(pickedItem?.Title) ? "Firma wählen" : pickedItem.Title; } catch { }
                     }
