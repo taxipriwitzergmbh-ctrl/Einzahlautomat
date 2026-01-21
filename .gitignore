@@ -2,13 +2,39 @@
 # Diese .gitignore-Datei wurde von Microsoft(R) Visual Studio automatisch erstellt.
 ################################################################################
 
-/AccountingRules.cs
-/.vs/Geldautomat/copilot-chat/55b7bd6e/sessions
-/.vs/Geldautomat/CopilotIndices
-/.vs/Geldautomat/FileContentIndex
-/.vs/Geldautomat/v17
-/.vs/CopilotSnapshots
-/.vs
-/bin/Release
-/obj/Release
+# Allgemeine Ignore-Regeln für .NET/.NET Framework Projekte
+
+# Visual Studio Arbeitsordner
+.vs/
+
+# Build-Ausgaben
+**/bin/
+**/obj/
+
+# NuGet-Pakete (werden per Restore wiederhergestellt)
+packages/
+!packages/repositories.config
+
+# Benutzer-/Projekt-spezifische Dateien
+*.user
+*.suo
+*.rsuser
+
+# Protokolle/Cache/DB
+*.log
+*.cache
+*.db
+*.ndf
+*.ldf
+
+# (Alt) explizit ignorierte Pfade aus vorheriger Datei – bleiben als Kommentar dokumentiert
+# /AccountingRules.cs
+# /.vs/Geldautomat/copilot-chat/55b7bd6e/sessions
+# /.vs/Geldautomat/CopilotIndices
+# /.vs/Geldautomat/FileContentIndex
+# /.vs/Geldautomat/v17
+# /.vs/CopilotSnapshots
+# /bin/Release
+# /obj/Release
+# /packages/Microsoft.Extensions.DependencyInjection.Abstractions.8.0.2/buildTransitive/netcoreapp2.0/Microsoft.Extensions.DependencyInjection.Abstractions.targets
 /packages/Microsoft.Extensions.DependencyInjection.Abstractions.8.0.2/buildTransitive/netcoreapp2.0/Microsoft.Extensions.DependencyInjection.Abstractions.targets
