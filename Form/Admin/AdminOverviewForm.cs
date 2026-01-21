@@ -186,7 +186,7 @@ namespace TaMi_Einzahlautomat
             // Titel
             lblTitle = new Label
             {
-                Text = "Admin �bersicht",
+                Text = "Admin Übersicht",
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
@@ -197,7 +197,7 @@ namespace TaMi_Einzahlautomat
             };
             headerPanel.Controls.Add(lblTitle);
 
-            // Schlie�en-Button
+            // Schließen-Button
             btnClose = new Button
             {
                 Text = "\u2715",
@@ -217,7 +217,7 @@ namespace TaMi_Einzahlautomat
             // Minimieren-Button
             btnMinimize = new Button
             {
-                Text = "�",
+                Text = "-",
                 Font = new Font("Segoe UI", 16F, FontStyle.Bold),
                 ForeColor = Color.White,
                 BackColor = Color.Transparent,
@@ -238,18 +238,18 @@ namespace TaMi_Einzahlautomat
             // Abgerundete Ecken
             try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 32, 32)); } catch { }
 
-            // Tabs anlegen (Ger�te / Einstellungen)
+            // Tabs anlegen (Geräte / Einstellungen)
             _tabs = new TabControl
             {
                 Location = new Point(0, headerPanel.Bottom),
-                // H�he etwas reduziert, damit unten Platz f�r ExeInfo-Label bleibt
+                // Höhe etwas reduziert, damit unten Platz für ExeInfo-Label bleibt
                 Size = new Size(ClientSize.Width, ClientSize.Height - headerPanel.Height - 30),
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold),
                 ItemSize = new Size(200, 36),
                 Padding = new Point(12, 6)
             };
-            _tabDevices = new TabPage("Ger�te") { BackColor = Color.White };
+            _tabDevices = new TabPage("Geräte") { BackColor = Color.White };
             _tabSettings = new TabPage("Einstellungen") { BackColor = Color.White, AutoScroll = true, Padding = new Padding(8) };
             _tabs.TabPages.Add(_tabDevices);
             _tabs.TabPages.Add(_tabSettings);
@@ -265,11 +265,11 @@ namespace TaMi_Einzahlautomat
             Font f16 = new Font("Segoe UI Variable", 16F, FontStyle.Bold);
             Font f14 = new Font("Segoe UI Variable", 14F, FontStyle.Bold);
 
-            // Inhalte Tab Ger�te
+            // Inhalte Tab Geräte
             int y = startY;
             btnKassenbestand = CreateMenuButton(_tabDevices, "Kassenbestand", y, h70, blue, f16); y += h70 + gapSmall;
             btnKassensturz = CreateMenuButton(_tabDevices, "Kassensturz", y, h70, blue, f16); y += h70 + gapSmall;
-            // Zus�tzlicher Abstand zwischen Kassensturz und Log
+            // Zusätzlicher Abstand zwischen Kassensturz und Log
             y += gapLarge;
             btnShowLog = CreateMenuButton(_tabDevices, "Log anzeigen", y, h60, blue, f14); y += h60 + gapLarge;
 
@@ -278,14 +278,14 @@ namespace TaMi_Einzahlautomat
             btnAbmeldenImmer.Click += (s,e)=> ForceLogoutFromAbrechnung();
             y += h60 + gapLarge;
 
-            // Ger�te
+            // Geräte
             btnNV200_1 = CreateMenuButton(_tabDevices, "Scheinautomat NV200/1", y, h70, blue, f16); y += h70 + gapSmall;
             btnNV200_2 = CreateMenuButton(_tabDevices, "Scheinautomat NV200/2", y, h70, blue, f16); y += h70 + gapSmall;
-            // Etwas kleinerer Abstand zwischen NV200/2 und M�nzpr�fer/1
+            // Etwas kleinerer Abstand zwischen NV200/2 und Münzpr�fer/1
             y += gapSmall;
-            btnCoinAdmin = CreateMenuButton(_tabDevices, "M�nzpr�fer/1", y, h70, blue, f16); y += h70 + gapSmall;
-            btnCoinAdmin2 = CreateMenuButton(_tabDevices, "M�nzpr�fer/2", y, h70, blue, f16); y += h70 + gapSmall;
-            // Etwas kleinerer Abstand zwischen M�nzpr�fer/2 und Coinfeeder
+            btnCoinAdmin = CreateMenuButton(_tabDevices, "Münzprüfer/1", y, h70, blue, f16); y += h70 + gapSmall;
+            btnCoinAdmin2 = CreateMenuButton(_tabDevices, "Münzprüfer/2", y, h70, blue, f16); y += h70 + gapSmall;
+            // Etwas kleinerer Abstand zwischen Münzprüfer/2 und Coinfeeder
             y += gapSmall;
             btnCoinFeeder = CreateMenuButton(_tabDevices, "Coinfeeder", y, h60, blue, f16); y += h60 + gapSmall;
 
@@ -321,7 +321,7 @@ namespace TaMi_Einzahlautomat
                 try { ShowOrActivate(() => new PaymentSettingsForm()); } catch { }
             };
 
-            // NEU: Allgemeine Einstellungen (OnlyNFC, Passw�rter)
+            // NEU: Allgemeine Einstellungen (OnlyNFC, Passwörter)
             ys += h60 + gapLarge;
             var btnGeneralSettings = CreateMenuButton(_tabSettings, "Allgemeine Einstellungen", ys, h60, blue, f14);
             btnGeneralSettings.Click += (s, e) => { try { ShowOrActivate(() => new GeneralSettingsForm()); } catch { } };
@@ -370,7 +370,7 @@ namespace TaMi_Einzahlautomat
 
         private void UpdateDeviceStatus()
         {
-            // Sicherstellen, dass Disabled-Flags aus INI geladen sind (falls jeweilige Admin-Form noch nie ge�ffnet wurde)
+            // Sicherstellen, dass Disabled-Flags aus INI geladen sind (falls jeweilige Admin-Form noch nie geöffnet wurde)
             try
             {
                 // NV200/1
@@ -434,7 +434,7 @@ namespace TaMi_Einzahlautomat
                 TryApplyBezel(null, null, isNv2: true);
             }
 
-            // M�nzpr�fer/1
+            // Münzprüfer/1
             if (btnCoinAdmin != null)
             {
                 var coin1 = CoinManager.Instance;
@@ -449,10 +449,10 @@ namespace TaMi_Einzahlautomat
                 }
                 if (string.IsNullOrWhiteSpace(zustand1))
                     zustand1 = (coin1 != null && coin1.Connected) ? "Verbunden" : "Nicht verbunden";
-                btnCoinAdmin.Text = $"M�nzpr�fer/1\nZustand: {zustand1}";
+                btnCoinAdmin.Text = $"Münzprüfer/1\nZustand: {zustand1}";
             }
 
-            // M�nzpr�fer/2
+            // Münzprüfer/2
             if (btnCoinAdmin2 != null)
             {
                 if (Coin2Manager.Instance == null)
@@ -471,7 +471,7 @@ namespace TaMi_Einzahlautomat
                 }
                 if (string.IsNullOrWhiteSpace(zustand2))
                     zustand2 = (coin2 != null && coin2.Connected) ? "Verbunden" : "Nicht verbunden";
-                btnCoinAdmin2.Text = $"M�nzpr�fer/2\nZustand: {zustand2}";
+                btnCoinAdmin2.Text = $"Münzprüfer/2\nZustand: {zustand2}";
             }
         }
 
@@ -487,7 +487,7 @@ namespace TaMi_Einzahlautomat
                 }
                 if (target == null)
                 {
-                    MessageBox.Show(this, "Keine Abrechnungsmaske ge�ffnet.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(this, "Keine Abrechnungsmaske geöffnet.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
                 // Versuche bevorzugt �ffentliche ForceAbmeldenFromAdminAsync (falls vorhanden)
@@ -497,7 +497,7 @@ namespace TaMi_Einzahlautomat
                     try { mi.Invoke(target, null); return; } catch { }
                 }
                 // Fallback: Nutzer informieren falls Methode nicht existiert (�ltere Version)
-                MessageBox.Show(this, "Diese Version der Abrechnungsmaske unterst�tzt das erzwungene Abmelden nicht.", "Abmelden", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, "Diese Version der Abrechnungsmaske unterstützt das erzwungene Abmelden nicht.", "Abmelden", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             catch (Exception ex)
             {

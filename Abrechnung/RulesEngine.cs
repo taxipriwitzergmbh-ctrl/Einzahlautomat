@@ -18,9 +18,10 @@ namespace TaMi_Einzahlautomat.Abrechnung
         public int? ManId { get; set; }
         public int? PersId { get; set; }
         public string FhzIds { get; set; }
-        public int? ResultKost1 { get; set; }
-        public int? ResultKost2 { get; set; }
-        public int? ResultKonto { get; set; }
+        // Changed to string to support alphanumeric Kost/Konto codes
+        public string ResultKost1 { get; set; }
+        public string ResultKost2 { get; set; }
+        public string ResultKonto { get; set; }
         public string ResultBuchungstext { get; set; }
         public bool IsActive { get; set; } = true;
         public List<AbrechnungsClause> Clauses { get; set; } = new List<AbrechnungsClause>();
@@ -290,9 +291,10 @@ namespace TaMi_Einzahlautomat.Abrechnung
                                 ManId = null,
                                 FhzIds = null,
                                 PersId = null,
-                                ResultKost1 = r["ResultKost1"] == DBNull.Value ? (int?)null : Convert.ToInt32(r["ResultKost1"]),
-                                ResultKost2 = r["ResultKost2"] == DBNull.Value ? (int?)null : Convert.ToInt32(r["ResultKost2"]),
-                                ResultKonto = r["ResultKonto"] == DBNull.Value ? (int?)null : Convert.ToInt32(r["ResultKonto"]),
+                                // read as string to support varchar columns
+                                ResultKost1 = r.Table.Columns.Contains("ResultKost1") && r["ResultKost1"] != DBNull.Value ? Convert.ToString(r["ResultKost1"]) : null,
+                                ResultKost2 = r.Table.Columns.Contains("ResultKost2") && r["ResultKost2"] != DBNull.Value ? Convert.ToString(r["ResultKost2"]) : null,
+                                ResultKonto = r.Table.Columns.Contains("ResultKonto") && r["ResultKonto"] != DBNull.Value ? Convert.ToString(r["ResultKonto"]) : null,
                                 ResultBuchungstext = r["ResultText"] as string,
                                 IsActive = r.Table.Columns.Contains("IsActive") && r["IsActive"] != DBNull.Value ? Convert.ToBoolean(r["IsActive"]) : true,
                                 Clauses = new List<AbrechnungsClause>()
@@ -376,8 +378,8 @@ namespace TaMi_Einzahlautomat.Abrechnung
             ref int? kost1, ref int? kost2, ref int? konto, ref string buchungstext)
         {
             if (rules == null) return;
-            int? specK1 = null, specK2 = null, specKto = null; string specTxt = null;
-            int? defK1 = null, defK2 = null, defKto = null; string defTxt = null;
+            string specK1 = null, specK2 = null, specKto = null; string specTxt = null;
+            string defK1 = null, defK2 = null, defKto = null; string defTxt = null;
 
             foreach (var r in rules)
             {
@@ -386,23 +388,36 @@ namespace TaMi_Einzahlautomat.Abrechnung
 
                 if (r.IsDefault)
                 {
-                    if (!defK1.HasValue && r.ResultKost1.HasValue) defK1 = r.ResultKost1;
-                    if (!defK2.HasValue && r.ResultKost2.HasValue) defK2 = r.ResultKost2;
-                    if (!defKto.HasValue && r.ResultKonto.HasValue) defKto = r.ResultKonto;
+                    if (string.IsNullOrEmpty(defK1) && !string.IsNullOrEmpty(r.ResultKost1)) defK1 = r.ResultKost1;
+                    if (string.IsNullOrEmpty(defK2) && !string.IsNullOrEmpty(r.ResultKost2)) defK2 = r.ResultKost2;
+                    if (string.IsNullOrEmpty(defKto) && !string.IsNullOrEmpty(r.ResultKonto)) defKto = r.ResultKonto;
                     if (string.IsNullOrWhiteSpace(defTxt) && !string.IsNullOrWhiteSpace(r.ResultBuchungstext)) defTxt = r.ResultBuchungstext;
                 }
                 else
                 {
-                    if (!specK1.HasValue && r.ResultKost1.HasValue) specK1 = r.ResultKost1;
-                    if (!specK2.HasValue && r.ResultKost2.HasValue) specK2 = r.ResultKost2;
-                    if (!specKto.HasValue && r.ResultKonto.HasValue) specKto = r.ResultKonto;
+                    if (string.IsNullOrEmpty(specK1) && !string.IsNullOrEmpty(r.ResultKost1)) specK1 = r.ResultKost1;
+                    if (string.IsNullOrEmpty(specK2) && !string.IsNullOrEmpty(r.ResultKost2)) specK2 = r.ResultKost2;
+                    if (string.IsNullOrEmpty(specKto) && !string.IsNullOrEmpty(r.ResultKonto)) specKto = r.ResultKonto;
                     if (string.IsNullOrWhiteSpace(specTxt) && !string.IsNullOrWhiteSpace(r.ResultBuchungstext)) specTxt = r.ResultBuchungstext;
                 }
             }
 
-            if (!kost1.HasValue) kost1 = specK1.HasValue ? specK1 : defK1;
-            if (!kost2.HasValue) kost2 = specK2.HasValue ? specK2 : defK2;
-            if (!konto.HasValue) konto = specKto.HasValue ? specKto : defKto;
+            // Convert selected string values to ints only if they are numeric; otherwise leave as null to avoid invalid integer assignment
+            if (!kost1.HasValue)
+            {
+                var sel = !string.IsNullOrEmpty(specK1) ? specK1 : defK1;
+                if (int.TryParse((sel ?? string.Empty).Trim(), out var v)) kost1 = v;
+            }
+            if (!kost2.HasValue)
+            {
+                var sel = !string.IsNullOrEmpty(specK2) ? specK2 : defK2;
+                if (int.TryParse((sel ?? string.Empty).Trim(), out var v)) kost2 = v;
+            }
+            if (!konto.HasValue)
+            {
+                var sel = !string.IsNullOrEmpty(specKto) ? specKto : defKto;
+                if (int.TryParse((sel ?? string.Empty).Trim(), out var v)) konto = v;
+            }
             if (string.IsNullOrWhiteSpace(buchungstext)) buchungstext = !string.IsNullOrWhiteSpace(specTxt) ? specTxt : defTxt;
         }
     }

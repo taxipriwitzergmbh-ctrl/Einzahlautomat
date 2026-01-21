@@ -117,7 +117,7 @@ namespace TaMi_Einzahlautomat.Coins {
             lock (_lock) {
                 if (!_disabledByConfig) return; // already enabled
                 _disabledByConfig = false;
-                Log("Konfig-Deaktivierung aufgehoben � Re-Init wird gestartet");
+                Log("Konfig-Deaktivierung aufgehoben - Re-Init wird gestartet");
                 // Reset spam flags so we can log meaningful first message again if still None
                 _loggedNoTypeOnce = false;
                 _lastNoTypeLogUtc = DateTime.MinValue;
@@ -169,7 +169,7 @@ namespace TaMi_Einzahlautomat.Coins {
 
                         if (shouldLog) {
                             _lastNoTypeLogUtc = DateTime.UtcNow;
-                            Log("[SmartCoin/2] Typ leer oder 'None' � zweite Instanz deaktiviert");
+                            Log("[SmartCoin/2] Typ leer oder 'None' - zweite Instanz deaktiviert");
                         }
 
                         _initialized = false;
@@ -184,19 +184,19 @@ namespace TaMi_Einzahlautomat.Coins {
                     var inst = CoinValidatorFactory.Create(type);
 
                     if (inst == null) {
-                        Log("Kein g�ltiger Typ � Fallback auf SmartCoinV1");
+                        Log("Kein gültiger Typ - Fallback auf SmartCoinV1");
                         inst = new SmartCoinV1();
                     }
 
                     if (!string.IsNullOrWhiteSpace(com)) inst.ComPort = com;
                     else Log("WARN: Kein ComPort in [SmartCoin/2] gefunden.");
                     if (int.TryParse(addrStr, out var addr) && addr > 0) inst.SspAddress = addr;
-                    else Log("INFO: Keine/ung�ltige SSPAddress � Standard wird verwendet.");
+                    else Log("INFO: Keine/ungültige SSPAddress - Standard wird verwendet.");
                     if (inst is SmartCoinV1 sc1) sc1.StatusChanged += OnStatusChanged;
 
                     try {
                         inst .Connect();
-                        Log("Connect() auf Ger�t 2 initiiert.");
+                        Log("Connect() auf Gerät 2 initiiert.");
                     }
 
                     catch (Exception ex) {
