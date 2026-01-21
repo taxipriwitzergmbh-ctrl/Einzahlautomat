@@ -4,7 +4,7 @@ using System.Text;
 using System.Collections.Concurrent; // NEU
 using System; // NEU für DateTime
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public static class IniHelper
     {

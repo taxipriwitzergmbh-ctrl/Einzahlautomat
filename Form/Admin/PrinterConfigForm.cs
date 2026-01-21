@@ -5,10 +5,10 @@ using System.Windows.Forms;
 using System.Drawing.Printing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
-using Geldautomat.Printing;
+using TaMi_Einzahlautomat.Printing;
 using System.IO.Ports;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class PrinterConfigForm : Form
     {

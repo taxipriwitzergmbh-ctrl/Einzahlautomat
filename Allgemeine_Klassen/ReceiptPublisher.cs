@@ -4,7 +4,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     // Einfacher Publisher für Quittungsinhalte.
     // Optional über INI konfigurierbar:

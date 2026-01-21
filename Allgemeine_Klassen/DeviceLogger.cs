@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     // Dedizierte Dateien unter Logs\SmartCoin1 und Logs\SmartCoin2 mit 7 Tagen Aufbewahrung
     public static class DeviceLogger

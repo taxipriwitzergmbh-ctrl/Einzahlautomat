@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading;
 using ITLlib;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class NV200_SSP
     {
@@ -990,7 +990,7 @@ namespace Geldautomat
                                 // Dialog mit Auswahl anzeigen (UI-Thread beachten!)
                                 System.Windows.Forms.Application.OpenForms[0]?.BeginInvoke((Action)(() =>
                                 {
-                                    var prompt = new Geldautomat.CashboxActionPromptForm(this, "Cashbox");
+                                    var prompt = new TaMi_Einzahlautomat.CashboxActionPromptForm(this, "Cashbox");
                                     prompt.Show();
                                 }));
                                 // NEU: Event ausl�sen, damit UIs (z.B. KassensturzNV200) sofort aktualisieren

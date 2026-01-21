@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class CashboxActionPromptForm : Form
     {

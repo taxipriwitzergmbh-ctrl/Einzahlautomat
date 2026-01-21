@@ -1,6 +1,6 @@
 using System;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     // Globaler Snapshot der zuletzt ermittelten Summen aus KassenbestandForm
     public static class KassenSummary

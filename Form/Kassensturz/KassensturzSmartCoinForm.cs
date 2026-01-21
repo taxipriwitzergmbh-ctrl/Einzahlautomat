@@ -2,10 +2,10 @@ using System;
 using System.Drawing;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Geldautomat.Coins;
+using TaMi_Einzahlautomat.Coins;
 using System.Linq;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class KassensturzSmartCoinForm : Form
     {

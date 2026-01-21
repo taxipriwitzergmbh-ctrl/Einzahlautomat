@@ -2,7 +2,7 @@
 using System.IO;
 using System.Xml.Serialization;
 
-namespace Geldautomat.Printing
+namespace TaMi_Einzahlautomat.Printing
 {
     // Einstellungen jetzt in Geldautomat.ini (Section [ReceiptPrinter])
     // Fallback: alte XML-Datei wird einmalig migriert.

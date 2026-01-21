@@ -7,7 +7,7 @@ using System.Threading;
 using System.Linq; // NEU für OrderBy
 using System.Runtime.InteropServices;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class LogViewForm : Form
     {

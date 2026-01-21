@@ -3,12 +3,12 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
-using Geldautomat;
+using TaMi_Einzahlautomat;
 using System.IO.Ports; // Ports
 using System.Linq; // Linq f�r Except/Where
 using System.Globalization; // NEU f�r Summenformat
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public partial class AdminNV200_2Form : Form
     {

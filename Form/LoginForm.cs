@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography; // DPAPI + AES
 using System.Text; // DPAPI + AES
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public partial class LoginForm : Form
     {

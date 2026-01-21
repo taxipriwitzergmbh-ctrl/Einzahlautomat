@@ -6,7 +6,7 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     // Moderne, flache Bottom-Bar mit sanfter Accent-Linie + Shimmer Progress (indeterminate)
     public sealed class ProcessingAnimation : IDisposable

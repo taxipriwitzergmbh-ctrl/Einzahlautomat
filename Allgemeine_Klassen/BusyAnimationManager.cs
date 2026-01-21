@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     // Zentrale, threadsichere Verwaltung einer einzigen ProcessingAnimation
     internal static class BusyAnimationManager

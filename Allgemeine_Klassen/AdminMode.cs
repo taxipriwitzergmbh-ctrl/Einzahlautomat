@@ -1,6 +1,6 @@
 using System;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     // Globales Flag, um Ein-/Auszahlungen zu blockieren, solange die Admin-Übersicht geöffnet ist
     internal static class AdminMode

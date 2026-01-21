@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using ITLlib;
 
-namespace Geldautomat.Printing
+namespace TaMi_Einzahlautomat.Printing
 {
     internal sealed class ItlTicketPrinter : IDisposable
     {

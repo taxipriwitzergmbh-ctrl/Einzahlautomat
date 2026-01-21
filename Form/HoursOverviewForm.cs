@@ -14,7 +14,7 @@ using PdfSharp.Fonts;
 using Microsoft.Win32;
 using System.Collections.Generic;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     // PdfSharp font resolver: resolves Windows font registry entries to font files
     internal class PdfFontResolver : IFontResolver

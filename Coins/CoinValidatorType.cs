@@ -1,4 +1,4 @@
-namespace Geldautomat.Coins
+namespace TaMi_Einzahlautomat.Coins
 {
     public enum CoinValidatorType
     {

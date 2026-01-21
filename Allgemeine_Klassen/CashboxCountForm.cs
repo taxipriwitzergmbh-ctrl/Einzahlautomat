@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     // Von Form zu UserControl geändert!
     public class CashboxCountForm : UserControl

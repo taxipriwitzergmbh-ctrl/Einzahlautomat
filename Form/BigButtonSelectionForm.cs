@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     // Simple data carrier for big button selection
     public class BigItem

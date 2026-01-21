@@ -2,7 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public partial class AdminNV200Form : Form
     {

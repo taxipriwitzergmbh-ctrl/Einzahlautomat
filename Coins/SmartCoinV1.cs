@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 
-namespace Geldautomat.Coins
+namespace TaMi_Einzahlautomat.Coins
 {
     // Port der SmartCoinSystem.vb Kernlogik (SSP/ITLlib). Ben�tigt ITLlib-Referenz im Projekt.
     public class SmartCoinV1 : ICoinValidator

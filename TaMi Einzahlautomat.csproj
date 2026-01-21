@@ -6,9 +6,9 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{E7F871FB-C2EE-457F-8AAE-8501614398F5}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <StartupObject>Geldautomat.Program</StartupObject>
-    <RootNamespace>Geldautomat</RootNamespace>
-    <AssemblyName>Geldautomat</AssemblyName>
+    <StartupObject>TaMi_Einzahlautomat.Program</StartupObject>
+    <RootNamespace>TaMi_Einzahlautomat</RootNamespace>
+    <AssemblyName>TaMi Einzahlautomat</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -287,6 +287,46 @@
     <Compile Include="Form\ShiftSelectionForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="SuE\TaMi\Config.cs" />
+    <Compile Include="SuE\TaMi\ConfigItem.cs" />
+    <Compile Include="SuE\TaMi\DispatchState.cs" />
+    <Compile Include="SuE\TaMi\Fahrzeug.cs" />
+    <Compile Include="SuE\TaMi\Fahrzeuge.cs" />
+    <Compile Include="SuE\TaMi\FahrzeugGruppe.cs" />
+    <Compile Include="SuE\TaMi\FahrzeugGruppen.cs" />
+    <Compile Include="SuE\TaMi\FhzState.cs" />
+    <Compile Include="SuE\TaMi\FhzStates.cs" />
+    <Compile Include="SuE\TaMi\Job.cs" />
+    <Compile Include="SuE\TaMi\JobPos.cs" />
+    <Compile Include="SuE\TaMi\Jobs.cs" />
+    <Compile Include="SuE\TaMi\Optionen.cs" />
+    <Compile Include="SuE\TaMi\Personal.cs" />
+    <Compile Include="SuE\TaMi\PersonalMan.cs" />
+    <Compile Include="SuE\TaMi\TaMiClient.cs" />
+    <Compile Include="SuE\TaMi\TaMiEnums.cs" />
+    <Compile Include="SuE\TaMi\TaMiTools.cs" />
+    <Compile Include="SuE\TaMi\Tarif.cs" />
+    <Compile Include="SuE\TaMi\Tarife.cs" />
+    <Compile Include="SuE\TaMi\Zone.cs" />
+    <Compile Include="SuE\TaMi\Zonen.cs" />
+    <Compile Include="SuE\TaMi\ZonePoly.cs" />
+    <Compile Include="SuE\Tools\AddressAnalyser.cs" />
+    <Compile Include="SuE\Tools\AppConfig.cs" />
+    <Compile Include="SuE\Tools\AppConfigItem.cs" />
+    <Compile Include="SuE\Tools\AsyncTcpClient.cs" />
+    <Compile Include="SuE\Tools\AutoClosingMessageBox.cs" />
+    <Compile Include="SuE\Tools\ControlExtensions.cs" />
+    <Compile Include="SuE\Tools\DataGridViewCheckBoxColumnEx.cs" />
+    <Compile Include="SuE\Tools\DataGridViewMultilineTextBoxColumn.cs" />
+    <Compile Include="SuE\Tools\EventExtensions.cs" />
+    <Compile Include="SuE\Tools\ExceptionReporter.cs" />
+    <Compile Include="SuE\Tools\Extensions.cs" />
+    <Compile Include="SuE\Tools\FormExtensions.cs" />
+    <Compile Include="SuE\Tools\InputBox.cs" />
+    <Compile Include="SuE\Tools\MessageClient.cs" />
+    <Compile Include="SuE\Tools\MessagePacket.cs" />
+    <Compile Include="SuE\Tools\TimeSpanNamed.cs" />
+    <Compile Include="SuE\Tools\Utils.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -349,12 +389,6 @@
     <Content Include="Ressourcen\Geldautomat_Win11.ico" />
     <Content Include="Ressourcen\Hintergrund.png" />
     <Content Include="Ressourcen\NFC.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Kassenclient Version 1.0\Version 1.0\TaMi-Kassenclient.csproj">
-      <Project>{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}</Project>
-      <Name>TaMi-Kassenclient</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

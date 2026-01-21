@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Geldautomat.Abrechnung; // DB Regeln lokal laden statt aus externer Assembly
+using TaMi_Einzahlautomat.Abrechnung; // DB Regeln lokal laden statt aus externer Assembly
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class Kontierung
     {

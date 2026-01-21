@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace Geldautomat.Printing
+namespace TaMi_Einzahlautomat.Printing
 {
     public interface IReceiptLayout
     {
@@ -82,7 +82,7 @@ namespace Geldautomat.Printing
                     int sidTmp;
                     if (schichtId.HasValue)
                     {
-                        using (var db = new Geldautomat.DatabaseHelper())
+                        using (var db = new TaMi_Einzahlautomat.DatabaseHelper())
                         {
                             var det = db.GetShiftDetailsAsync(schichtId.Value).GetAwaiter().GetResult();
                             if (det != null)
@@ -110,7 +110,7 @@ namespace Geldautomat.Printing
                     }
                     if (manId >= 0)
                     {
-                        using (var db = new Geldautomat.DatabaseHelper())
+                        using (var db = new TaMi_Einzahlautomat.DatabaseHelper())
                         {
                             var dt = db.GetMandantenAsync(true).GetAwaiter().GetResult();
                             foreach (System.Data.DataRow r in dt.Rows)
@@ -167,7 +167,7 @@ namespace Geldautomat.Printing
                         {
                             if (pid.HasValue && arbeitsBeginn.HasValue && arbeitsEnde.HasValue)
                             {
-                                using (var db = new Geldautomat.DatabaseHelper())
+                                using (var db = new TaMi_Einzahlautomat.DatabaseHelper())
                                 {
                                     var dtPause = db.GetZeiterfassungAsync(pid.Value, arbeitsBeginn.Value.Date, arbeitsEnde.Value.Date.AddDays(1)).GetAwaiter().GetResult();
                                     foreach (System.Data.DataRow r in dtPause.Rows)

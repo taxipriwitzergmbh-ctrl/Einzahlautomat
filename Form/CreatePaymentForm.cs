@@ -7,7 +7,7 @@ using System.Windows.Forms;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class CreatePaymentForm : Form
     {

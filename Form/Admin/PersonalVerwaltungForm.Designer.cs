@@ -1,4 +1,4 @@
-﻿namespace Geldautomat
+﻿namespace TaMi_Einzahlautomat
 {
     partial class PersonalVerwaltungForm
     {

@@ -4,7 +4,7 @@ using System.IO.Ports;
 using System.Text;
 using System.Threading;
 
-namespace Geldautomat.Coins
+namespace TaMi_Einzahlautomat.Coins
 {
     public class Rm5CctalkValidator : ICoinValidator
     {

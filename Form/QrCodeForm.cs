@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class QrCodeForm : Form
     {

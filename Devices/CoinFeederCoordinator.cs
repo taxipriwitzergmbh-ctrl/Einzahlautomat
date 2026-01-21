@@ -1,8 +1,8 @@
 using System;
 using System.Threading;
-using Geldautomat.Coins; // RM5 detection
+using TaMi_Einzahlautomat.Coins; // RM5 detection
 
-namespace Geldautomat.Devices
+namespace TaMi_Einzahlautomat.Devices
 {
     internal static class CoinFeederCoordinator
     {

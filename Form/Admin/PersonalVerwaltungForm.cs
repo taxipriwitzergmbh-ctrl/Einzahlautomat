@@ -7,7 +7,7 @@ using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Collections.Generic;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public partial class PersonalVerwaltungForm : Form
     {

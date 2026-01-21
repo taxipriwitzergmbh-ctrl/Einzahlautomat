@@ -7,10 +7,11 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading;
-using Geldautomat.Devices;
-using Geldautomat.Coins;
+using TaMi_Einzahlautomat.Devices;
+using TaMi_Einzahlautomat.Coins;
+using TaMi_Einzahlautomat; // added for types still in original namespace
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     internal static class Program
     {

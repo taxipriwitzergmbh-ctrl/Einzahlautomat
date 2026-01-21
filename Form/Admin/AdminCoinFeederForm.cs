@@ -2,13 +2,13 @@
 using System.Drawing;
 using System.Threading;
 using System.Windows.Forms;
-using Geldautomat.Devices;
+using TaMi_Einzahlautomat.Devices;
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Runtime.InteropServices;
 using System.Linq; // sicherstellen
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class AdminCoinFeederForm : Form
     {

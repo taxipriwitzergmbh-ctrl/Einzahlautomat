@@ -1,6 +1,6 @@
 using System;
 
-namespace Geldautomat.Coins
+namespace TaMi_Einzahlautomat.Coins
 {
     // Zentraler Singleton für das Münzgerät. Baut die Session (Connect) einmalig auf.
     public static class CoinManager

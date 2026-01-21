@@ -3,11 +3,11 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
-using Geldautomat.Coins;
+using TaMi_Einzahlautomat.Coins;
 using System.IO.Ports; // NEU Ports
 using System.Linq; // NEU
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class AdminCoin2Form : Form
     {

@@ -2,7 +2,7 @@
 using System.IO.Ports;
 using System.Text;
 
-namespace Geldautomat.Printing
+namespace TaMi_Einzahlautomat.Printing
 {
     public class LegacyItlPrinterDevice : IDisposable
     {

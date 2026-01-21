@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.IO; // neu für INI-Auswertung
 using System.Collections.Generic; // neu für Dictionaries
-using Geldautomat.Printing; // NEU
+using TaMi_Einzahlautomat.Printing; // NEU
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class CashboxRemoveForm : Form
     {

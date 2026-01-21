@@ -1,7 +1,7 @@
 using System;
 using System.IO.Ports;
 
-namespace Geldautomat.Printing
+namespace TaMi_Einzahlautomat.Printing
 {
     [Serializable]
     public class LegacyItlPrinterConfig

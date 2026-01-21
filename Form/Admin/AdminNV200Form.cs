@@ -8,7 +8,7 @@ using System.Windows.Forms;
 using System.IO.Ports; // NEU f?r COM-Port Auflistung
 using System.Globalization; // NEU f?r Formatierung
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public partial class AdminNV200Form : Form
     {

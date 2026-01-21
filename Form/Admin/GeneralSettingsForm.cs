@@ -6,7 +6,7 @@ using System.Drawing.Drawing2D;
 using System.Security.Cryptography; // DPAPI & AES
 using System.Text; // DPAPI & AES
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class GeneralSettingsForm : Form
     {

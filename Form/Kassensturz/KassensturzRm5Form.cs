@@ -3,9 +3,9 @@ using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Geldautomat.Coins;
+using TaMi_Einzahlautomat.Coins;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class KassensturzRm5Form : Form
     {

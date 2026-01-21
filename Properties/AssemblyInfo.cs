@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("Geldautomat")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Taxi Priwitzer")]
-[assembly: AssemblyProduct("Geldautomat")]
-[assembly: AssemblyCopyright("Copyright © Taxi Priwitzer 2025")]
+[assembly: AssemblyCompany("Priwitzer Dienstleistungs GmbH")]
+[assembly: AssemblyProduct("TaMi Einzahlautomat")]
+[assembly: AssemblyCopyright("Copyright © Priwitzer Dienstleistungs GmbH 2025")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

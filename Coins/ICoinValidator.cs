@@ -1,6 +1,6 @@
 using System;
 
-namespace Geldautomat.Coins
+namespace TaMi_Einzahlautomat.Coins
 {
     public interface ICoinValidator : IDisposable
     {

@@ -4,7 +4,7 @@ using System.IO.Ports;
 using System.Text;
 using System.Linq;
 
-namespace Geldautomat.Devices
+namespace TaMi_Einzahlautomat.Devices
 {
     public enum CoinFeederProtocolMode
     {

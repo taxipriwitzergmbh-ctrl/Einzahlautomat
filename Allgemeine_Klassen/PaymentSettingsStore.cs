@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Xml.Serialization;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public enum MwStType
     {

@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Geldautomat.Abrechnung
+namespace TaMi_Einzahlautomat.Abrechnung
 {
     public sealed class AbrechnungsRegel
     {
@@ -271,7 +271,7 @@ namespace Geldautomat.Abrechnung
         {
             try
             {
-                using (var db = new Geldautomat.DatabaseHelper())
+                using (var db = new TaMi_Einzahlautomat.DatabaseHelper())
                 {
                     var dt = await db.LoadAbrechnungsRegelnAsync();
                     var list = new List<AbrechnungsRegel>();
@@ -337,7 +337,7 @@ namespace Geldautomat.Abrechnung
             }
         }
 
-        private static async Task TryLoadClausesAsync(List<AbrechnungsRegel> rules, Geldautomat.DatabaseHelper db)
+        private static async Task TryLoadClausesAsync(List<AbrechnungsRegel> rules, TaMi_Einzahlautomat.DatabaseHelper db)
         {
             try
             {

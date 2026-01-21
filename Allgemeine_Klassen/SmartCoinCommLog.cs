@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     /// <summary>
     /// Pufferbasiertes File-Logging für SmartCoin-Kommunikation (Commands, Responses, Status, SmartEmpty).

@@ -6,9 +6,9 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
-using Geldautomat.Coins; // NEU
+using TaMi_Einzahlautomat.Coins; // NEU
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class KassenbestandForm : Form
     {

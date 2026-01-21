@@ -9,7 +9,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Printing;
 using System.Drawing.Imaging;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class DocumentsForm : Form
     {

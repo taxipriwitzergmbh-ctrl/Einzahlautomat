@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography; // DPAPI
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public static class EmailReceiptService
     {

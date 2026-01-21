@@ -1,6 +1,6 @@
 using System;
 
-namespace Geldautomat.Printing
+namespace TaMi_Einzahlautomat.Printing
 {
     public static class LegacyItlPrinterManager
     {

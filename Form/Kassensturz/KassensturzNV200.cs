@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.Linq; // hinzugefügt für Enumerable
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class KassensturzNV200 : Form
     {

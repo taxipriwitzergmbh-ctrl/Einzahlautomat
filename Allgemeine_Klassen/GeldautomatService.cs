@@ -1,7 +1,7 @@
 using System;
-using Geldautomat.Coins;
+using TaMi_Einzahlautomat.Coins;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     /// <summary>
     /// Zentraler Service für Hardware-Objekte und ggf. weitere Automat-Logik.

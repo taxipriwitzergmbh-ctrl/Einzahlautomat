@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public static class AppSettings
     {

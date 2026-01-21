@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.Threading.Tasks;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class AuswahlDialog : Form
     {

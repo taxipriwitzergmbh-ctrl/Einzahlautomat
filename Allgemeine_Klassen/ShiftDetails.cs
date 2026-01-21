@@ -1,6 +1,6 @@
 using System;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class ShiftDetails
     {

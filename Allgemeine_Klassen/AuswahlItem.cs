@@ -1,6 +1,6 @@
 using System.Data;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class AuswahlItem
     {

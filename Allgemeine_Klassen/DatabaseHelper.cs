@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using SuE.TaMi;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     // ...bestehende Klassen FahrzeugInfo, PersonalStatus, LoginContext...
     public class FahrzeugInfo { public int FID { get; set; } public string Kennzeichen { get; set; } }

@@ -2,7 +2,7 @@ using System;
 using System.IO.Ports;
 using System.Text;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     // Grundlage für die NV200-Anbindung via COM.
     // Ohne konkrete Protokollkommandos (z. B. SSP-Poll) antwortet das Gerät i. d. R. nicht.

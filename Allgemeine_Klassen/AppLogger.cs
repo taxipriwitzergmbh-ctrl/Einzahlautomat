@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using Geldautomat.Coins;
+using TaMi_Einzahlautomat.Coins;
 using System.Collections.Concurrent; // NEU für Queue
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public static class AppLogger
     {

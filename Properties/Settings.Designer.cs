@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Geldautomat.Properties {
+namespace TaMi_Einzahlautomat.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]

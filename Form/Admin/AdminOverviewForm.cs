@@ -1,16 +1,16 @@
-using System.Windows.Forms;
+ï»¿using System.Windows.Forms;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Drawing.Drawing2D;
-using Geldautomat.Coins;
+using TaMi_Einzahlautomat.Coins;
 using System;
-using Geldautomat.Devices; // NEU
+using TaMi_Einzahlautomat.Devices; // NEU
 using System.IO.Ports; // NEU
-using Geldautomat; // <--- Hinzugefügt für LogViewForm
-using System.Reflection; // NEU für Versionsinfo
-using System.IO; // NEU für Timestamp
+using TaMi_Einzahlautomat; // <--- Hinzugefï¿½gt fï¿½r LogViewForm
+using System.Reflection; // NEU fï¿½r Versionsinfo
+using System.IO; // NEU fï¿½r Timestamp
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class AdminOverviewForm : Form
     {
@@ -27,7 +27,7 @@ namespace Geldautomat
         private Button btnNV200_2;
         private Button btnKassenbestand; // NEU
         private Button btnCoinAdmin;     // NEU
-        private Button btnCoinAdmin2;    // NEU: Münzprüfer/2
+        private Button btnCoinAdmin2;    // NEU: Mï¿½nzprï¿½fer/2
         private Button btnKassensturz; // NEU
         private Button btnExitProgram; // NEU: Programm beenden
         private Button btnPersonal; // NEU: Personalverwaltung
@@ -39,7 +39,7 @@ namespace Geldautomat
         // NEU: Immer bedienbarer Abmelden-Button (ersetzt ToggleOps)
         private Button btnAbmeldenImmer;
 
-        // NEU: Münzprüfer + INI
+        // NEU: Mï¿½nzprï¿½fer + INI
         private ICoinValidator _coin;
         private readonly string _iniPath = @"C:\\ProgramData\\SuE-Software\\SuE-TaMi Client SQL\\Geldautomat.ini";
 
@@ -53,7 +53,7 @@ namespace Geldautomat
         private string _lastNv1Bezel = null; // track last applied bezel color as "R,G,B"
         private string _lastNv2Bezel = null;
 
-        // Cache für Einzelinstanz-Fenster
+        // Cache fï¿½r Einzelinstanz-Fenster
         private T ShowOrActivate<T>(Func<T> factory) where T : Form
         {
             bool prevTopMost = this.TopMost;
@@ -150,7 +150,7 @@ namespace Geldautomat
             {
                 Text = text,
                 Size = new Size(400, height),
-                // Buttons leicht nach rechts rücken (gleichmäßiger Rand links/rechts)
+                // Buttons leicht nach rechts rï¿½cken (gleichmï¿½ï¿½iger Rand links/rechts)
                 Location = new Point(Math.Max(20, ((parent?.ClientSize.Width ?? ClientSize.Width) - 400) / 2), y),
                 Font = font ?? new Font("Segoe UI Variable", 16F, FontStyle.Bold),
                 BackColor = backColor,
@@ -167,7 +167,7 @@ namespace Geldautomat
             // Fenster-Setup
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(450, 980); // etwas höher, damit mehr Buttons sichtbar sind
+            ClientSize = new Size(450, 980); // etwas hï¿½her, damit mehr Buttons sichtbar sind
             BackColor = Color.White;
             DoubleBuffered = true;
 
@@ -186,7 +186,7 @@ namespace Geldautomat
             // Titel
             lblTitle = new Label
             {
-                Text = "Admin Übersicht",
+                Text = "Admin ï¿½bersicht",
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
@@ -197,7 +197,7 @@ namespace Geldautomat
             };
             headerPanel.Controls.Add(lblTitle);
 
-            // Schließen-Button
+            // Schlieï¿½en-Button
             btnClose = new Button
             {
                 Text = "\u2715",
@@ -217,7 +217,7 @@ namespace Geldautomat
             // Minimieren-Button
             btnMinimize = new Button
             {
-                Text = "–",
+                Text = "ï¿½",
                 Font = new Font("Segoe UI", 16F, FontStyle.Bold),
                 ForeColor = Color.White,
                 BackColor = Color.Transparent,
@@ -238,18 +238,18 @@ namespace Geldautomat
             // Abgerundete Ecken
             try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 32, 32)); } catch { }
 
-            // Tabs anlegen (Geräte / Einstellungen)
+            // Tabs anlegen (Gerï¿½te / Einstellungen)
             _tabs = new TabControl
             {
                 Location = new Point(0, headerPanel.Bottom),
-                // Höhe etwas reduziert, damit unten Platz für ExeInfo-Label bleibt
+                // Hï¿½he etwas reduziert, damit unten Platz fï¿½r ExeInfo-Label bleibt
                 Size = new Size(ClientSize.Width, ClientSize.Height - headerPanel.Height - 30),
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold),
                 ItemSize = new Size(200, 36),
                 Padding = new Point(12, 6)
             };
-            _tabDevices = new TabPage("Geräte") { BackColor = Color.White };
+            _tabDevices = new TabPage("Gerï¿½te") { BackColor = Color.White };
             _tabSettings = new TabPage("Einstellungen") { BackColor = Color.White, AutoScroll = true, Padding = new Padding(8) };
             _tabs.TabPages.Add(_tabDevices);
             _tabs.TabPages.Add(_tabSettings);
@@ -265,11 +265,11 @@ namespace Geldautomat
             Font f16 = new Font("Segoe UI Variable", 16F, FontStyle.Bold);
             Font f14 = new Font("Segoe UI Variable", 14F, FontStyle.Bold);
 
-            // Inhalte Tab Geräte
+            // Inhalte Tab Gerï¿½te
             int y = startY;
             btnKassenbestand = CreateMenuButton(_tabDevices, "Kassenbestand", y, h70, blue, f16); y += h70 + gapSmall;
             btnKassensturz = CreateMenuButton(_tabDevices, "Kassensturz", y, h70, blue, f16); y += h70 + gapSmall;
-            // Zusätzlicher Abstand zwischen Kassensturz und Log
+            // Zusï¿½tzlicher Abstand zwischen Kassensturz und Log
             y += gapLarge;
             btnShowLog = CreateMenuButton(_tabDevices, "Log anzeigen", y, h60, blue, f14); y += h60 + gapLarge;
 
@@ -278,14 +278,14 @@ namespace Geldautomat
             btnAbmeldenImmer.Click += (s,e)=> ForceLogoutFromAbrechnung();
             y += h60 + gapLarge;
 
-            // Geräte
+            // Gerï¿½te
             btnNV200_1 = CreateMenuButton(_tabDevices, "Scheinautomat NV200/1", y, h70, blue, f16); y += h70 + gapSmall;
             btnNV200_2 = CreateMenuButton(_tabDevices, "Scheinautomat NV200/2", y, h70, blue, f16); y += h70 + gapSmall;
-            // Etwas kleinerer Abstand zwischen NV200/2 und Münzprüfer/1
+            // Etwas kleinerer Abstand zwischen NV200/2 und Mï¿½nzprï¿½fer/1
             y += gapSmall;
-            btnCoinAdmin = CreateMenuButton(_tabDevices, "Münzprüfer/1", y, h70, blue, f16); y += h70 + gapSmall;
-            btnCoinAdmin2 = CreateMenuButton(_tabDevices, "Münzprüfer/2", y, h70, blue, f16); y += h70 + gapSmall;
-            // Etwas kleinerer Abstand zwischen Münzprüfer/2 und Coinfeeder
+            btnCoinAdmin = CreateMenuButton(_tabDevices, "Mï¿½nzprï¿½fer/1", y, h70, blue, f16); y += h70 + gapSmall;
+            btnCoinAdmin2 = CreateMenuButton(_tabDevices, "Mï¿½nzprï¿½fer/2", y, h70, blue, f16); y += h70 + gapSmall;
+            // Etwas kleinerer Abstand zwischen Mï¿½nzprï¿½fer/2 und Coinfeeder
             y += gapSmall;
             btnCoinFeeder = CreateMenuButton(_tabDevices, "Coinfeeder", y, h60, blue, f16); y += h60 + gapSmall;
 
@@ -321,7 +321,7 @@ namespace Geldautomat
                 try { ShowOrActivate(() => new PaymentSettingsForm()); } catch { }
             };
 
-            // NEU: Allgemeine Einstellungen (OnlyNFC, Passwörter)
+            // NEU: Allgemeine Einstellungen (OnlyNFC, Passwï¿½rter)
             ys += h60 + gapLarge;
             var btnGeneralSettings = CreateMenuButton(_tabSettings, "Allgemeine Einstellungen", ys, h60, blue, f14);
             btnGeneralSettings.Click += (s, e) => { try { ShowOrActivate(() => new GeneralSettingsForm()); } catch { } };
@@ -370,7 +370,7 @@ namespace Geldautomat
 
         private void UpdateDeviceStatus()
         {
-            // Sicherstellen, dass Disabled-Flags aus INI geladen sind (falls jeweilige Admin-Form noch nie geöffnet wurde)
+            // Sicherstellen, dass Disabled-Flags aus INI geladen sind (falls jeweilige Admin-Form noch nie geï¿½ffnet wurde)
             try
             {
                 // NV200/1
@@ -434,7 +434,7 @@ namespace Geldautomat
                 TryApplyBezel(null, null, isNv2: true);
             }
 
-            // Münzprüfer/1
+            // Mï¿½nzprï¿½fer/1
             if (btnCoinAdmin != null)
             {
                 var coin1 = CoinManager.Instance;
@@ -445,14 +445,14 @@ namespace Geldautomat
                 }
                 else if (coin1 != null && coin1.Connected)
                 {
-                    zustand1 = (coin1 as Geldautomat.Coins.SmartCoinV1)?.CurrentStatus;
+                    zustand1 = (coin1 as TaMi_Einzahlautomat.Coins.SmartCoinV1)?.CurrentStatus;
                 }
                 if (string.IsNullOrWhiteSpace(zustand1))
                     zustand1 = (coin1 != null && coin1.Connected) ? "Verbunden" : "Nicht verbunden";
-                btnCoinAdmin.Text = $"Münzprüfer/1\nZustand: {zustand1}";
+                btnCoinAdmin.Text = $"Mï¿½nzprï¿½fer/1\nZustand: {zustand1}";
             }
 
-            // Münzprüfer/2
+            // Mï¿½nzprï¿½fer/2
             if (btnCoinAdmin2 != null)
             {
                 if (Coin2Manager.Instance == null)
@@ -467,15 +467,15 @@ namespace Geldautomat
                 }
                 else if (coin2 != null && coin2.Connected)
                 {
-                    zustand2 = (coin2 as Geldautomat.Coins.SmartCoinV1)?.CurrentStatus;
+                    zustand2 = (coin2 as TaMi_Einzahlautomat.Coins.SmartCoinV1)?.CurrentStatus;
                 }
                 if (string.IsNullOrWhiteSpace(zustand2))
                     zustand2 = (coin2 != null && coin2.Connected) ? "Verbunden" : "Nicht verbunden";
-                btnCoinAdmin2.Text = $"Münzprüfer/2\nZustand: {zustand2}";
+                btnCoinAdmin2.Text = $"Mï¿½nzprï¿½fer/2\nZustand: {zustand2}";
             }
         }
 
-        // Immer Abmelden erzwingen – unabhängig von AdminMode
+        // Immer Abmelden erzwingen ï¿½ unabhï¿½ngig von AdminMode
         private void ForceLogoutFromAbrechnung()
         {
             try
@@ -487,17 +487,17 @@ namespace Geldautomat
                 }
                 if (target == null)
                 {
-                    MessageBox.Show(this, "Keine Abrechnungsmaske geöffnet.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(this, "Keine Abrechnungsmaske geï¿½ffnet.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
-                // Versuche bevorzugt öffentliche ForceAbmeldenFromAdminAsync (falls vorhanden)
+                // Versuche bevorzugt ï¿½ffentliche ForceAbmeldenFromAdminAsync (falls vorhanden)
                 var mi = target.GetType().GetMethod("ForceAbmeldenFromAdminAsync", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                 if (mi != null)
                 {
                     try { mi.Invoke(target, null); return; } catch { }
                 }
-                // Fallback: Nutzer informieren falls Methode nicht existiert (ältere Version)
-                MessageBox.Show(this, "Diese Version der Abrechnungsmaske unterstützt das erzwungene Abmelden nicht.", "Abmelden", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                // Fallback: Nutzer informieren falls Methode nicht existiert (ï¿½ltere Version)
+                MessageBox.Show(this, "Diese Version der Abrechnungsmaske unterstï¿½tzt das erzwungene Abmelden nicht.", "Abmelden", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             catch (Exception ex)
             {
@@ -515,7 +515,7 @@ namespace Geldautomat
                 // Map states -> colors
                 if (t.Contains("idle") || t.Contains("bereit") || t.Contains("started") || t.Contains("connected") || t.Contains("synchron"))
                 {
-                    // Grün = bereit/idle
+                    // Grï¿½n = bereit/idle
                     r = 0; g = 255; b = 0;
                 }
                 else if (t.Contains("disabled") || t.Contains("jammed") || t.Contains("halted") || t.Contains("failed") || t.Contains("timeout") || t.Contains("open sspcomport") || t.Contains("neustart"))
@@ -585,7 +585,7 @@ namespace Geldautomat
                 int spacing = 8;       // Abstand zwischen Buttons
                 int top = 6;
 
-                // Buttons rechtsbündig ausrichten
+                // Buttons rechtsbï¿½ndig ausrichten
                 if (btnClose != null)
                     btnClose.Location = new Point(Math.Max(0, headerPanel.ClientSize.Width - marginRight - btnClose.Width), top);
                 if (btnMinimize != null && btnClose != null)

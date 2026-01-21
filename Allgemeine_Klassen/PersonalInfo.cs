@@ -1,8 +1,8 @@
-using System;
+ï»¿using System;
 using System.Data.SqlClient;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public class PersonalInfo
     {
@@ -30,7 +30,7 @@ namespace Geldautomat
         }
 
 
-        // NEU: vorab geladener Guthaben-Saldo (LoginContext) – falls gesetzt, erneute DB-Abfrage im AbrechnungForm vermeiden
+        // NEU: vorab geladener Guthaben-Saldo (LoginContext) ï¿½ falls gesetzt, erneute DB-Abfrage im AbrechnungForm vermeiden
         public decimal PreloadedGuthaben { get; set; }
 
 

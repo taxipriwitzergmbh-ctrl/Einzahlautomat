@@ -9,14 +9,13 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.IO;
 using System.Threading.Tasks;
-using Geldautomat.Coins;
+using TaMi_Einzahlautomat.Coins;
 using System.Reflection; // für DoubleBuffered-Reflektion
-using TaMi_Kassenclient; // für directe RulesEngine-Nutzung als Fallback
-using Geldautomat.Printing;
-using Geldautomat.Devices; // for CoinFeederProtocolMode
+using TaMi_Einzahlautomat.Printing;
+using TaMi_Einzahlautomat.Devices; // for CoinFeederProtocolMode
 using System.Drawing.Imaging; // NEU für ColorMatrix (transparenter Hintergrund)
 
-namespace Geldautomat
+namespace TaMi_Einzahlautomat
 {
     public partial class AbrechnungForm : Form
     {

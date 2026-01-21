@@ -5,7 +5,7 @@ using System.Drawing.Printing;
 using System.IO;
 using System.Linq;
 
-namespace Geldautomat.Printing
+namespace TaMi_Einzahlautomat.Printing
 {
     public class ReceiptPrinter
     {
