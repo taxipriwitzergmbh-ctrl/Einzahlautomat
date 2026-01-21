@@ -71,4 +71,17 @@
     <MakeDir Directories="$(TargetDir)PDFsharp" Condition=" '@(PdfSharpToMove)' != '' " />
     <Move SourceFiles="@(PdfSharpToMove)" DestinationFolder="$(TargetDir)PDFsharp" Condition=" '@(PdfSharpToMove)' != '' " />
   </Target>
+
+  <!-- Copy folder 'Ressourcen' to build output directory -->
+  <Target Name="CopyRessourcenFolder" AfterTargets="Build">
+    <ItemGroup>
+      <RessourcenFiles Include="$(MSBuildProjectDirectory)\Ressourcen\**\*.*" />
+    </ItemGroup>
+    <Message Text="Copying Ressourcen files to $(TargetDir)Ressourcen" Importance="high" Condition=" '@(RessourcenFiles)' != '' " />
+    <MakeDir Directories="$(TargetDir)Ressourcen" Condition=" '@(RessourcenFiles)' != '' " />
+    <Copy SourceFiles="@(RessourcenFiles)"
+          DestinationFiles="@(RessourcenFiles->'$(TargetDir)Ressourcen\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true"
+          Condition=" '@(RessourcenFiles)' != '' " />
+  </Target>
 </Project>
