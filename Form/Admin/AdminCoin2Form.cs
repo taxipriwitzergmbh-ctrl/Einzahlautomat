@@ -34,7 +34,7 @@ namespace TaMi_Einzahlautomat
         private TextBox txtLog;
 
         private ICoinValidator _coin;
-        private readonly string _iniPath = @"C:\\ProgramData\\SuE-Software\\SuE-TaMi Client SQL\\Geldautomat.ini";
+        private readonly string _iniPath = @"C:\\ProgramData\\SuE-Software\\SuE-TaMi Client SQL\\Einzahlautomat.ini";
         private const string Section = "SmartCoin/2";
 
         private bool _enabledRequested = false;

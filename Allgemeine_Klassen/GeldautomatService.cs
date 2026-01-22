@@ -10,7 +10,7 @@ namespace TaMi_Einzahlautomat
     {
         public NV200_SSP Ssp { get; }
         public ICoinValidator Coin { get; }
-        private readonly string _iniPath = @"C:\ProgramData\SuE-Software\SuE-TaMi Client SQL\Geldautomat.ini";
+        private readonly string _iniPath = @"C:\ProgramData\SuE-Software\SuE-TaMi Client SQL\Einzahlautomat.ini";
         private bool _disposed;
 
         public GeldautomatService()

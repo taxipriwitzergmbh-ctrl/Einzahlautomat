@@ -7,7 +7,7 @@ namespace TaMi_Einzahlautomat.Coins
     {
         private static readonly object _lock = new object();
         private static bool _initialized = false;
-        private static readonly string DefaultIniPath = @"C:\\ProgramData\\SuE-Software\\SuE-TaMi Client SQL\\Geldautomat.ini";
+        private static readonly string DefaultIniPath = @"C:\\ProgramData\\SuE-Software\\SuE-TaMi Client SQL\\Einzahlautomat.ini";
         public static ICoinValidator Instance { get; private set; }
 
         static CoinManager() { }

@@ -43,7 +43,7 @@ namespace TaMi_Einzahlautomat
         private CheckBox chkAutoSenden;
         private Timer tmrAutoSend;
         private Button btnComPortSpeichern;
-        private string iniPath = @"C:\ProgramData\SuE-Software\SuE-TaMi Client SQL\Geldautomat.ini";
+        private string iniPath = @"C:\ProgramData\SuE-Software\SuE-TaMi Client SQL\Einzahlautomat.ini";
 
         // NEU: Statusanzeige
         private Panel _panelStatus;

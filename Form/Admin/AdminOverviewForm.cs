@@ -41,7 +41,7 @@ namespace TaMi_Einzahlautomat
 
         // NEU: M�nzpr�fer + INI
         private ICoinValidator _coin;
-        private readonly string _iniPath = @"C:\\ProgramData\\SuE-Software\\SuE-TaMi Client SQL\\Geldautomat.ini";
+        private readonly string _iniPath = @"C:\\ProgramData\\SuE-Software\\SuE-TaMi Client SQL\\Einzahlautomat.ini";
 
         private Timer _statusTimer; // NEU
         private Button btnCoinFeeder; // NEU

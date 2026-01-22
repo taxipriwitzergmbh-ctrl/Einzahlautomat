@@ -7,7 +7,7 @@ namespace TaMi_Einzahlautomat
     {
         // Pfad zur zentralen INI
         private static readonly string IniPath =
-            @"C:\ProgramData\SuE-Software\SuE-TaMi Client SQL\Geldautomat.ini";
+            @"C:\ProgramData\SuE-Software\SuE-TaMi Client SQL\Einzahlautomat.ini";
 
         public static bool TryGetNv200ComFromIni(out string comPort)
         {

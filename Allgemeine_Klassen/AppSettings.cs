@@ -7,7 +7,7 @@ namespace TaMi_Einzahlautomat
     {
         public static string AutomatenName { get; set; } = ""; // Alt (wird später entfernt)
         public static int DeviceId { get; set; } = 0;            // Neu
-        public static string IniPath { get; set; } = @"C:\ProgramData\SuE-Software\SuE-TaMi Client SQL\Geldautomat.ini";
+        public static string IniPath { get; set; } = @"C:\ProgramData\SuE-Software\SuE-TaMi Client SQL\Einzahlautomat.ini";
         public static string AllowedManIdsRaw { get; set; } = null; // from TKassenbuchDevice (e.g. "1;4")
 
         // ALT: liest den Namen (Bestand bis Umstellung abgeschlossen ist)

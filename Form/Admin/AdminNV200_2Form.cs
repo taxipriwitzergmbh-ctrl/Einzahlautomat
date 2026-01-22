@@ -43,7 +43,7 @@ namespace TaMi_Einzahlautomat
         private string[] _detectBasePorts;
         private Form _detectDialog;
         private Timer _detectTimer;
-        private string iniPath = @"C:\ProgramData\SuE-Software\SuE-TaMi Client SQL\Geldautomat.ini";
+        private string iniPath = @"C:\ProgramData\SuE-Software\SuE-TaMi Client SQL\Einzahlautomat.ini";
 
         private Button btnEnableToggle;
         private bool _enabledRequested = false;
