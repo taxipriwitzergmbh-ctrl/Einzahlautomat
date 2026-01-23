@@ -850,9 +850,7 @@ namespace TaMi_Einzahlautomat
                 if (table == null) return;
                 string employeeMail = null;
                 try { employeeMail = _personal?.EMail; } catch { }
-                var mailCfg = MailSettings.Load();
                 if (string.IsNullOrWhiteSpace(employeeMail)) { MessageBox.Show(this, "Keine Mitarbeiter-E-Mail hinterlegt.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
-                if (mailCfg == null || !mailCfg.IsConfigured) { MessageBox.Show(this, "Maileinstellungen sind nicht konfiguriert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                 if (!ShowMailConsentDialog(employeeMail)) return;
 
                 string monthYear = string.Empty; try { monthYear = lblPeriod?.Text ?? string.Empty; } catch { }
@@ -917,26 +915,100 @@ namespace TaMi_Einzahlautomat
                         return;
                     }
 
-                    using (var msg = new System.Net.Mail.MailMessage())
+                    // 1) Dienstkonto2 bevorzugt verwenden
+                    bool sentViaDk2 = false;
+                    try
                     {
-                        var from = new System.Net.Mail.MailAddress(string.IsNullOrWhiteSpace(mailCfg.Username) ? mailCfg.FromAddress : mailCfg.Username, mailCfg.FromDisplayName);
-                        msg.From = from;
-                        msg.To.Add(new System.Net.Mail.MailAddress(employeeMail));
-                        msg.Subject = "Zeiterfassung - Bericht";
-                        msg.Body = "Anbei die angeforderte Zeiterfassung als PDF-Anhang.";
-                        msg.IsBodyHtml = false;
-                        msg.SubjectEncoding = Encoding.UTF8; msg.BodyEncoding = Encoding.UTF8;
-                        var att = new System.Net.Mail.Attachment(tmpPdf);
-                        msg.Attachments.Add(att);
-
-                        using (var client = new System.Net.Mail.SmtpClient(mailCfg.SmtpHost, mailCfg.SmtpPort))
+                        int dkId = 0; int.TryParse(IniHelper.ReadValue("Mail", "Dienstkonto2ID", AppSettings.IniPath), out dkId);
+                        if (dkId > 0)
                         {
-                            client.EnableSsl = mailCfg.EnableSsl;
-                            client.UseDefaultCredentials = false;
-                            if (!string.IsNullOrWhiteSpace(mailCfg.Username)) client.Credentials = new System.Net.NetworkCredential(mailCfg.Username, mailCfg.Password);
-                            client.Send(msg);
+                            DatabaseHelper.DienstkontoInfo sel = null;
+                            using (var db = new DatabaseHelper())
+                            {
+                                var list = db.GetDienstkontenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                                if (list != null) sel = list.Find(x => x.ID == dkId);
+                            }
+                            if (sel != null)
+                            {
+                                string decryptedPwd = EmailReceiptService.TinyDecrypt(sel.Passwort ?? string.Empty);
+                                int configuredPort = 25; if (!string.IsNullOrWhiteSpace(sel.Port)) int.TryParse(sel.Port, out configuredPort);
+                                string fromName = IniHelper.ReadValue("Mail", "Dienstkonto2FromName", AppSettings.IniPath);
+                                if (string.IsNullOrWhiteSpace(fromName)) fromName = sel.Name;
+                                string loginAddr = string.IsNullOrWhiteSpace(sel.Benutzername) ? (sel.Absender ?? string.Empty) : sel.Benutzername;
+                                if (string.IsNullOrWhiteSpace(loginAddr)) loginAddr = sel.Absender ?? string.Empty;
+
+                                using (var msg = new System.Net.Mail.MailMessage())
+                                {
+                                    msg.From = new System.Net.Mail.MailAddress(loginAddr, fromName);
+                                    msg.To.Add(new System.Net.Mail.MailAddress(employeeMail));
+                                    msg.Subject = "Zeiterfassung - Bericht";
+                                    msg.Body = "Anbei die angeforderte Zeiterfassung als PDF-Anhang.";
+                                    msg.IsBodyHtml = false;
+                                    msg.SubjectEncoding = Encoding.UTF8; msg.BodyEncoding = Encoding.UTF8;
+                                    var att = new System.Net.Mail.Attachment(tmpPdf);
+                                    msg.Attachments.Add(att);
+
+                                    Exception lastError = null;
+                                    int[] portsToTry = new int[] { 587, 465, configuredPort };
+                                    foreach (var p in portsToTry.Distinct())
+                                    {
+                                        try
+                                        {
+                                            using (var client = new System.Net.Mail.SmtpClient(sel.Host, p))
+                                            {
+                                                client.EnableSsl = (p == 465 || p == 587);
+                                                client.UseDefaultCredentials = false;
+                                                if (!string.IsNullOrWhiteSpace(sel.Benutzername)) client.Credentials = new System.Net.NetworkCredential(sel.Benutzername, decryptedPwd);
+                                                client.Send(msg);
+                                                sentViaDk2 = true;
+                                                lastError = null;
+                                                break;
+                                            }
+                                        }
+                                        catch (Exception exSend) { lastError = exSend; }
+                                    }
+                                    if (!sentViaDk2 && lastError != null)
+                                    {
+                                        try { AppLogger.Log("Zeiterfassung: DK2-Mailversand fehlgeschlagen: " + lastError.ToString()); } catch { }
+                                    }
+                                }
+                            }
                         }
                     }
+                    catch { sentViaDk2 = false; }
+
+                    if (!sentViaDk2)
+                    {
+                        // 2) Fallback: alte Maileinstellungen (INI)
+                        var mailCfg = MailSettings.Load();
+                        if (mailCfg == null || !mailCfg.IsConfigured)
+                        {
+                            MessageBox.Show(this, "Maileinstellungen sind nicht konfiguriert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        using (var msg = new System.Net.Mail.MailMessage())
+                        {
+                            var from = new System.Net.Mail.MailAddress(string.IsNullOrWhiteSpace(mailCfg.Username) ? mailCfg.FromAddress : mailCfg.Username, mailCfg.FromDisplayName);
+                            msg.From = from;
+                            msg.To.Add(new System.Net.Mail.MailAddress(employeeMail));
+                            msg.Subject = "Zeiterfassung - Bericht";
+                            msg.Body = "Anbei die angeforderte Zeiterfassung als PDF-Anhang.";
+                            msg.IsBodyHtml = false;
+                            msg.SubjectEncoding = Encoding.UTF8; msg.BodyEncoding = Encoding.UTF8;
+                            var att = new System.Net.Mail.Attachment(tmpPdf);
+                            msg.Attachments.Add(att);
+
+                            using (var client = new System.Net.Mail.SmtpClient(mailCfg.SmtpHost, mailCfg.SmtpPort))
+                            {
+                                client.EnableSsl = mailCfg.EnableSsl;
+                                client.UseDefaultCredentials = false;
+                                if (!string.IsNullOrWhiteSpace(mailCfg.Username)) client.Credentials = new System.Net.NetworkCredential(mailCfg.Username, mailCfg.Password);
+                                client.Send(msg);
+                            }
+                        }
+                    }
+
                     try { AppLogger.Log($"Zeiterfassung: E-Mail gesendet für PID={_personal.PID}, Zeitraum='{monthYear}' an '{employeeMail}'"); } catch { }
                     MessageBox.Show(this, "E-Mail wurde gesendet.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
