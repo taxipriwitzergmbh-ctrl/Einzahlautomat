@@ -2287,7 +2287,22 @@ namespace TaMi_Einzahlautomat
                         }
                         if (!allowed.Contains(manId)) continue;
                     }
-                    string belegnr = row["Belegnummer"].ToString(); string text = row["Buchungstext"]?.ToString() ?? "Zahlung"; string typ = row.Table.Columns.Contains("Typ") ? (row["Typ"]?.ToString() ?? "Zahlung") : "Zahlung"; DateTime? erfasst = row.Table.Columns.Contains("ErfasstAm") && row["ErfasstAm"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(row["ErfasstAm"]) : null; _auswahlItems.Add(new AuswahlItem { AnzeigeText = $"{typ} {belegnr} ({text}){(erfasst.HasValue ? " am " + erfasst.Value.ToString("dd.MM.yyyy HH:mm") : "")}", Auszahlung = row });
+                    string belegnr = row["Belegnummer"].ToString();
+                    string text = row["Buchungstext"]?.ToString() ?? "Zahlung";
+                    string typ = row.Table.Columns.Contains("Typ") ? (row["Typ"]?.ToString() ?? "Zahlung") : "Zahlung";
+                    // Betrag anzeigen statt Datum/Uhrzeit
+                    string betragPart = string.Empty;
+                    try
+                    {
+                        if (row.Table.Columns.Contains("BetragGesamt") && row["BetragGesamt"] != DBNull.Value)
+                        {
+                            var de = System.Globalization.CultureInfo.GetCultureInfo("de-DE");
+                            decimal betrag = Convert.ToDecimal(row["BetragGesamt"]);
+                            betragPart = " (" + betrag.ToString("C2", de) + ")";
+                        }
+                    }
+                    catch { }
+                    _auswahlItems.Add(new AuswahlItem { AnzeigeText = $"{typ} {belegnr} ({text}){betragPart}", Auszahlung = row });
                 }
             }
         }
