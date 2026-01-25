@@ -21,6 +21,9 @@ namespace TaMi_Einzahlautomat
         private Button btnClose;
         private Button btnMinimize;
         private Label lblTitle;
+        // Titel-Hinweis mit Auto-Reset
+        private Timer _titleResetTimer;
+        private string _defaultTitle = "Kassenautomat Login";
 
         // Flow Steuerung
         private enum LoginStage { EnterPid, EnterPassword, CreatePassword1, CreatePassword2 }
@@ -311,6 +314,21 @@ namespace TaMi_Einzahlautomat
 
             lblTitle = new Label { Text = "Kassenautomat Login", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(24, 0), Size = new Size(320, 60), BackColor = Color.Transparent };
             headerPanel.Controls.Add(lblTitle);
+            // Timer für Titel-Reset
+            _titleResetTimer = new Timer { Interval = 4000 };
+            _titleResetTimer.Tick += (s, e) =>
+            {
+                try
+                {
+                    _titleResetTimer.Stop();
+                    if (lblTitle != null)
+                    {
+                        lblTitle.Text = _defaultTitle;
+                        try { lblTitle.Refresh(); } catch { }
+                    }
+                }
+                catch { }
+            };
 
             // Automatenname unter dem Header im weißen Bereich anzeigen
             var autoNameText = (AppSettings.AutomatenName ?? string.Empty).Trim();
@@ -665,6 +683,24 @@ namespace TaMi_Einzahlautomat
                 _nfcIdleTimer.Stop(); _nfcIdleTimer.Start();
                 e.Handled = true;
             }
+        }
+
+        private void ShowTitleTemporary(string text, int milliseconds = 4000)
+        {
+            try
+            {
+                if (lblTitle == null) return;
+                if (_titleResetTimer == null)
+                {
+                    _titleResetTimer = new Timer();
+                }
+                _titleResetTimer.Stop();
+                _titleResetTimer.Interval = Math.Max(100, milliseconds);
+                lblTitle.Text = text ?? _defaultTitle;
+                try { lblTitle.Refresh(); } catch { }
+                _titleResetTimer.Start();
+            }
+            catch { }
         }
 
         private void ShowMaintenanceUnlockPanel()
@@ -1336,6 +1372,7 @@ namespace TaMi_Einzahlautomat
                             if (p == null)
                             {
                                 lblError.Text = "NFC nicht erkannt (Wartung).";
+                                ShowTitleTemporary("NFC Chip unbekannt");
                                 return;
                             }
                             _pendingPid = p.PID;
@@ -1374,6 +1411,8 @@ namespace TaMi_Einzahlautomat
                         {
                             lblError.Text = "NFC nicht erkannt.";
                             try { AppLogger.Log("NFC-Token unbekannt (gekürzt)"); } catch { }
+                            // Titel-Hinweis: unbekannter NFC Chip für 4 Sekunden anzeigen
+                            ShowTitleTemporary("NFC Chip unbekannt");
                             return;
                         }
 
@@ -1406,7 +1445,7 @@ namespace TaMi_Einzahlautomat
                 {
                     if (lblTitle != null)
                     {
-                        lblTitle.Text = string.IsNullOrEmpty(prev) ? "Kassenautomat Login" : prev;
+                        lblTitle.Text = string.IsNullOrEmpty(prev) ? _defaultTitle : prev;
                         try { lblTitle.Refresh(); } catch { }
                     }
                 }

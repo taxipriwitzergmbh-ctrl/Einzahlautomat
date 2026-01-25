@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -9,10 +9,10 @@ namespace TaMi_Einzahlautomat
     public static class AnyDeskHelper
     {
         // Download-URL bereitgestellt vom Nutzer
-        private const string AnyDeskUrl = "https://my.anydesk.com/download/IVsJVVTj/SuE_Geldautomat.exe";
+        private const string AnyDeskUrl = "https://my.anydesk.com/download/I9ht59hx/SuE_Geldautomat.exe";
         // Installations-Ziel (lokal)
         private static readonly string LocalInstallerPath = Path.Combine(Path.GetTempPath(), "SuE_Geldautomat.exe");
-        // Optionaler Zielordner für portable Installation
+        // Optionaler Zielordner fï¿½r portable Installation
         private static readonly string LocalAppPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "SuE-Software", "AnyDesk");
         private static readonly string LocalExePath = Path.Combine(LocalAppPath, "AnyDesk.exe");
 
@@ -83,7 +83,7 @@ namespace TaMi_Einzahlautomat
                 {
                     FileName = LocalInstallerPath,
                     UseShellExecute = true,
-                    Verb = "runas" // Admin-Rechte anfordern für Installation
+                    Verb = "runas" // Admin-Rechte anfordern fï¿½r Installation
                 };
                 var p = Process.Start(psi);
                 p?.WaitForExit(120000); // bis zu 2 Minuten warten
