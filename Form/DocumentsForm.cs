@@ -428,6 +428,7 @@ namespace TaMi_Einzahlautomat
             pnl.Controls.Add(btnOpen);
             var btnPrint = new Button { Text = "Drucken", Location = new Point(124, 110), Size = new Size(104, 36), BackColor = Color.FromArgb(76, 175, 80), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Tag = filePath, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
             btnPrint.FlatAppearance.BorderSize = 0; btnPrint.Click += (s, e) => PrintPath((string)((Button)s).Tag);
+            try { var disableDocs = IniHelper.ReadValue("UI", "DisableDocumentsPrint", AppSettings.IniPath); if (!string.IsNullOrWhiteSpace(disableDocs) && (disableDocs.Equals("1") || disableDocs.Equals("true", StringComparison.OrdinalIgnoreCase))) btnPrint.Visible = false; } catch { }
             pnl.Controls.Add(btnPrint);
 
             var btnMail = new Button { Text = "per Mail", Location = new Point(12, 152), Size = new Size(216, 36), BackColor = Color.FromArgb(255, 167, 38), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Tag = filePath, Font = new Font("Segue UI Variable", 11F, FontStyle.Bold) };

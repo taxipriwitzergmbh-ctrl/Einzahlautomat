@@ -245,6 +245,7 @@ namespace TaMi_Einzahlautomat
             // Print and Email buttons for exporting the current view (use document printer and mail settings)
             var btnPrintMonth = new Button { Text = "Drucken", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Size = new Size(96, 40), Location = new Point(900, 14), BackColor = Color.FromArgb(76, 175, 80), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             btnPrintMonth.FlatAppearance.BorderSize = 0; btnPrintMonth.Click += (s, e) => PrintMonthReport(); _header.Controls.Add(btnPrintMonth);
+            try { var disable = IniHelper.ReadValue("UI", "DisableHoursPrint", AppSettings.IniPath); if (!string.IsNullOrWhiteSpace(disable) && (disable.Equals("1") || disable.Equals("true", StringComparison.OrdinalIgnoreCase))) btnPrintMonth.Visible = false; } catch { }
             var btnEmailMonth = new Button { Text = "per Mail", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Size = new Size(96, 40), Location = new Point(1004, 14), BackColor = Color.FromArgb(255, 167, 38), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             btnEmailMonth.FlatAppearance.BorderSize = 0; btnEmailMonth.Click += (s, e) => EmailMonthReport(); _header.Controls.Add(btnEmailMonth);
 
@@ -379,7 +380,7 @@ namespace TaMi_Einzahlautomat
                     _openPauseEntryId = id;
                     bool pauseOpen = id.HasValue;
                     _btnPause.Text = pauseOpen ? "Pause beenden" : "Pause starten";
-                    _btnPause.BackColor = pauseOpen ? Color.FromArgb(229, 57, 53) : Color.FromArgb(255, 167, 38);
+                    _btnPause.BackColor = pauseOpen ? Color.FromArgb(229, 57, 53) : Color.FromArgb(255,167,38);
                     PositionPauseButton();
                 }
             }
