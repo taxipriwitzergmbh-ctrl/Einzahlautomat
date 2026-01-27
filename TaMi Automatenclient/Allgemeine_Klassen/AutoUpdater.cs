@@ -10,7 +10,8 @@ namespace TaMi_Automatenclient
 {
     public static class AutoUpdater
     {
-        private const string UpdateUrl = "http://kassenautomat.priwitzer-dienstleistungsgmbh.de/Update_Automatenclient";
+        // Einzahlautomat: MSI-Installer liegt unter folgendem Pfad
+        private const string UpdateUrl = "http://kassenautomat.priwitzer-dienstleistungsgmbh.de/Update_Einzahlautomat/Einzahlautomat_Setup.msi";
 
         public static void CheckAndPromptAtStartup()
         {
@@ -25,7 +26,9 @@ namespace TaMi_Automatenclient
                 string tmpPath = null;
                 try
                 {
-                    tmpPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".exe");
+                    var remoteExt = Path.GetExtension(remoteUrl);
+                    if (string.IsNullOrEmpty(remoteExt)) remoteExt = ".msi";
+                    tmpPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + remoteExt);
                     using (var wc = new WebClient())
                     {
                         wc.DownloadFile(remoteUrl, tmpPath);
@@ -127,10 +130,19 @@ namespace TaMi_Automatenclient
         {
             try
             {
-                var info = FileVersionInfo.GetVersionInfo(path);
-                if (!string.IsNullOrEmpty(info.FileVersion))
+                var ext = Path.GetExtension(path);
+                if (!string.IsNullOrEmpty(ext) && ext.Equals(".msi", StringComparison.OrdinalIgnoreCase))
                 {
-                    Version v; if (Version.TryParse(info.FileVersion, out v)) return v;
+                    var mv = GetMsiProductVersion(path);
+                    if (mv != null) return mv;
+                }
+                else
+                {
+                    var info = FileVersionInfo.GetVersionInfo(path);
+                    if (!string.IsNullOrEmpty(info.FileVersion))
+                    {
+                        Version v; if (Version.TryParse(info.FileVersion, out v)) return v;
+                    }
                 }
             }
             catch { }
@@ -142,22 +154,65 @@ namespace TaMi_Automatenclient
             try { if (!string.IsNullOrEmpty(path) && File.Exists(path)) File.Delete(path); } catch { }
         }
 
-        private static string BuildUpdateBatch(string srcExe, string targetExe)
+        private static string BuildUpdateBatch(string srcPath, string targetExe)
         {
             var sb = new StringBuilder();
             sb.AppendLine("@echo off");
             sb.AppendLine("setlocal");
-            sb.AppendLine("set SRC=\"" + srcExe + "\"");
+            sb.AppendLine("set SRC=\"" + srcPath + "\"");
             sb.AppendLine("set EXE=\"" + targetExe + "\"");
-            sb.AppendLine(":repeat");
-            sb.AppendLine("ping 127.0.0.1 -n 2 >nul");
-            sb.AppendLine("copy /y %SRC% %EXE% >nul");
-            sb.AppendLine("if errorlevel 1 goto repeat");
-            sb.AppendLine("start \"\" %EXE%");
-            sb.AppendLine("del /f /q %SRC% >nul 2>&1");
-            sb.AppendLine("del \"%~f0\" >nul 2>&1");
-            sb.AppendLine("endlocal");
+
+            var ext = Path.GetExtension(srcPath);
+            if (!string.IsNullOrEmpty(ext) && ext.Equals(".msi", StringComparison.OrdinalIgnoreCase))
+            {
+                var exeName = Path.GetFileName(targetExe);
+                if (string.IsNullOrEmpty(exeName)) exeName = "app.exe";
+                sb.AppendLine(":waitclose");
+                sb.AppendLine("ping 127.0.0.1 -n 2 >nul");
+                sb.AppendLine("tasklist /fi \"imagename eq " + exeName + "\" | find /i \"" + exeName + "\" >nul && goto waitclose");
+                sb.AppendLine("msiexec /i %SRC% /passive /norestart");
+                sb.AppendLine("start \"\" %EXE%");
+                sb.AppendLine("del /f /q %SRC% >nul 2>&1");
+                sb.AppendLine("del \"%~f0\" >nul 2>&1");
+                sb.AppendLine("endlocal");
+            }
+            else
+            {
+                sb.AppendLine(":repeat");
+                sb.AppendLine("ping 127.0.0.1 -n 2 >nul");
+                sb.AppendLine("copy /y %SRC% %EXE% >nul");
+                sb.AppendLine("if errorlevel 1 goto repeat");
+                sb.AppendLine("start \"\" %EXE%");
+                sb.AppendLine("del /f /q %SRC% >nul 2>&1");
+                sb.AppendLine("del \"%~f0\" >nul 2>&1");
+                sb.AppendLine("endlocal");
+            }
             return sb.ToString();
+        }
+
+        private static Version GetMsiProductVersion(string msiPath)
+        {
+            try
+            {
+                var t = Type.GetTypeFromProgID("WindowsInstaller.Installer");
+                if (t == null) return null;
+                var installer = Activator.CreateInstance(t);
+                // OpenDatabase(msiPath, 0)
+                var db = t.InvokeMember("OpenDatabase", BindingFlags.InvokeMethod, null, installer, new object[] { msiPath, 0 });
+                if (db == null) return null;
+                var dbType = db.GetType();
+                var view = dbType.InvokeMember("OpenView", BindingFlags.InvokeMethod, null, db, new object[] { "SELECT Value FROM Property WHERE Property='ProductVersion'" });
+                if (view == null) return null;
+                var viewType = view.GetType();
+                viewType.InvokeMember("Execute", BindingFlags.InvokeMethod, null, view, new object[] { null });
+                var rec = viewType.InvokeMember("Fetch", BindingFlags.InvokeMethod, null, view, null);
+                if (rec == null) return null;
+                var recType = rec.GetType();
+                var s = recType.InvokeMember("StringData", BindingFlags.GetProperty, null, rec, new object[] { 1 }) as string;
+                Version v; if (!string.IsNullOrEmpty(s) && Version.TryParse(s, out v)) return v;
+            }
+            catch { }
+            return null;
         }
     }
 }

@@ -10,9 +10,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Projektmappenelemente", "Pr
 		..\KassesystemPRO\KassesystemPRO.vbproj.user = ..\KassesystemPRO\KassesystemPRO.vbproj.user
 	EndProjectSection
 EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Geldautomat_install", "..\Geldautomat_install\Geldautomat_install.vdproj", "{B3069E88-C038-0969-059B-2E0D7EDBA343}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaMi-Automatenclient", "..\TaMi Automatenclient\TaMi-Automatenclient.csproj", "{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}"
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Einzahlautomat Setup", "..\Einzahlautomat Setup\Einzahlautomat Setup.vdproj", "{FA632BDF-0641-3223-9A67-65B24AB088F1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,10 +30,6 @@ Global
 		{E7F871FB-C2EE-457F-8AAE-8501614398F5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E7F871FB-C2EE-457F-8AAE-8501614398F5}.Release|x86.ActiveCfg = Release|Any CPU
 		{E7F871FB-C2EE-457F-8AAE-8501614398F5}.Release|x86.Build.0 = Release|Any CPU
-		{B3069E88-C038-0969-059B-2E0D7EDBA343}.Debug|Any CPU.ActiveCfg = Debug
-		{B3069E88-C038-0969-059B-2E0D7EDBA343}.Debug|x86.ActiveCfg = Debug
-		{B3069E88-C038-0969-059B-2E0D7EDBA343}.Release|Any CPU.ActiveCfg = Release
-		{B3069E88-C038-0969-059B-2E0D7EDBA343}.Release|x86.ActiveCfg = Release
 		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Debug|x86.ActiveCfg = Debug|Any CPU
@@ -42,6 +38,14 @@ Global
 		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Release|x86.ActiveCfg = Release|Any CPU
 		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Release|x86.Build.0 = Release|Any CPU
+		{FA632BDF-0641-3223-9A67-65B24AB088F1}.Debug|Any CPU.ActiveCfg = Debug
+		{FA632BDF-0641-3223-9A67-65B24AB088F1}.Debug|Any CPU.Build.0 = Debug
+		{FA632BDF-0641-3223-9A67-65B24AB088F1}.Debug|x86.ActiveCfg = Debug
+		{FA632BDF-0641-3223-9A67-65B24AB088F1}.Debug|x86.Build.0 = Debug
+		{FA632BDF-0641-3223-9A67-65B24AB088F1}.Release|Any CPU.ActiveCfg = Release
+		{FA632BDF-0641-3223-9A67-65B24AB088F1}.Release|Any CPU.Build.0 = Release
+		{FA632BDF-0641-3223-9A67-65B24AB088F1}.Release|x86.ActiveCfg = Release
+		{FA632BDF-0641-3223-9A67-65B24AB088F1}.Release|x86.Build.0 = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

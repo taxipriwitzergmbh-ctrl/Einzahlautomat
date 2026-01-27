@@ -210,6 +210,9 @@ namespace TaMi_Einzahlautomat
                 TryScheduleRestart("ThreadException");
             };
 
+            // Prüfe auf verfügbare Updates (MSI) vom Webspace und biete Aktualisierung an
+            try { TaMi_Automatenclient.AutoUpdater.CheckAndPromptAtStartup(); } catch { }
+
             AppSettings.AutomatenName = AppSettings.LoadAutomatenNameFromIni();
             AppSettings.DeviceId = AppSettings.LoadDeviceIdFromIni(); // NEU
             if (AppSettings.DeviceId <= 0)
