@@ -327,6 +327,7 @@
     <Compile Include="SuE\Tools\MessagePacket.cs" />
     <Compile Include="SuE\Tools\TimeSpanNamed.cs" />
     <Compile Include="SuE\Tools\Utils.cs" />
+    <Compile Include="TaMi Automatenclient\Allgemeine_Klassen\AutoUpdater.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
