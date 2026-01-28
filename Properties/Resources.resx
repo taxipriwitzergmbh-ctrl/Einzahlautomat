@@ -114,4 +114,58 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="_100euro" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\100euro.jpg;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
+  <data name="_10cent" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\10cent.bmp;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
+  <data name="_10euro" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\10euro.jpg;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
+  <data name="_1cent" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\1cent.png;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
+  <data name="_1euro" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\1euro.bmp;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
+  <data name="_20cent" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\20cent.bmp;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
+  <data name="_20euro" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\20euro.jpg;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
+  <data name="_2cent" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\2cent.png;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
+  <data name="_2cent1" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\2cent1.png;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
+  <data name="_2euro" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\2euro.bmp;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
+  <data name="_50cent" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\50cent.bmp;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
+  <data name="_50euro" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\50euro.jpg;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
+  <data name="_5cent" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\5cent.png;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
+  <data name="_5cent1" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\5cent1.png;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
+  <data name="_5euro" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\5euro.jpg;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
+  <data name="Geldautomat_Win11" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\Geldautomat_Win11.ico;System.Drawing.Icon, System.Drawing</value>
+  </data>
+  <data name="Hintergrund" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\Hintergrund.png;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
+  <data name="NFC" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\NFC.png;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
 </root>

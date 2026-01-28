@@ -287,6 +287,7 @@
     <Compile Include="Form\ShiftSelectionForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Properties\Resources.Designer.cs" />
     <Compile Include="SuE\TaMi\Config.cs" />
     <Compile Include="SuE\TaMi\ConfigItem.cs" />
     <Compile Include="SuE\TaMi\DispatchState.cs" />
@@ -330,14 +331,8 @@
     <Compile Include="TaMi Automatenclient\Allgemeine_Klassen\AutoUpdater.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
     </EmbeddedResource>
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
-      <DesignTime>True</DesignTime>
-    </Compile>
     <None Include="Beispiel-Fix für AppConfigItem %28analog zu ConfigItem%29" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">

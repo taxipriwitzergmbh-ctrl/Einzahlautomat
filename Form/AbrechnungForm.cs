@@ -280,16 +280,10 @@ namespace TaMi_Einzahlautomat
         {
             try
             {
-                string baseDir = Application.StartupPath;
-                string path1 = Path.Combine(baseDir, "Resources", "Hintergrund.png");
-                string path2 = Path.Combine(baseDir, "Ressourcen", "Hintergrund.png");
-                string chosen = File.Exists(path1) ? path1 : (File.Exists(path2) ? path2 : null);
-                if (chosen != null)
+                var img = TaMi_Einzahlautomat.Properties.Resources.Hintergrund;
+                if (img != null)
                 {
-                    using (var img = Image.FromFile(chosen))
-                    {
-                        _bgImage = new Bitmap(img);
-                    }
+                    _bgImage = new Bitmap(img);
                 }
             }
             catch { }
@@ -1050,18 +1044,7 @@ namespace TaMi_Einzahlautomat
             {
                 var rowY = startY + i * rowH;
                 var pb = new PictureBox { Location = new Point(startXMuenzImage, rowY), Size = new Size(60, 60), SizeMode = PictureBoxSizeMode.Zoom, BorderStyle = BorderStyle.None, BackColor = Color.White };
-                try
-                {
-                    var path = Path.Combine(Application.StartupPath, "Ressourcen", muenzBilder[i]);
-                    if (!File.Exists(path))
-                    {
-                        var fallbackPng = Path.Combine(Application.StartupPath, "Ressourcen", Path.GetFileNameWithoutExtension(muenzBilder[i]) + ".png");
-                        var fallbackBmp = Path.Combine(Application.StartupPath, "Ressourcen", Path.GetFileNameWithoutExtension(muenzBilder[i]) + ".bmp");
-                        if (File.Exists(fallbackPng)) path = fallbackPng; else if (File.Exists(fallbackBmp)) path = fallbackBmp;
-                    }
-                    if (File.Exists(path)) pb.Image = Image.FromFile(path);
-                }
-                catch { }
+                try { pb.Image = GetCoinImageByIndex(i); } catch { }
                 tabWechseln.Controls.Add(pb); picMuenzen[i] = pb;
                 var bMinus = new Button { Text = "–", Location = new Point(startXMuenzMinus, rowY), Size = new Size(48, 48), Tag = i, FlatStyle = FlatStyle.Flat, BackColor = danger, ForeColor = Color.White, Font = new Font("Segoe UI Variable", 24F, FontStyle.Bold) };
                 bMinus.FlatAppearance.BorderSize = 0; bMinus.Click += BtnMinusMuenzen_Click; tabWechseln.Controls.Add(bMinus); btnMinusMuenzen[i] = bMinus;
@@ -1086,18 +1069,7 @@ namespace TaMi_Einzahlautomat
                     BorderStyle = BorderStyle.None,
                     BackColor = Color.White
                 };
-                try
-                {
-                    var path = Path.Combine(Application.StartupPath, "Ressourcen", scheinBilder[i]);
-                    if (!File.Exists(path))
-                    {
-                        var fallbackPng = Path.Combine(Application.StartupPath, "Ressourcen", Path.GetFileNameWithoutExtension(scheinBilder[i]) + ".png");
-                        var fallbackBmp = Path.Combine(Application.StartupPath, "Ressourcen", Path.GetFileNameWithoutExtension(scheinBilder[i]) + ".bmp");
-                        if (File.Exists(fallbackPng)) path = fallbackPng; else if (File.Exists(fallbackBmp)) path = fallbackBmp;
-                    }
-                    if (File.Exists(path)) pb.Image = Image.FromFile(path);
-                }
-                catch { }
+                try { pb.Image = GetNoteImageByIndex(i); } catch { }
                 tabWechseln.Controls.Add(pb); picScheine[i] = pb;
                 var bMinus = new Button { Text = "–", Location = new Point(startXScheinMinus, rowY), Size = new Size(48, 48), Tag = i, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, Font = new Font("Segoe UI Variable", 24F, FontStyle.Bold) };
                 bMinus.FlatAppearance.BorderSize = 0; bMinus.Click += BtnMinus_Click; tabWechseln.Controls.Add(bMinus); btnMinus[i] = bMinus;
@@ -1109,7 +1081,6 @@ namespace TaMi_Einzahlautomat
                 tabWechseln.Controls.Add(lAvail); lblVerfuegbar[i] = lAvail;
                 if (scheinWerte[i] >= 100) { pb.Visible = false; bMinus.Visible = false; lbl.Visible = false; bPlus.Visible = false; lAvail.Visible = false; }
             }
-
             int labelX = 600; int labelWidth = 350; int maxVerfuegbarY = startY + Math.Max(muenzWerte.Length, scheinWerte.Length) * rowH + 10; int maxAvailX = labelX - 180;
             lblMaxVerfuegbar = new Label { Text = $"Maximal verfügbar: {(_personalGuthaben + _eingezahltSession):C2}", Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(33, 150, 243), Location = new Point(maxAvailX, maxVerfuegbarY), Size = new Size(labelWidth + 180, 40), TextAlign = ContentAlignment.MiddleRight, BackColor = Color.Transparent };
             tabWechseln.Controls.Add(lblMaxVerfuegbar);
@@ -1118,6 +1089,45 @@ namespace TaMi_Einzahlautomat
             btnAuszahlen = new Button { Text = "Auszahlen", Location = new Point(labelX + labelWidth + 30, maxVerfuegbarY + 40), Size = new Size(180, 60), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(46, 125, 50), ForeColor = Color.White, Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold) };
             btnAuszahlen.FlatAppearance.BorderSize = 0; btnAuszahlen.Click += btnAuszahlen_Click; tabWechseln.Controls.Add(btnAuszahlen);
             SafeRefreshAvailability(); UpdateSummeAuszahlung(); UpdateMaxVerfuegbar();
+        }
+
+        private Image GetCoinImageByIndex(int i)
+        {
+            try
+            {
+                switch (muenzWerte[i])
+                {
+                    case 1: return TaMi_Einzahlautomat.Properties.Resources._1cent ?? TaMi_Einzahlautomat.Properties.Resources._1euro; // fallback
+                    case 2: return TaMi_Einzahlautomat.Properties.Resources._2cent ?? TaMi_Einzahlautomat.Properties.Resources._2cent1;
+                    case 5: return TaMi_Einzahlautomat.Properties.Resources._5cent ?? TaMi_Einzahlautomat.Properties.Resources._5cent1;
+                    case 10: return TaMi_Einzahlautomat.Properties.Resources._10cent;
+                    case 20: return TaMi_Einzahlautomat.Properties.Resources._20cent;
+                    case 50: return TaMi_Einzahlautomat.Properties.Resources._50cent;
+                    case 100: return TaMi_Einzahlautomat.Properties.Resources._1euro;
+                    case 200: return TaMi_Einzahlautomat.Properties.Resources._2euro;
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private Image GetNoteImageByIndex(int i)
+        {
+            try
+            {
+                switch (scheinWerte[i])
+                {
+                    case 5: return TaMi_Einzahlautomat.Properties.Resources._5euro;
+                    case 10: return TaMi_Einzahlautomat.Properties.Resources._10euro;
+                    case 20: return TaMi_Einzahlautomat.Properties.Resources._20euro;
+                    case 50: return TaMi_Einzahlautomat.Properties.Resources._50euro;
+                    case 100: return TaMi_Einzahlautomat.Properties.Resources._100euro;
+                    case 200: return null; // not present
+                    case 500: return null; // not present
+                }
+            }
+            catch { }
+            return null;
         }
 
         private void UpdateAbrechnenSummaries()
