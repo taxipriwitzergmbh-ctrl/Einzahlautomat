@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Reflection;
 using TaMi_Einzahlautomat.Devices;
 using TaMi_Einzahlautomat.Coins;
 using TaMi_Einzahlautomat; // added for types still in original namespace
@@ -198,6 +199,61 @@ namespace TaMi_Einzahlautomat
         [STAThread]
         private static void Main()
         {
+            // Ensure PdfSharp files are organized into a subfolder and can be loaded from there
+            try
+            {
+                var baseDir = Application.StartupPath;
+                var pdfSharpDir = Path.Combine(baseDir, "PDFSharp");
+                try { Directory.CreateDirectory(pdfSharpDir); } catch { }
+
+                // Move known PdfSharp/MigraDoc related files to the PDFSharp directory
+                string[] patterns = new[]
+                {
+                    "PdfSharp*.dll",
+                    "MigraDoc*.dll",
+                    "SharpZipLib*.dll",
+                    "System.Drawing.Common*.dll", // sometimes required by PdfSharp
+                    "fonts.json", // common resource files if present
+                    "*.ttf"
+                };
+                foreach (var pat in patterns)
+                {
+                    try
+                    {
+                        var files = Directory.GetFiles(baseDir, pat, SearchOption.TopDirectoryOnly);
+                        foreach (var f in files)
+                        {
+                            var name = Path.GetFileName(f);
+                            var dest = Path.Combine(pdfSharpDir, name);
+                            if (!string.Equals(f, dest, StringComparison.OrdinalIgnoreCase))
+                            {
+                                try
+                                {
+                                    if (File.Exists(dest)) File.Delete(dest);
+                                }
+                                catch { }
+                                try { File.Move(f, dest); } catch { }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                // Probe assemblies from PDFSharp folder
+                AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
+                {
+                    try
+                    {
+                        var asmName = new AssemblyName(e.Name).Name + ".dll";
+                        var candidate = Path.Combine(pdfSharpDir, asmName);
+                        if (File.Exists(candidate)) return Assembly.LoadFrom(candidate);
+                    }
+                    catch { }
+                    return null;
+                };
+            }
+            catch { }
+
             AppDomain.CurrentDomain.UnhandledException += (s, e) =>
             {
                 Exception ex = e.ExceptionObject as Exception;

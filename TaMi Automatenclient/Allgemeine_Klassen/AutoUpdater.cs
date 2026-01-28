@@ -160,7 +160,9 @@ namespace TaMi_Automatenclient
             sb.AppendLine("@echo off");
             sb.AppendLine("setlocal");
             sb.AppendLine("set SRC=\"" + srcPath + "\"");
-            sb.AppendLine("set EXE=\"" + targetExe + "\"");
+                sb.AppendLine("set EXE=\"" + targetExe + "\"");
+                // Keep unquoted path for directory extraction
+                sb.AppendLine("set EXEPATH=" + targetExe);
 
             var ext = Path.GetExtension(srcPath);
             if (!string.IsNullOrEmpty(ext) && ext.Equals(".msi", StringComparison.OrdinalIgnoreCase))
@@ -171,6 +173,24 @@ namespace TaMi_Automatenclient
                 sb.AppendLine("ping 127.0.0.1 -n 2 >nul");
                 sb.AppendLine("tasklist /fi \"imagename eq " + exeName + "\" | find /i \"" + exeName + "\" >nul && goto waitclose");
                 sb.AppendLine("msiexec /i %SRC% /passive /norestart");
+                // After installation, organize PdfSharp-related files into a subfolder to keep program folder clean
+                // Determine application directory from %EXE%
+                sb.AppendLine("set BASEDIR=%~dp0");
+                sb.AppendLine("set APPDIR=%EXEPATH%");
+                sb.AppendLine("for %%I in (\"%EXEPATH%\") do set APPDIR=%%~dpI");
+                sb.AppendLine("if not exist \"%APPDIR%PDFSharp\" mkdir \"%APPDIR%PDFSharp\"");
+                sb.AppendLine("pushd \"%APPDIR%\"");
+                // Move common dlls (retry a few times in case MSI still holds locks)
+                sb.AppendLine("set RETRIES=5");
+                sb.AppendLine(":move_try");
+                sb.AppendLine("for %%F in (PdfSharp*.dll MigraDoc*.dll SharpZipLib*.dll) do if exist \"%%F\" move /y \"%%F\" \"%APPDIR%PDFSharp\" >nul");
+                sb.AppendLine("for %%F in (*.ttf fonts.json) do if exist \"%%F\" move /y \"%%F\" \"%APPDIR%PDFSharp\" >nul");
+                sb.AppendLine("set /a RETRIES-=1");
+                sb.AppendLine("if %RETRIES% gtr 0 (");
+                sb.AppendLine("  ping 127.0.0.1 -n 2 >nul");
+                sb.AppendLine("  goto move_try");
+                sb.AppendLine(")");
+                sb.AppendLine("popd");
                 sb.AppendLine("start \"\" %EXE%");
                 sb.AppendLine("del /f /q %SRC% >nul 2>&1");
                 sb.AppendLine("del \"%~f0\" >nul 2>&1");
