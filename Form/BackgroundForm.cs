@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -22,14 +22,14 @@ namespace TaMi_Einzahlautomat
 
         private void InitializeBackground()
         {
-            AutoScaleMode = AutoScaleMode.None; // verhindert DPI-Autoscaling -> vermeidet schwarze Ränder
+            AutoScaleMode = AutoScaleMode.None; // verhindert DPI-Autoscaling -> vermeidet schwarze Rï¿½nder
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
             ShowIcon = false;
             ShowInTaskbar = false; // Hintergrund nicht in Taskleiste
             BackColor = Color.Black;
             DoubleBuffered = true;
-            TopMost = _kioskMode; // Im Kioskmodus immer oben (eigene Fenster bleiben per Owner darüber)
+            TopMost = _kioskMode; // Im Kioskmodus immer oben (eigene Fenster bleiben per Owner darï¿½ber)
 
             _picture = new PictureBox
             {
@@ -51,7 +51,7 @@ namespace TaMi_Einzahlautomat
                 try { _picture.Invalidate(); } catch { }
             };
 
-            Resize += (s, e) => { try { _picture.Invalidate(); } catch { } }; // bei Größenänderung neu zeichnen
+            Resize += (s, e) => { try { _picture.Invalidate(); } catch { } }; // bei Grï¿½ï¿½enï¿½nderung neu zeichnen
 
             FormClosed += (s, e) =>
             {
@@ -60,7 +60,7 @@ namespace TaMi_Einzahlautomat
             };
         }
 
-        // Cover-Scaling: füllt komplette Breite/Höhe, schneidet ggf. überstehende Bereiche ab (keine Balken)
+        // Cover-Scaling: fï¿½llt komplette Breite/Hï¿½he, schneidet ggf. ï¿½berstehende Bereiche ab (keine Balken)
         private void Picture_Paint(object sender, PaintEventArgs e)
         {
             if (_backgroundImage == null) return;
@@ -87,16 +87,11 @@ namespace TaMi_Einzahlautomat
         {
             try
             {
-                string baseDir = Application.StartupPath;
-                string path1 = Path.Combine(baseDir, "Resources", "Hintergrund.png");
-                string path2 = Path.Combine(baseDir, "Ressourcen", "Hintergrund.png");
-                string chosen = File.Exists(path1) ? path1 : (File.Exists(path2) ? path2 : null);
-                if (chosen != null)
+                var img = TaMi_Einzahlautomat.Properties.Resources.Hintergrund;
+                if (img != null)
                 {
-                    using (var img = Image.FromFile(chosen))
-                    {
-                        _backgroundImage = new Bitmap(img); // lokale Kopie
-                    }
+                    _backgroundImage?.Dispose();
+                    _backgroundImage = new Bitmap(img); // lokale Kopie aus Embedded Resource
                 }
             }
             catch { }
@@ -107,7 +102,7 @@ namespace TaMi_Einzahlautomat
             get
             {
                 var cp = base.CreateParams;
-                cp.ExStyle |= 0x08000000; // WS_EX_NOACTIVATE: Hintergrund erhält keinen Fokus
+                cp.ExStyle |= 0x08000000; // WS_EX_NOACTIVATE: Hintergrund erhï¿½lt keinen Fokus
                 cp.ExStyle |= 0x00000080; // WS_EX_TOOLWINDOW: nicht in Alt-Tab
                 cp.ExStyle |= 0x00000008; // WS_EX_TOPMOST
                 return cp;
@@ -132,7 +127,7 @@ namespace TaMi_Einzahlautomat
             {
                 var taskbar = FindWindow("Shell_TrayWnd", null);
                 if (taskbar != IntPtr.Zero) ShowWindow(taskbar, SW_HIDE);
-                var start = FindWindow("Button", null); // älteres Startmenü
+                var start = FindWindow("Button", null); // ï¿½lteres Startmenï¿½
                 if (start != IntPtr.Zero) ShowWindow(start, SW_HIDE);
             }
             catch { }

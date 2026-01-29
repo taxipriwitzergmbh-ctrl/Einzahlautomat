@@ -278,15 +278,23 @@ namespace TaMi_Einzahlautomat
 
         private void LoadBackgroundImage()
         {
+            var img = TaMi_Einzahlautomat.Properties.Resources.Hintergrund;
+            if (img == null)
+            {
+                try { AppLogger.Log("Resources.Hintergrund ist null – Hintergrund wird nicht angezeigt."); } catch { }
+                return;
+            }
             try
             {
-                var img = TaMi_Einzahlautomat.Properties.Resources.Hintergrund;
-                if (img != null)
-                {
-                    _bgImage = new Bitmap(img);
-                }
+                _bgImage?.Dispose();
+                _bgImage = new Bitmap(img);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                try { AppLogger.Log("Fehler beim Laden des Hintergrundbildes: " + ex.Message); } catch { }
+                // Fallback: direkt als Form-Hintergrund setzen
+                try { this.BackgroundImage = img; this.BackgroundImageLayout = ImageLayout.Stretch; } catch { }
+            }
         }
 
         protected override void OnPaintBackground(PaintEventArgs e)

@@ -813,11 +813,7 @@ namespace TaMi_Einzahlautomat
                 Controls.Add(_picNfc); try { _picNfc.SendToBack(); } catch { }
                 try { headerPanel?.BringToFront(); } catch { }
             }
-            try
-            {
-                string baseDir = Application.StartupPath; string path1 = Path.Combine(baseDir, "Resources", "NFC.png"); string path2 = Path.Combine(baseDir, "Ressourcen", "NFC.png"); string chosen = File.Exists(path1) ? path1 : (File.Exists(path2) ? path2 : null); if (chosen != null) { using (var img = Image.FromFile(chosen)) { _picNfc.Image = new Bitmap(img); } }
-            }
-            catch { }
+            try { _picNfc.Image = TaMi_Einzahlautomat.Properties.Resources.NFC; } catch { }
         }
 
         private void BuildNumPad()
