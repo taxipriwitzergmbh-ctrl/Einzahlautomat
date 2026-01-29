@@ -49,6 +49,7 @@ namespace TaMi_Einzahlautomat
         private Button btnShowLog; // NEU: Log anzeigen
         private Button btnPrinterConfig; // NEU
         private Label _lblExeInfo; // NEU: Build-/Versionsinfo
+        private Button btnCheckUpdate; // NEU: Update prüfen
 
         private string _lastNv1Bezel = null; // track last applied bezel color as "R,G,B"
         private string _lastNv2Bezel = null;
@@ -325,6 +326,18 @@ namespace TaMi_Einzahlautomat
             ys += h60 + gapLarge;
             var btnGeneralSettings = CreateMenuButton(_tabSettings, "Allgemeine Einstellungen", ys, h60, blue, f14);
             btnGeneralSettings.Click += (s, e) => { try { ShowOrActivate(() => new GeneralSettingsForm()); } catch { } };
+
+            // NEU: Update prüfen Button
+            ys += h60 + gapSmall;
+            btnCheckUpdate = CreateMenuButton(_tabSettings, "Nach Update suchen", ys, h60, Color.FromArgb(0, 122, 204), f14);
+            btnCheckUpdate.Click += (s, e) =>
+            {
+                try
+                {
+                    Program.CheckForUpdateNow(this);
+                }
+                catch { }
+            };
 
             // Fernwartung (AnyDesk) Button unter Einstellungen
             ys += h60 + gapLarge;

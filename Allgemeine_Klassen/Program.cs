@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Reflection;
+using System.Net;
 using TaMi_Einzahlautomat.Devices;
 using TaMi_Einzahlautomat.Coins;
 using TaMi_Einzahlautomat; // added for types still in original namespace
@@ -266,8 +267,7 @@ namespace TaMi_Einzahlautomat
                 TryScheduleRestart("ThreadException");
             };
 
-            // Prüfe auf verfügbare Updates (MSI) vom Webspace und biete Aktualisierung an
-            try { TaMi_Automatenclient.AutoUpdater.CheckAndPromptAtStartup(); } catch { }
+           
 
             AppSettings.AutomatenName = AppSettings.LoadAutomatenNameFromIni();
             AppSettings.DeviceId = AppSettings.LoadDeviceIdFromIni(); // NEU
@@ -324,6 +324,9 @@ namespace TaMi_Einzahlautomat
             AppLogger.Init();
             try { AppLogger.LogStartBanner(); } catch { }
             SafeLog("Programmstart");
+
+            // Check for available update on startup (non-blocking)
+            try { Task.Run(() => PromptUpdateIfAvailable()); } catch { }
 
             try { CoinFeederCoordinator.Start(); } catch { }
 
@@ -584,6 +587,17 @@ namespace TaMi_Einzahlautomat
             try { AppLogger.Log(msg); } catch { }
         }
 
+        // Public entry points to trigger update check
+        public static void CheckForUpdateNow()
+        {
+            try { Task.Run(() => PromptUpdateIfAvailable()); } catch { }
+        }
+
+        public static void CheckForUpdateNow(Form owner)
+        {
+            try { Task.Run(() => PromptUpdateIfAvailableWithOwner(owner)); } catch { }
+        }
+
         private static bool ReadKioskFlagFromIni()
         {
             try
@@ -630,6 +644,109 @@ namespace TaMi_Einzahlautomat
                 if (start != IntPtr.Zero) ShowWindow(start, SW_SHOW);
             }
             catch { }
+        }
+
+        private const string UpdateMsiUrl = "http://kassenautomat.priwitzer-dienstleistungsgmbh.de/Update_Einzahlautomat/Einzahlautomat_Setup.msi";
+        private static async Task PromptUpdateIfAvailable()
+        {
+            await PromptUpdateIfAvailableWithOwner(_background).ConfigureAwait(false);
+        }
+
+        private static async Task PromptUpdateIfAvailableWithOwner(Form owner)
+        {
+            try
+            {
+                // Download MSI to temp to read ProductVersion
+                string tempMsi = Path.Combine(Path.GetTempPath(), "Einzahlautomat_Setup.msi");
+                try
+                {
+                    using (var wc = new WebClient())
+                    {
+                        wc.Proxy = WebRequest.DefaultWebProxy;
+                        await wc.DownloadFileTaskAsync(UpdateMsiUrl, tempMsi).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SafeLog("Update-Download für Versionsprüfung fehlgeschlagen: " + ex.Message);
+                    return;
+                }
+
+                var localVerStr = Application.ProductVersion;
+                Version localVer;
+                if (!Version.TryParse(localVerStr, out localVer)) localVer = new Version(0, 0, 0, 0);
+
+                Version remoteVer = GetMsiProductVersion(tempMsi) ?? new Version(0, 0, 0, 0);
+                if (remoteVer <= localVer) return; // not newer
+
+                // Ask user on UI thread
+                var ui = owner ?? _background;
+                if (ui != null && !ui.IsDisposed)
+                {
+                    ui.BeginInvoke(new Action(async () =>
+                    {
+                        var res = MessageBox.Show(
+                            ui,
+                            "Es ist eine neuere Version verfügbar (" + remoteVer + "). Möchten Sie das Update jetzt installieren?",
+                            "Update verfügbar",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Question);
+                        if (res != DialogResult.Yes) return;
+
+                        // MSI already downloaded to tempMsi
+
+                        try
+                        {
+                            // Start MSI installer; let it handle elevation if needed
+                            var psi = new ProcessStartInfo
+                            {
+                                FileName = "msiexec.exe",
+                                Arguments = "/i \"" + tempMsi + "\"",
+                                UseShellExecute = true,
+                                Verb = "runas"
+                            };
+                            Process.Start(psi);
+                        }
+                        catch (Exception ex)
+                        {
+                            SafeLog("Update-Start fehlgeschlagen: " + ex.Message);
+                            MessageBox.Show(ui, "Update konnte nicht gestartet werden:\r\n" + ex.Message, "Update", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+
+                        // Close the app to allow installer to update files
+                        try { RequestControlledShutdown(); } catch { }
+                    }));
+                }
+            }
+            catch (Exception ex)
+            {
+                SafeLog("Update-Prüfung fehlgeschlagen: " + ex.Message);
+            }
+        }
+
+        private static Version GetMsiProductVersion(string msiPath)
+        {
+            try
+            {
+                var progId = Type.GetTypeFromProgID("WindowsInstaller.Installer");
+                if (progId == null) return null;
+                object installerObj = Activator.CreateInstance(progId);
+                var installerType = installerObj.GetType();
+                var db = installerType.InvokeMember("OpenDatabase", System.Reflection.BindingFlags.InvokeMethod, null, installerObj, new object[] { msiPath, 0 });
+                var dbType = db.GetType();
+                var view = dbType.InvokeMember("OpenView", System.Reflection.BindingFlags.InvokeMethod, null, db, new object[] { "SELECT `Value` FROM `Property` WHERE `Property`='ProductVersion'" });
+                var viewType = view.GetType();
+                viewType.InvokeMember("Execute", System.Reflection.BindingFlags.InvokeMethod, null, view, new object[] { null });
+                var rec = viewType.InvokeMember("Fetch", System.Reflection.BindingFlags.InvokeMethod, null, view, null);
+                if (rec == null) return null;
+                var recType = rec.GetType();
+                var val = recType.InvokeMember("StringData", System.Reflection.BindingFlags.GetProperty, null, rec, new object[] { 1 }) as string;
+                Version v;
+                if (Version.TryParse(val, out v)) return v;
+                return null;
+            }
+            catch { return null; }
         }
     }
 }

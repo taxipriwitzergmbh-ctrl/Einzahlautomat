@@ -1489,7 +1489,7 @@
             "SourcePath" = "8:System.Net.Http.dll"
             "TargetName" = "8:"
             "Tag" = "8:"
-            "Folder" = "8:_EEC05DB0403D4A3799AB777E4F6CFDB8"
+            "Folder" = "8:_1E049868D1BB40B89DB59E904FC645F1"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -1644,7 +1644,7 @@
             "SourcePath" = "8:System.Net.Http.dll"
             "TargetName" = "8:"
             "Tag" = "8:"
-            "Folder" = "8:_EEC05DB0403D4A3799AB777E4F6CFDB8"
+            "Folder" = "8:_1E049868D1BB40B89DB59E904FC645F1"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -1799,17 +1799,6 @@
             "Property" = "8:TARGETDIR"
                 "Folders"
                 {
-                    "{9EF0B969-E518-4E46-987F-47570745A589}:_9FB33BD8F3E84E7B94C116973EAA3E6D"
-                    {
-                    "Name" = "8:Ressourcen"
-                    "AlwaysCreate" = "11:FALSE"
-                    "Condition" = "8:"
-                    "Transitive" = "11:FALSE"
-                    "Property" = "8:_4922E53D697144A2951BA14390CC8088"
-                        "Folders"
-                        {
-                        }
-                    }
                     "{9EF0B969-E518-4E46-987F-47570745A589}:_EEC05DB0403D4A3799AB777E4F6CFDB8"
                     {
                     "Name" = "8:PdfSharp"
@@ -1861,8 +1850,8 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:Einzahlautomat Setup"
-        "ProductCode" = "8:{2AF169F5-7ADA-4FCB-89D0-530FA47C168B}"
-        "PackageCode" = "8:{877399FD-5118-476D-B056-3EF57EEEB7AD}"
+        "ProductCode" = "8:{9CFA29E0-EF0D-4F9F-BF93-950E66DBAD6C}"
+        "PackageCode" = "8:{5E8D9DBB-2F4B-4645-A3C1-25B581F2E95D}"
         "UpgradeCode" = "8:{8CAACCC8-FD0C-4D2D-A1EE-B351D81D9E7A}"
         "AspNetVersion" = "8:2.0.50727.0"
         "RestartWWWService" = "11:FALSE"
