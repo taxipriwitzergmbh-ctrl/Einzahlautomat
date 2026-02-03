@@ -1000,7 +1000,15 @@ namespace TaMi_Einzahlautomat
                 bool enabled = true;
                 if (btnAbmelden != null && !btnAbmelden.Enabled) enabled = false;
                 bool manualMode = (nudManuell != null && nudManuell.Visible) || (btnManuellAdd != null && btnManuellAdd.Visible);
-                if (manualMode) { if (btnAbrechnen != null) btnAbrechnen.Enabled = enabled; return; }
+                if (manualMode)
+                {
+                    if (btnAbrechnen != null)
+                    {
+                        btnAbrechnen.Enabled = enabled;
+                        try { btnAbrechnen.BackColor = enabled ? Color.FromArgb(46, 125, 50) : Color.FromArgb(160, 160, 160); btnAbrechnen.ForeColor = Color.White; } catch { }
+                    }
+                    return;
+                }
                 if (enabled)
                 {
                     decimal sum = 0m; decimal noch = 0m;
@@ -1038,7 +1046,11 @@ namespace TaMi_Einzahlautomat
                     if (sum == 0m) enabled = false;
                     if (noch != 0m) enabled = false;
                 }
-                if (btnAbrechnen != null) btnAbrechnen.Enabled = enabled;
+                if (btnAbrechnen != null)
+                {
+                    btnAbrechnen.Enabled = enabled;
+                    try { btnAbrechnen.BackColor = enabled ? Color.FromArgb(46, 125, 50) : Color.FromArgb(160, 160, 160); btnAbrechnen.ForeColor = Color.White; } catch { }
+                }
             }
             catch { }
         }
