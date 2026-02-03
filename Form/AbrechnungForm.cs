@@ -1233,7 +1233,21 @@ namespace TaMi_Einzahlautomat
                     string title = string.IsNullOrWhiteSpace(vorgang) ? "QUITTUNG" : vorgang.ToUpperInvariant();
                     string mitarbeiter = _personal.Vorname + " " + _personal.Name;
                     var body = ReceiptLayouts.Current.BuildBody(title, mitarbeiter, buchungstext, b19, b7, b0, cfg.PrintVatLines);
-                    new ReceiptPrinter(cfg).PrintSimpleReceipt(title, body);
+                    if (cfg.LegacyDontWait)
+                    {
+                        try
+                        {
+                            Task.Run(() =>
+                            {
+                                try { new ReceiptPrinter(cfg).PrintSimpleReceipt(title, body); } catch { }
+                            });
+                        }
+                        catch { }
+                    }
+                    else
+                    {
+                        new ReceiptPrinter(cfg).PrintSimpleReceipt(title, body);
+                    }
                 }
                 // choice == No -> nichts tun
             }

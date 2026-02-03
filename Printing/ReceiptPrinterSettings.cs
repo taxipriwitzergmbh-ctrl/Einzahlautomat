@@ -41,6 +41,9 @@ namespace TaMi_Einzahlautomat.Printing
         public int Legacy2Chars { get; set; } = 40;
         public bool Legacy2Cut { get; set; } = true;
 
+        // If true, do not wait for printing (run asynchronously), primarily for legacy printers
+        public bool LegacyDontWait { get; set; } = false;
+
         public static ReceiptPrinterSettings Load()
         {
             var s = new ReceiptPrinterSettings();
@@ -80,6 +83,7 @@ namespace TaMi_Einzahlautomat.Printing
                         s.Legacy2Baud = ParseInt(IniHelper.ReadValue(IniSection, nameof(Legacy2Baud), ini), 9600, 1200, 115200);
                         s.Legacy2Chars = ParseInt(IniHelper.ReadValue(IniSection, nameof(Legacy2Chars), ini), 40, 10, 80);
                         s.Legacy2Cut = ParseBool(IniHelper.ReadValue(IniSection, nameof(Legacy2Cut), ini), true);
+                        s.LegacyDontWait = ParseBool(IniHelper.ReadValue(IniSection, nameof(LegacyDontWait), ini), false);
                         return s;
                     }
                 }
@@ -150,6 +154,7 @@ namespace TaMi_Einzahlautomat.Printing
                 IniHelper.WriteValue(IniSection, nameof(Legacy2Baud), Legacy2Baud.ToString(), ini);
                 IniHelper.WriteValue(IniSection, nameof(Legacy2Chars), Legacy2Chars.ToString(), ini);
                 IniHelper.WriteValue(IniSection, nameof(Legacy2Cut), Legacy2Cut ? "1" : "0", ini);
+                IniHelper.WriteValue(IniSection, nameof(LegacyDontWait), LegacyDontWait ? "1" : "0", ini);
             }
             catch { }
         }
