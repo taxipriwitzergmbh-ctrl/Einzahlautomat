@@ -20,6 +20,7 @@ namespace TaMi_Einzahlautomat
         private Label lblTitle;
         private Button btnClose;
         private ComboBox cmbPorts;
+        private ComboBox cmbType; // Typ-Auswahl: CoinFeeder oder NFC V2
        
         private Button btnDetect; // NEU Erkennung
         private bool _detectingPort; // NEU
@@ -50,6 +51,7 @@ namespace TaMi_Einzahlautomat
             _iniPath = iniPath;
             _feeder = Program.CoinFeeder; // globale Instanz
             BuildUi();
+            LoadTypeFromIni();
             LoadPortFromIni();
             LoadPorts();
             // Sicherstellen, dass der aktuell konfigurierte/open Port selektiert ist
@@ -188,6 +190,27 @@ namespace TaMi_Einzahlautomat
             cmbPorts.DropDown += (s,e)=> LoadPorts(true);
             Controls.Add(cmbPorts);
 
+            // Typ-Auswahl (CoinFeeder / NFC V2)
+            var lblType = new Label
+            {
+                Text = "Typ:",
+                Location = new Point(24, 120),
+                AutoSize = true,
+                Font = new Font("Segoe UI Variable", 12f, FontStyle.Bold)
+            };
+            Controls.Add(lblType);
+
+            cmbType = new ComboBox
+            {
+                Location = new Point(80, 116),
+                Size = new Size(160, 36),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI Variable", 12f)
+            };
+            cmbType.Items.AddRange(new object[] { "CoinFeeder", "NFC V2" });
+            cmbType.SelectedIndexChanged += (s, e) => { SaveTypeToIni(); UpdateUiState(); };
+            Controls.Add(cmbType);
+
             btnDetect = MakeSmallButton("Erkennung", new Point(250, 76), Color.FromArgb(33, 150, 243));
             btnDetect.Size = new Size(120,36);
             btnDetect.Click += (s,e)=> StartDetectPortMode();
@@ -219,7 +242,7 @@ namespace TaMi_Einzahlautomat
                 Multiline = true,
                 ReadOnly = true,
                 ScrollBars = ScrollBars.Vertical,
-                Location = new Point(24, 130),
+                Location = new Point(24, 170),
                 Size = new Size(560, 460),
                 Font = new Font("Consolas", 10f),
                 BackColor = Color.White
@@ -244,7 +267,7 @@ namespace TaMi_Einzahlautomat
             // NV200/1 -> default channel commands (ohne 'a')
             // NV200/2 -> channel 'a'
             int bx = 610;
-            int by = 170;
+            int by = 210;
             int bw = 220;
             int bh = 58;
             int pad = 16;
@@ -474,6 +497,7 @@ namespace TaMi_Einzahlautomat
             try
             {
                 bool open = _feeder != null && _feeder.IsOpen;
+                bool isNfc = IsNfcMode();
                 btnGreen.Enabled = open;
                 btnGreenA.Enabled = open;
                 btnRed.Enabled = open;
@@ -481,6 +505,16 @@ namespace TaMi_Einzahlautomat
                 btnReconnect.Enabled = (cmbPorts.SelectedItem != null);
                 lblStatus.Text = $"Status: Port={_feeder?.PortName ?? "-"} | Open={(open ? "Ja" : "Nein")}";
                 lblStatus.ForeColor = open ? Color.FromArgb(0, 128, 0) : Color.FromArgb(183, 28, 28);
+
+                // Im NFC-Modus keine LED-Steuerung
+                if (isNfc)
+                {
+                    btnGreen.Visible = false; btnGreenA.Visible = false; btnRed.Visible = false; btnRedA.Visible = false;
+                }
+                else
+                {
+                    btnGreen.Visible = true; btnGreenA.Visible = true; btnRed.Visible = true; btnRedA.Visible = true;
+                }
             }
             catch { }
         }
@@ -501,6 +535,7 @@ namespace TaMi_Einzahlautomat
         {
             try
             {
+                if (IsNfcMode()) { UpdateUiState(); return; } // Keine Auto-LED-Logik im NFC-Modus
                 var nv1 = Program.NV200Instance; // default channel
                 var nv2 = Program.NV2002Instance; // channel 'a'
                 string s1 = nv1?.states ?? string.Empty;
@@ -604,6 +639,12 @@ namespace TaMi_Einzahlautomat
         {
             if (_feeder == null)
                 throw new InvalidOperationException("CoinFeeder nicht initialisiert.");
+
+            if (IsNfcMode())
+            {
+                AppendLog("NFC V2 Modus aktiv – Senden deaktiviert.");
+                return;
+            }
 
             try
             {
@@ -791,6 +832,58 @@ namespace TaMi_Einzahlautomat
             _detectingPort = false;
             btnDetect.Text = "Erkennung";
             AppendLog(cancelled ? "COM-Port Erkennung abgebrochen." : "Neuer COM-Port erkannt: " + (cmbPorts.SelectedItem ?? "?"));
+        }
+
+        // --- Hilfsmethoden: Typ laden/speichern und prüfen ---
+        private void LoadTypeFromIni()
+        {
+            try
+            {
+                var t = IniHelper.ReadValue("CoinFeeder", "Type", _iniPath);
+                if (string.Equals(t, "NFC", StringComparison.OrdinalIgnoreCase) || string.Equals(t, "NFC V2", StringComparison.OrdinalIgnoreCase))
+                    cmbType.SelectedItem = "NFC V2";
+                else
+                    cmbType.SelectedItem = "CoinFeeder";
+            }
+            catch { cmbType.SelectedIndex = 0; }
+        }
+
+        private void SaveTypeToIni()
+        {
+            try
+            {
+                var val = (cmbType.SelectedItem as string) ?? "CoinFeeder";
+                IniHelper.WriteValue("CoinFeeder", "Type", val, _iniPath);
+            }
+            catch { }
+        }
+
+        private bool IsNfcMode()
+        {
+            try { return string.Equals(Convert.ToString(cmbType.SelectedItem), "NFC V2", StringComparison.OrdinalIgnoreCase); } catch { return false; }
+        }
+
+        // --- NFC Frame Decoder: 2011$<count>$<b1>$<b2>$... ---
+        private string DecodeNfcFrame(string line)
+        {
+            try
+            {
+                var raw = (line ?? string.Empty).Trim();
+                var parts = raw.Split(new[] { '$' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length >= 2 && parts[0] == "2011")
+                {
+                    int count = 0; int.TryParse(parts[1], out count);
+                    var values = new List<int>();
+                    for (int i = 2; i < parts.Length; i++) { if (int.TryParse(parts[i], out var v)) values.Add(v); }
+                    if (count > 0 && values.Count >= count)
+                    {
+                        return $"NFC V2: Bits={count}, Werte=[{string.Join(",", values.Take(count))}]";
+                    }
+                    return $"NFC V2: Rohdaten=[{string.Join(",", values)}]";
+                }
+            }
+            catch { }
+            return line;
         }
     }
 }

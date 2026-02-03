@@ -288,7 +288,7 @@ namespace TaMi_Einzahlautomat
             btnCoinAdmin2 = CreateMenuButton(_tabDevices, "Münzprüfer/2", y, h70, blue, f16); y += h70 + gapSmall;
             // Etwas kleinerer Abstand zwischen Münzprüfer/2 und Coinfeeder
             y += gapSmall;
-            btnCoinFeeder = CreateMenuButton(_tabDevices, "Coinfeeder", y, h60, blue, f16); y += h60 + gapSmall;
+            btnCoinFeeder = CreateMenuButton(_tabDevices, "NFC / Coinfeeder", y, h60, blue, f16); y += h60 + gapSmall;
 
             // Repositioned: printer config now directly below Coinfeeder
             btnPrinterConfig = CreateMenuButton(_tabDevices, "Quittungsdrucker", y, h60, blue, f14);

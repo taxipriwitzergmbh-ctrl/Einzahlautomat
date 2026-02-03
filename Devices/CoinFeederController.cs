@@ -227,6 +227,39 @@ namespace TaMi_Einzahlautomat.Devices
                             }
                             _currentNumber.Clear();
                         }
+                        // Direkt nach Separator prüfen, ob 2011-UID vollständig ist und sofort emittieren
+                        if (_currentFrameHas2011Header && _expected2011Length > 0 && _numberBuffer.Count >= _expected2011Length)
+                        {
+                            var uidBytes = _numberBuffer.GetRange(0, _expected2011Length).ToArray();
+                            var sbEmit = new System.Text.StringBuilder(uidBytes.Length * 2);
+                            foreach (var b in uidBytes) sbEmit.AppendFormat("{0:X2}", b);
+                            string tokenEmit = sbEmit.ToString();
+
+                            if (IsExplicitRm5Blacklisted(tokenEmit))
+                            {
+                                Log($"NFC: RM5 status frame suppressed ({tokenEmit})");
+                                _numberBuffer.RemoveRange(0, _expected2011Length);
+                                _currentFrameHas2011Header = false; _expected2011Length = -1; _currentFrameHasLargeNumber = false;
+                            }
+                            else if (IsIgnoredNfcToken(tokenEmit))
+                            {
+                                _numberBuffer.RemoveRange(0, _expected2011Length);
+                                _currentFrameHas2011Header = false; _expected2011Length = -1; _currentFrameHasLargeNumber = false;
+                            }
+                            else
+                            {
+                                var nowEmit = DateTime.UtcNow;
+                                if (!(string.Equals(_lastEmittedNfcToken, tokenEmit, StringComparison.OrdinalIgnoreCase) && (nowEmit - _lastEmittedNfcTime) < NfcEmitDebounce))
+                                {
+                                    try { if (NfcEnabled) NfcReceived?.Invoke(tokenEmit); } catch { }
+                                    try { if (NfcEnabled) EventLog?.Invoke($"NFC: {tokenEmit}"); } catch { }
+                                    _lastEmittedNfcToken = tokenEmit;
+                                    _lastEmittedNfcTime = nowEmit;
+                                }
+                                _numberBuffer.RemoveRange(0, _expected2011Length);
+                                _currentFrameHas2011Header = false; _expected2011Length = -1; _currentFrameHasLargeNumber = false;
+                            }
+                        }
                         // $ is a separator only
                         continue;
                     }
@@ -331,7 +364,15 @@ namespace TaMi_Einzahlautomat.Devices
                             continue;
                         }
 
-                        // If we have enough tokens, try to find a UID window (prefer 7 bytes)
+                        // Nur NFC-Erkennung zulassen, wenn der Frame mit 2011$ begonnen hat
+                        if (!_currentFrameHas2011Header)
+                        {
+                            // Kein 2011-Header -> als Telemetrie behandeln und verwerfen
+                            _numberBuffer.Clear();
+                            continue;
+                        }
+
+                        // Wenn wir genug Tokens haben, versuche eine UID zu finden (präferiert 7 Bytes)
                         if (_numberBuffer.Count >= MinNfcTokenCount)
                         {
                             byte[] uid = null;

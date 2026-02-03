@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using TaMi_Einzahlautomat.Coins; // RM5 detection
 
@@ -68,6 +68,15 @@ namespace TaMi_Einzahlautomat.Devices
         {
             try
             {
+                // NFC V2 Modus? -> Coordinator vollständig deaktivieren
+                try
+                {
+                    var t = IniHelper.ReadValue("CoinFeeder", "Type", AppSettings.IniPath);
+                    if (!string.IsNullOrWhiteSpace(t) && (t.Equals("NFC V2", StringComparison.OrdinalIgnoreCase) || t.Equals("NFC", StringComparison.OrdinalIgnoreCase)))
+                        return 0;
+                }
+                catch { }
+
                 string overrideStr = IniHelper.ReadValue("CoinFeeder", "CoordinatorIntervalMs", AppSettings.IniPath);
                 if (!string.IsNullOrWhiteSpace(overrideStr) && int.TryParse(overrideStr, out int cfg) && cfg >= 0)
                 {
@@ -104,6 +113,7 @@ namespace TaMi_Einzahlautomat.Devices
         {
             try
             {
+                if (IsNfcMode()) return; // Im NFC-Modus keine Befehle senden
                 var feeder = Program.CoinFeeder;
                 if (feeder == null) return;
 
@@ -233,7 +243,7 @@ namespace TaMi_Einzahlautomat.Devices
                 {
                     feeder.Open();
                     _consecutiveOpenFails = 0;
-                    try { AppLogger.Log("CoinFeederCoordinator: Port ge�ffnet (Reopen) auf " + sel); } catch { }
+                    try { AppLogger.Log("CoinFeederCoordinator: Port ge�ffnet (Reopen) auf " + sel); } catch { }
                 }
                 catch (Exception openEx)
                 {
@@ -252,6 +262,7 @@ namespace TaMi_Einzahlautomat.Devices
         {
             try
             {
+                if (IsNfcMode()) return; // Sicherheitscheck: im NFC-Modus niemals senden
                 var feeder = Program.CoinFeeder;
                 if (feeder == null || !feeder.IsOpen) return;
                 feeder.SendTemplate(template);
@@ -260,6 +271,16 @@ namespace TaMi_Einzahlautomat.Devices
             {
                 try { AppLogger.Log("CoinFeeder send failed: " + ex.Message); } catch { }
             }
+        }
+
+        private static bool IsNfcMode()
+        {
+            try
+            {
+                var t = IniHelper.ReadValue("CoinFeeder", "Type", AppSettings.IniPath);
+                return !string.IsNullOrWhiteSpace(t) && (t.Equals("NFC V2", StringComparison.OrdinalIgnoreCase) || t.Equals("NFC", StringComparison.OrdinalIgnoreCase));
+            }
+            catch { return false; }
         }
     }
 }

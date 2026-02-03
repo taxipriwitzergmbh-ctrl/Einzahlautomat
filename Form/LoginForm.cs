@@ -248,7 +248,8 @@ namespace TaMi_Einzahlautomat
                 try { if (AdminMode.IsOpen) return; } catch { }
                 try { if (_ssp?.MitarbeiterEingeloggt == true) return; } catch { }
                 // Zentrale Filterung im CoinFeeder – hier keine zusätzliche Ignoreliste mehr
-                if (string.IsNullOrWhiteSpace(token) || token.Length < 12 || token.Trim('0').Length == 0) return;
+                // Tokenlänge: bisher >=12 (6 Bytes). Für NFC V2 auch 4-Byte-UIDs zulassen (>=8 Hex-Zeichen)
+                if (string.IsNullOrWhiteSpace(token) || token.Length < 8 || token.Trim('0').Length == 0) return;
                 var now = DateTime.UtcNow;
                 if (string.Equals(_lastCoinFeederToken, token, StringComparison.OrdinalIgnoreCase) && (now - _lastCoinFeederTokenTime).TotalSeconds < 3) return;
                 _lastCoinFeederToken = token; _lastCoinFeederTokenTime = now;
