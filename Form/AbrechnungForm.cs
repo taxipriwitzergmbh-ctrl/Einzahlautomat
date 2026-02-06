@@ -1801,52 +1801,52 @@ namespace TaMi_Einzahlautomat
             {
                 try { if (_tmrAvail != null) { _tmrAvail.Enabled = false; _tmrAvail.Stop(); } } catch { }
                 if (AdminMode.IsOpen && !ignoreAdminMode) { MessageBox.Show(this, "Im Admin-Modus ist Abmelden deaktiviert.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
-                if (_eingezahltSession > 0m)
+                // Personalguthaben beim Abmelden immer als Delta zum letzten DB-Saldo buchen,
+                // damit bereits reduzierte Guthaben (durch Auszahlungen) nicht verloren gehen.
+                int manId = _details?.ManId ?? (_currentAuszahlungRow != null && _currentAuszahlungRow.Table.Columns.Contains("FirmenID") && _currentAuszahlungRow["FirmenID"] != DBNull.Value ? Convert.ToInt32(_currentAuszahlungRow["FirmenID"]) : 0);
+                int schichtId = _details?.SchichtId ?? 0;
+                using (var db = new DatabaseHelper())
                 {
-                    int manId = _details?.ManId ?? (_currentAuszahlungRow != null && _currentAuszahlungRow.Table.Columns.Contains("FirmenID") && _currentAuszahlungRow["FirmenID"] != DBNull.Value ? Convert.ToInt32(_currentAuszahlungRow["FirmenID"]) : 0);
-                    int schichtId = _details?.SchichtId ?? 0;
-                    using (var db = new DatabaseHelper())
+                    decimal alterSaldo = await db.GetLastPersonalGuthabenSaldoAsync(_personal.PID);
+                    decimal neuerSaldo = Math.Round(_personalGuthaben, 2);
+
+                    // Zusätzliches Session-Eingezahlt (z.B. durch Münz-/Schein-Einwurf ohne sofortige PG-Buchung)
+                    // wird dem gewünschten Guthaben-Saldo zugeschlagen.
+                    if (_eingezahltSession != 0m)
                     {
-                        decimal alterSaldo = await db.GetLastPersonalGuthabenSaldoAsync(_personal.PID); decimal betrag = Math.Round(_eingezahltSession, 2); decimal neuerSaldo = alterSaldo + betrag; var zpg = AccountingRules.GetPersonalguthabenKontierung(manId);
-                        var entry = new KassenbuchEntry { PersId = _personal.PID, SchichtId = schichtId, Typ = "Personalguthaben", Buchungstext = AccountingRules.ComposePgEinbuchungText(_personal), Kost1 = zpg.Kost1, Kost2 = zpg.Kost2, Konto = zpg.Konto, Betrag19 = 0m, Betrag7 = 0m, Betrag0 = betrag, SaldoPersonalguthaben = neuerSaldo, FirmenId = -1, AutomatenName = AppSettings.AutomatenName, Kassenbestand = GetCurrentKassenbestandEuro() };
-                        await db.InsertKassenbuchAsync(entry); _personalGuthaben = neuerSaldo; _eingezahltSession = 0m; lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; UpdateMaxVerfuegbar();
+                        neuerSaldo = Math.Round(neuerSaldo + Math.Round(_eingezahltSession, 2), 2);
                     }
-                }
-                else if (_eingezahltSession < 0m)
-                {
-                    // Negative manuelle Eingabe: Personalguthaben bei Abmeldung reduzieren
-                    int manId = _details?.ManId ?? (_currentAuszahlungRow != null && _currentAuszahlungRow.Table.Columns.Contains("FirmenID") && _currentAuszahlungRow["FirmenID"] != DBNull.Value ? Convert.ToInt32(_currentAuszahlungRow["FirmenID"]) : 0);
-                    int schichtId = _details?.SchichtId ?? 0;
-                    using (var db = new DatabaseHelper())
+
+                    decimal delta = Math.Round(neuerSaldo - alterSaldo, 2);
+                    if (delta != 0m)
                     {
-                        decimal alterSaldo = await db.GetLastPersonalGuthabenSaldoAsync(_personal.PID);
-                        decimal betrag = Math.Abs(Math.Round(_eingezahltSession, 2)); // zu reduzierender Betrag
-                        decimal neuerSaldo = Math.Round(alterSaldo - betrag, 2);
                         var zpg = AccountingRules.GetPersonalguthabenKontierung(manId);
+                        string buchungstext = delta > 0m ? AccountingRules.ComposePgEinbuchungText(_personal) : AccountingRules.ComposePgEinzahlungText(_personal);
                         var entry = new KassenbuchEntry
                         {
                             PersId = _personal.PID,
                             SchichtId = schichtId,
                             Typ = "Personalguthaben",
-                            Buchungstext = AccountingRules.ComposePgEinzahlungText(_personal),
+                            Buchungstext = buchungstext,
                             Kost1 = zpg.Kost1,
                             Kost2 = zpg.Kost2,
                             Konto = zpg.Konto,
                             Betrag19 = 0m,
                             Betrag7 = 0m,
-                            Betrag0 = -betrag, // Abzug
+                            Betrag0 = delta,
                             SaldoPersonalguthaben = neuerSaldo,
                             FirmenId = -1,
                             AutomatenName = AppSettings.AutomatenName,
                             Kassenbestand = GetCurrentKassenbestandEuro()
                         };
                         await db.InsertKassenbuchAsync(entry);
-                        _personalGuthaben = neuerSaldo;
-                        _eingezahltSession = 0m;
-                        lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}";
-                        lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}";
-                        UpdateMaxVerfuegbar();
                     }
+
+                    _personalGuthaben = neuerSaldo;
+                    _eingezahltSession = 0m;
+                    lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}";
+                    lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}";
+                    UpdateMaxVerfuegbar();
                 }
             }
             catch (Exception ex) { if (!ignoreAdminMode) MessageBox.Show(this, $"Fehler beim Abmelden:\r\n{ex.Message}", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error); }
