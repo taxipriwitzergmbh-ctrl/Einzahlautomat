@@ -19,6 +19,9 @@ namespace TaMi_Einzahlautomat
 {
     public partial class AbrechnungForm : Form
     {
+        private Panel _cardAbrechnen;
+        private Region _cardAbrechnenRegion;
+
         // Global zugängliche aktuelle Personal-ID (für andere Dialoge wie CreatePaymentForm)
         public static int CurrentPersonalId { get; private set; }
         // Singleton-Helper: nur eine Instanz zulassen
@@ -157,6 +160,14 @@ namespace TaMi_Einzahlautomat
         private TabPage tabWechseln;
 
         private Label lblTitel, lblGuthaben, lblB19, lblB7, lblB0, lblSumme, lblEingezahlt, lblNoch;
+
+        // Abrechnen-Tab: ausgerichtete Summen (Text links / Betrag rechts)
+        private Panel pnlSummeRow;
+        private Panel pnlEingezahltRow;
+        private Panel pnlNochRow;
+        private Label lblSummeText, lblEingezahltText, lblNochText;
+        private Label lblSummeValue, lblEingezahltValue, lblNochValue;
+        private Panel pnlSummeSeparator;
 
         private Button btnAbrechnen, btnAbmelden, btnManuellAdd;
         private Button btnCreatePayment;
@@ -750,75 +761,351 @@ namespace TaMi_Einzahlautomat
 
         private void BuildAbrechnenTab()
         {
-            int y = 30;
+            tabAbrechnen.BackColor = Color.White;
+
+            Color surface = Color.White;
+            Color border = Color.FromArgb(229, 231, 235);
+            Color text = Color.FromArgb(17, 24, 39);
+            Color subText = Color.FromArgb(55, 65, 81);
+            Color primary = Color.FromArgb(0, 122, 204);
+            Color success = Color.FromArgb(46, 125, 50);
+
+            var fontTitle = new Font("Segoe UI Variable", 22F, FontStyle.Bold);
+            var fontBody = new Font("Segoe UI Variable", 18F, FontStyle.Regular);
+            var fontStrong = new Font("Segoe UI Variable", 20F, FontStyle.Bold);
+
+            if (_cardAbrechnen != null)
+            {
+                try { _cardAbrechnenRegion?.Dispose(); } catch { }
+                try { _cardAbrechnen.Dispose(); } catch { }
+                _cardAbrechnen = null;
+            }
+
+            int pad = 28;
+            _cardAbrechnen = new Panel
+            {
+                Location = new Point(24, 24),
+                Size = new Size(tabAbrechnen.ClientSize.Width - 48, tabAbrechnen.ClientSize.Height - 48),
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+                BackColor = surface
+            };
+            _cardAbrechnen.Paint += (s, e) =>
+            {
+                try
+                {
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    using (var pen = new Pen(border, 1f))
+                    {
+                        var r = _cardAbrechnen.ClientRectangle;
+                        r.Width -= 1; r.Height -= 1;
+                        e.Graphics.DrawRectangle(pen, r);
+                    }
+                }
+                catch { }
+            };
+            try
+            {
+                var rgn = Region.FromHrgn(CreateRoundRectRgn(0, 0, _cardAbrechnen.Width, _cardAbrechnen.Height, 18, 18));
+                _cardAbrechnenRegion = rgn;
+                _cardAbrechnen.Region = rgn;
+            }
+            catch { }
+            tabAbrechnen.Controls.Add(_cardAbrechnen);
+
+            tabAbrechnen.SizeChanged += (s, e) =>
+            {
+                try
+                {
+                    if (_cardAbrechnen == null) return;
+                    _cardAbrechnenRegion?.Dispose();
+                    _cardAbrechnenRegion = null;
+                    var rgn = Region.FromHrgn(CreateRoundRectRgn(0, 0, _cardAbrechnen.Width, _cardAbrechnen.Height, 18, 18));
+                    _cardAbrechnenRegion = rgn;
+                    _cardAbrechnen.Region = rgn;
+                }
+                catch { }
+            };
+
+            int y = pad;
+
             lblTitel = new Label
             {
                 Text = $"Mitarbeiter: {_personal.Vorname} {_personal.Name}",
-                Font = new Font("Segoe UI Semibold", 22F, FontStyle.Bold),
-                Location = new Point(40, y),
-                Size = new Size(800, 48),
+                Font = fontTitle,
+                ForeColor = text,
+                Location = new Point(pad, y),
+                Size = new Size(_cardAbrechnen.Width - pad * 2, 44),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 BackColor = Color.Transparent
             };
-            tabAbrechnen.Controls.Add(lblTitel);
+            _cardAbrechnen.Controls.Add(lblTitel);
 
-            y += 60;
+            y += 54;
             lblGuthaben = new Label
             {
                 Text = "Personal-Guthaben: 0,00 € (Platzhalter)",
-                Font = new Font("Segoe UI Variable", 20F),
-                Location = new Point(40, y),
-                Size = new Size(800, 44),
+                Font = fontBody,
+                ForeColor = subText,
+                Location = new Point(pad, y),
+                Size = new Size(_cardAbrechnen.Width - pad * 2, 36),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 BackColor = Color.Transparent
             };
-            tabAbrechnen.Controls.Add(lblGuthaben);
+            _cardAbrechnen.Controls.Add(lblGuthaben);
 
-            y += 60; // inkl. Leerzeile
+            // Mehr Abstand zwischen Personal-Guthaben und Info-Textfeld
+            y += 78;
+
+            var sep = new Panel
+            {
+                BackColor = Color.FromArgb(242, 244, 247),
+                Location = new Point(pad, y),
+                Size = new Size(_cardAbrechnen.Width - pad * 2, 1),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            _cardAbrechnen.Controls.Add(sep);
+
+            y += 18;
 
             lblBelegInfo = new Label
             {
                 Text = string.Empty,
-                Font = new Font("Segoe UI Variable", 26F, FontStyle.Bold),
-                Location = new Point(40, y),
-                Size = new Size(1100, 70),
-                BackColor = Color.Transparent,
-                ForeColor = Color.FromArgb(90, 180, 255),
+                Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
+                Location = new Point(pad, y),
+                Size = new Size(_cardAbrechnen.Width - pad * 2, 52),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                BackColor = Color.FromArgb(246, 248, 252),
+                ForeColor = primary,
                 AutoSize = false,
-                Padding = new Padding(4),
-                TextAlign = ContentAlignment.MiddleLeft
+                Padding = new Padding(12, 10, 12, 10),
+                TextAlign = ContentAlignment.TopLeft
             };
-            tabAbrechnen.Controls.Add(lblBelegInfo);
-            y += 80;
+            try { lblBelegInfo.AutoEllipsis = true; } catch { }
+            _cardAbrechnen.Controls.Add(lblBelegInfo);
 
-            y += 60;
+            y += 72;
+
             var b19Init = _details != null ? _details.Betrag19 : 0m;
             var b7Init = _details != null ? _details.Betrag7 : 0m;
             var b0Init = _details != null ? _details.Betrag0 : 0m;
-            lblB19 = new Label { Text = $"19%: {b19Init:C2}", Font = new Font("Segoe UI Variable", 20F), Location = new Point(40, y), Size = new Size(250, 44) };
-            tabAbrechnen.Controls.Add(lblB19);
-            lblB7 = new Label { Text = $"7%: {b7Init:C2}", Font = new Font("Segoe UI Variable", 20F), Location = new Point(320, y), Size = new Size(250, 44) };
-            tabAbrechnen.Controls.Add(lblB7);
-            lblB0 = new Label { Text = $"0%: {b0Init:C2}", Font = new Font("Segoe UI Variable", 20F), Location = new Point(600, y), Size = new Size(250, 44) };
-            tabAbrechnen.Controls.Add(lblB0);
 
-            y += 60;
+            int colW = (_cardAbrechnen.Width - pad * 2 - 24 * 2) / 3;
+            if (colW < 280) colW = 280;
+            int x1 = pad;
+            int x2 = x1 + colW + 24;
+            int x3 = x2 + colW + 24;
+
+            lblB19 = new Label { Text = $"19%: {b19Init:C2}", Font = fontBody, ForeColor = text, Location = new Point(x1, y), Size = new Size(colW, 36), BackColor = Color.Transparent };
+            _cardAbrechnen.Controls.Add(lblB19);
+            lblB7 = new Label { Text = $"7%: {b7Init:C2}", Font = fontBody, ForeColor = text, Location = new Point(x2, y), Size = new Size(colW, 36), BackColor = Color.Transparent };
+            _cardAbrechnen.Controls.Add(lblB7);
+            lblB0 = new Label { Text = $"0%: {b0Init:C2}", Font = fontBody, ForeColor = text, Location = new Point(x3, y), Size = new Size(colW, 36), BackColor = Color.Transparent };
+            _cardAbrechnen.Controls.Add(lblB0);
+
+            y += 52;
             var sumInit = (_details != null ? _details.SummeZuZahlen : 0m);
-            lblSumme = new Label { Text = $"Summe: {sumInit:C2}", Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold), Location = new Point(40, y), Size = new Size(400, 48) };
-            tabAbrechnen.Controls.Add(lblSumme);
 
-            y += 86;
-            lblEingezahlt = new Label { Text = $"Eingezahlt: {_eingezahltSession:C2}", Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold), Location = new Point(40, y), Size = new Size(400, 48) };
-            tabAbrechnen.Controls.Add(lblEingezahlt);
+            // zweispaltiges Layout, damit Eurozeichen fluchten
+            int amountW = 170;
+            int gap2 = 6;
+            int labelW = 240;
+            try
+            {
+                int w1 = TextRenderer.MeasureText("Noch zu zahlen:", fontStrong).Width;
+                int w2 = TextRenderer.MeasureText("Eingezahlt:", fontStrong).Width;
+                int w3 = TextRenderer.MeasureText("Summe:", fontStrong).Width;
+                labelW = Math.Max(140, Math.Max(w1, Math.Max(w2, w3)) + 8);
+            }
+            catch { labelW = 240; }
+            int rowW = labelW + gap2 + amountW;
+
+            pnlSummeSeparator = new Panel
+            {
+                BackColor = Color.FromArgb(229, 231, 235),
+                Location = new Point(pad + labelW + gap2, y - 10),
+                Size = new Size(amountW, 1),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
+            };
+            _cardAbrechnen.Controls.Add(pnlSummeSeparator);
+
+            pnlSummeRow = new Panel
+            {
+                Location = new Point(pad, y),
+                Size = new Size(rowW, 40),
+                BackColor = Color.Transparent,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
+            };
+            lblSummeText = new Label
+            {
+                Text = "Summe:",
+                Font = fontStrong,
+                ForeColor = text,
+                Location = new Point(0, 0),
+                Size = new Size(labelW, 40),
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            lblSummeValue = new Label
+            {
+                Text = sumInit.ToString("C2"),
+                Font = fontStrong,
+                ForeColor = text,
+                Location = new Point(labelW + gap2, 0),
+                Size = new Size(amountW, 40),
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleRight
+            };
+            pnlSummeRow.Controls.Add(lblSummeText);
+            pnlSummeRow.Controls.Add(lblSummeValue);
+            _cardAbrechnen.Controls.Add(pnlSummeRow);
+            lblSumme = lblSummeValue;
+
+            y += 62;
+            pnlEingezahltRow = new Panel
+            {
+                Location = new Point(pad, y),
+                Size = new Size(rowW, 40),
+                BackColor = Color.Transparent,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
+            };
+            lblEingezahltText = new Label
+            {
+                Text = "Eingezahlt:",
+                Font = fontStrong,
+                ForeColor = text,
+                Location = new Point(0, 0),
+                Size = new Size(labelW, 40),
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            lblEingezahltValue = new Label
+            {
+                Text = _eingezahltSession.ToString("C2"),
+                Font = fontStrong,
+                ForeColor = text,
+                Location = new Point(labelW + gap2, 0),
+                Size = new Size(amountW, 40),
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleRight
+            };
+            pnlEingezahltRow.Controls.Add(lblEingezahltText);
+            pnlEingezahltRow.Controls.Add(lblEingezahltValue);
+            _cardAbrechnen.Controls.Add(pnlEingezahltRow);
+            lblEingezahlt = lblEingezahltValue;
+
+            // gleicher Abstand wie nach "Summe"
+            y += 62;
             var nochInit = Math.Max(0m, sumInit - _eingezahltSession);
             nochInit = Math.Max(0m, nochInit - _personalGuthaben);
-            lblNoch = new Label { Text = $"Noch zu zahlen: {nochInit:C2}", Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold), Location = new Point(500, y), Size = new Size(400, 48) };
-            tabAbrechnen.Controls.Add(lblNoch);
-            try { lblNoch.ForeColor = (nochInit > 0m) ? Color.Red : Color.Green; } catch { }
+            pnlNochRow = new Panel
+            {
+                Location = new Point(pad, y),
+                Size = new Size(rowW, 40),
+                BackColor = Color.Transparent,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
+            };
+            lblNochText = new Label
+            {
+                Text = "Noch zu zahlen:",
+                Font = fontStrong,
+                ForeColor = text,
+                Location = new Point(0, 0),
+                Size = new Size(labelW, 40),
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            lblNochValue = new Label
+            {
+                Text = nochInit.ToString("C2"),
+                Font = fontStrong,
+                ForeColor = text,
+                Location = new Point(labelW + gap2, 0),
+                Size = new Size(amountW, 40),
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleRight
+            };
+            pnlNochRow.Controls.Add(lblNochText);
+            pnlNochRow.Controls.Add(lblNochValue);
+            _cardAbrechnen.Controls.Add(pnlNochRow);
+            lblNoch = lblNochValue;
+            try { lblNoch.ForeColor = (nochInit > 0m) ? Color.FromArgb(211, 47, 47) : success; } catch { }
 
-            y += 80;
+            // Strich auch über "Noch zu zahlen" (durchgehend)
+            try
+            {
+                var pnlNochSeparator = new Panel
+                {
+                    BackColor = Color.FromArgb(229, 231, 235),
+                    Location = new Point(pad, y - 10),
+                    Size = new Size(_cardAbrechnen.Width - pad * 2, 1),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                };
+                _cardAbrechnen.Controls.Add(pnlNochSeparator);
+                _cardAbrechnen.SizeChanged += (s, e) =>
+                {
+                    try
+                    {
+                        pnlNochSeparator.Top = pnlNochRow.Top - 10;
+                        pnlNochSeparator.Left = pad;
+                        pnlNochSeparator.Width = _cardAbrechnen.Width - pad * 2;
+                    }
+                    catch { }
+                };
+            }
+            catch { }
+
+            // Bei Resize im Abrechnen-Tab die Betrags-Spalte + Separator sauber ausrichten
+            try
+            {
+                _cardAbrechnen.SizeChanged += (s, e) =>
+                {
+                    try
+                    {
+                        if (pnlSummeRow == null || pnlEingezahltRow == null || pnlNochRow == null) return;
+
+                        int newAmountW = 170;
+                        int newGap2 = 6;
+                        int newLabelW = 240;
+                        try
+                        {
+                            int w1 = TextRenderer.MeasureText("Noch zu zahlen:", fontStrong).Width;
+                            int w2 = TextRenderer.MeasureText("Eingezahlt:", fontStrong).Width;
+                            int w3 = TextRenderer.MeasureText("Summe:", fontStrong).Width;
+                            newLabelW = Math.Max(140, Math.Max(w1, Math.Max(w2, w3)) + 8);
+                        }
+                        catch { newLabelW = 240; }
+                        int newRowW = newLabelW + newGap2 + newAmountW;
+
+                        pnlSummeRow.Width = newRowW;
+                        pnlEingezahltRow.Width = newRowW;
+                        pnlNochRow.Width = newRowW;
+
+                        if (lblSummeText != null) lblSummeText.Width = newLabelW;
+                        if (lblEingezahltText != null) lblEingezahltText.Width = newLabelW;
+                        if (lblNochText != null) lblNochText.Width = newLabelW;
+
+                        int xVal = newLabelW + newGap2;
+                        if (lblSummeValue != null) { lblSummeValue.Left = xVal; lblSummeValue.Width = newAmountW; }
+                        if (lblEingezahltValue != null) { lblEingezahltValue.Left = xVal; lblEingezahltValue.Width = newAmountW; }
+                        if (lblNochValue != null) { lblNochValue.Left = xVal; lblNochValue.Width = newAmountW; }
+
+                        if (pnlSummeSeparator != null)
+                        {
+                            pnlSummeSeparator.Left = pad + xVal;
+                            pnlSummeSeparator.Width = newAmountW;
+                        }
+                    }
+                    catch { }
+                };
+            }
+            catch { }
+
+            // Buttons weiter nach unten
+            y += 170;
             btnAbrechnen = new Button
             {
                 Text = "Buchen",
-                Location = new Point(40, y),
+                Location = new Point(pad, y),
                 Size = new Size(220, 60),
                 Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold),
                 BackColor = Color.FromArgb(46, 125, 50),
@@ -826,13 +1113,14 @@ namespace TaMi_Einzahlautomat
                 FlatStyle = FlatStyle.Flat
             };
             btnAbrechnen.FlatAppearance.BorderSize = 0;
+            try { btnAbrechnen.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnAbrechnen.Width, btnAbrechnen.Height, 14, 14)); } catch { }
             btnAbrechnen.Click += btnAbrechnen_Click;
-            tabAbrechnen.Controls.Add(btnAbrechnen);
+            _cardAbrechnen.Controls.Add(btnAbrechnen);
 
             btnCreatePayment = new Button
             {
                 Text = "Zahlung anlegen",
-                Location = new Point(280, y),
+                Location = new Point(pad + 240, y),
                 Size = new Size(260, 60),
                 Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold),
                 BackColor = Color.FromArgb(33, 150, 243),
@@ -841,6 +1129,7 @@ namespace TaMi_Einzahlautomat
                 Visible = PaymentSettingsStore.IsEnabled()
             };
             btnCreatePayment.FlatAppearance.BorderSize = 0;
+            try { btnCreatePayment.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnCreatePayment.Width, btnCreatePayment.Height, 14, 14)); } catch { }
             btnCreatePayment.Click += async (s, e) =>
             {
                 using (var dlg = new CreatePaymentForm())
@@ -852,17 +1141,18 @@ namespace TaMi_Einzahlautomat
                     }
                 }
             };
-            tabAbrechnen.Controls.Add(btnCreatePayment);
+            _cardAbrechnen.Controls.Add(btnCreatePayment);
 
             // y unverändert lassen, keine zusätzlichen Buttons hier
 
-            y += 80;
-            nudManuell = new NumericUpDown { Location = new Point(40, y), Size = new Size(200, 44), DecimalPlaces = 2, Minimum = -10000, Maximum = 10000, Increment = 5, Font = new Font("Segoe UI Variable", 20F), Visible = false };
-            tabAbrechnen.Controls.Add(nudManuell);
-            btnManuellAdd = new Button { Text = "Manuell hinzufügen", Location = new Point(260, y), Size = new Size(280, 48), Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Visible = false };
+            y += 92;
+            nudManuell = new NumericUpDown { Location = new Point(pad, y), Size = new Size(240, 48), DecimalPlaces = 2, Minimum = -10000, Maximum = 10000, Increment = 5, Font = new Font("Segoe UI Variable", 18F), Visible = false };
+            _cardAbrechnen.Controls.Add(nudManuell);
+            btnManuellAdd = new Button { Text = "Manuell hinzufügen", Location = new Point(pad + 260, y), Size = new Size(300, 48), Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Visible = false };
             btnManuellAdd.FlatAppearance.BorderSize = 0;
+            try { btnManuellAdd.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnManuellAdd.Width, btnManuellAdd.Height, 12, 12)); } catch { }
             btnManuellAdd.Click += btnManuellAdd_Click;
-            tabAbrechnen.Controls.Add(btnManuellAdd);
+            _cardAbrechnen.Controls.Add(btnManuellAdd);
 
             if (_ssp != null && !string.IsNullOrWhiteSpace(_ssp.ComPort))
                 UpdateAbrechnenSummaries();
@@ -1479,14 +1769,21 @@ namespace TaMi_Einzahlautomat
                 if (_currentZahlungIstEinzahlung)
                 {
                     decimal summe = raw19 + raw7 + raw0;
-                    lblB19.Text = $"19%: {raw19:C2}"; lblB7.Text = $"7%: {raw7:C2}"; lblB0.Text = $"0%: {raw0:C2}"; lblSumme.Text = $"Summe: {summe:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}";
+                    lblB19.Text = $"19%: {raw19:C2}"; lblB7.Text = $"7%: {raw7:C2}"; lblB0.Text = $"0%: {raw0:C2}";
+                    if (lblSumme != null) lblSumme.Text = summe.ToString("C2");
+                    if (lblEingezahlt != null) lblEingezahlt.Text = _eingezahltSession.ToString("C2");
                     var rest = Math.Max(0m, summe - _eingezahltSession); var noch = Math.Max(0m, rest - _personalGuthaben);
-                    lblNoch.Text = $"Noch zu zahlen: {noch:C2}"; try { lblNoch.ForeColor = (noch > 0m) ? Color.Red : Color.Green; } catch { }
+                    if (lblNoch != null) lblNoch.Text = noch.ToString("C2");
+                    try { if (lblNoch != null) lblNoch.ForeColor = (noch > 0m) ? Color.Red : Color.Green; } catch { }
                 }
                 else
                 {
                     decimal summe = -raw19 - raw7 - raw0;
-                    lblB19.Text = $"19%: {-raw19:C2}"; lblB7.Text = $"7%: {-raw7:C2}"; lblB0.Text = $"0%: {-raw0:C2}"; lblSumme.Text = $"Summe: {summe:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; lblNoch.Text = "Noch zu zahlen: 0,00 €"; try { lblNoch.ForeColor = Color.Green; } catch { }
+                    lblB19.Text = $"19%: {-raw19:C2}"; lblB7.Text = $"7%: {-raw7:C2}"; lblB0.Text = $"0%: {-raw0:C2}";
+                    if (lblSumme != null) lblSumme.Text = summe.ToString("C2");
+                    if (lblEingezahlt != null) lblEingezahlt.Text = _eingezahltSession.ToString("C2");
+                    if (lblNoch != null) lblNoch.Text = 0m.ToString("C2");
+                    try { if (lblNoch != null) lblNoch.ForeColor = Color.Green; } catch { }
                 }
                 // Wichtig: nicht mit Standard-Nullwerten überschreiben, wenn eine Auszahlung geladen ist
                 UpdateBuchenEnabled();
@@ -1494,9 +1791,20 @@ namespace TaMi_Einzahlautomat
             }
             if (_details == null)
             {
-                lblB19.Text = "19%: 0,00 €"; lblB7.Text = "7%: 0,00 €"; lblB0.Text = "0%: 0,00 €"; lblSumme.Text = "Summe: 0,00 €"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; lblNoch.Text = "Noch zu zahlen: 0,00 €"; UpdateBuchenEnabled(); return;
+                lblB19.Text = "19%: 0,00 €"; lblB7.Text = "7%: 0,00 €"; lblB0.Text = "0%: 0,00 €";
+                if (lblSumme != null) lblSumme.Text = 0m.ToString("C2");
+                if (lblEingezahlt != null) lblEingezahlt.Text = _eingezahltSession.ToString("C2");
+                if (lblNoch != null) lblNoch.Text = 0m.ToString("C2");
+                try { if (lblNoch != null) lblNoch.ForeColor = Color.Green; } catch { }
+                UpdateBuchenEnabled();
+                return;
             }
-            lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; var restStd = Math.Max(0, _details.SummeZuZahlen - _eingezahltSession); var nochStd = Math.Max(0, restStd - _personalGuthaben); lblNoch.Text = $"Noch zu zahlen: {nochStd:C2}"; try { lblNoch.ForeColor = (nochStd > 0m) ? Color.Red : Color.Green; } catch { }
+            if (lblSumme != null) lblSumme.Text = _details.SummeZuZahlen.ToString("C2");
+            if (lblEingezahlt != null) lblEingezahlt.Text = _eingezahltSession.ToString("C2");
+            var restStd = Math.Max(0, _details.SummeZuZahlen - _eingezahltSession);
+            var nochStd = Math.Max(0, restStd - _personalGuthaben);
+            if (lblNoch != null) lblNoch.Text = nochStd.ToString("C2");
+            try { if (lblNoch != null) lblNoch.ForeColor = (nochStd > 0m) ? Color.Red : Color.Green; } catch { }
             UpdateBuchenEnabled();
         }
 
@@ -2506,7 +2814,9 @@ namespace TaMi_Einzahlautomat
 
         private async void LadeSchicht(ShiftDetails details)
         {
-            _details = details; lblTitel.Text = $"Mitarbeiter: {_personal.Vorname} {_personal.Name}"; lblB19.Text = $"19%: {_details.Betrag19:C2}"; lblB7.Text = $"7%: {_details.Betrag7:C2}"; lblB0.Text = $"0%: {_details.Betrag0:C2}"; lblSumme.Text = $"Summe: {_details.SummeZuZahlen:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}";
+            _details = details; lblTitel.Text = $"Mitarbeiter: {_personal.Vorname} {_personal.Name}"; lblB19.Text = $"19%: {_details.Betrag19:C2}"; lblB7.Text = $"7%: {_details.Betrag7:C2}"; lblB0.Text = $"0%: {_details.Betrag0:C2}";
+            if (lblSumme != null) lblSumme.Text = _details.SummeZuZahlen.ToString("C2");
+            if (lblEingezahlt != null) lblEingezahlt.Text = _eingezahltSession.ToString("C2");
             string kennzeichen = "";
             using (var db = new DatabaseHelper())
             {
@@ -2608,15 +2918,22 @@ namespace TaMi_Einzahlautomat
             if (_currentZahlungIstEinzahlung)
             {
                 decimal summe = raw19 + raw7 + raw0;
-                lblB19.Text = $"19%: {raw19:C2}"; lblB7.Text = $"7%: {raw7:C2}"; lblB0.Text = $"0%: {raw0:C2}"; lblSumme.Text = $"Summe: {summe:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}";
+                lblB19.Text = $"19%: {raw19:C2}"; lblB7.Text = $"7%: {raw7:C2}"; lblB0.Text = $"0%: {raw0:C2}";
+                if (lblSumme != null) lblSumme.Text = summe.ToString("C2");
+                if (lblEingezahlt != null) lblEingezahlt.Text = _eingezahltSession.ToString("C2");
                 var rest = Math.Max(0m, summe - _eingezahltSession); var noch = Math.Max(0m, rest - _personalGuthaben);
-                lblNoch.Text = $"Noch zu zahlen: {noch:C2}"; try { lblNoch.ForeColor = (noch > 0m) ? Color.Red : Color.Green; } catch { }
+                if (lblNoch != null) lblNoch.Text = noch.ToString("C2");
+                try { if (lblNoch != null) lblNoch.ForeColor = (noch > 0m) ? Color.Red : Color.Green; } catch { }
                 UpdateBuchenEnabled();
             }
             else
             {
                 decimal summe = -raw19 - raw7 - raw0;
-                lblB19.Text = $"19%: {-raw19:C2}"; lblB7.Text = $"7%: {-raw7:C2}"; lblB0.Text = $"0%: {-raw0:C2}"; lblSumme.Text = $"Summe: {summe:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; lblNoch.Text = "Noch zu zahlen: 0,00 €"; try { lblNoch.ForeColor = Color.Green; } catch { }
+                lblB19.Text = $"19%: {-raw19:C2}"; lblB7.Text = $"7%: {-raw7:C2}"; lblB0.Text = $"0%: {-raw0:C2}";
+                if (lblSumme != null) lblSumme.Text = summe.ToString("C2");
+                if (lblEingezahlt != null) lblEingezahlt.Text = _eingezahltSession.ToString("C2");
+                if (lblNoch != null) lblNoch.Text = 0m.ToString("C2");
+                try { if (lblNoch != null) lblNoch.ForeColor = Color.Green; } catch { }
                 UpdateBuchenEnabled();
             }
         }
@@ -2732,7 +3049,7 @@ namespace TaMi_Einzahlautomat
                 {
                     try
                     {
-                        btnSchichtAuswahl.Visible = _auswahlItems != null && _auswahlItems.Count > 1; if (_auswahlItems == null || _auswahlItems.Count == 0) { _details = null; _currentAuszahlungRow = null; lblBelegInfo.Text = string.Empty; lblB19.Text = "19%: 0,00 €"; lblB7.Text = "7%: 0,00 €"; lblB0.Text = "0%: 0,00 €"; lblSumme.Text = "Summe: 0,00 €"; lblNoch.Text = "Noch zu zahlen: 0,00 €"; UpdateBuchenEnabled(); return; }
+                        btnSchichtAuswahl.Visible = _auswahlItems != null && _auswahlItems.Count > 1; if (_auswahlItems == null || _auswahlItems.Count == 0) { _details = null; _currentAuszahlungRow = null; lblBelegInfo.Text = string.Empty; lblB19.Text = "19%: 0,00 €"; lblB7.Text = "7%: 0,00 €"; lblB0.Text = "0%: 0,00 €"; if (lblSumme != null) lblSumme.Text = 0m.ToString("C2"); if (lblNoch != null) lblNoch.Text = 0m.ToString("C2"); try { if (lblNoch != null) lblNoch.ForeColor = Color.Green; } catch { } UpdateBuchenEnabled(); return; }
                         var nextShift = _auswahlItems.Where(a => a.Schicht != null).OrderBy(a => a.Schicht.StartZeit).FirstOrDefault();
                         if (nextShift != null)
                         {
