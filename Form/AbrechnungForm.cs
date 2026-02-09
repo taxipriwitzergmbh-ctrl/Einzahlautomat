@@ -34,14 +34,8 @@ namespace TaMi_Einzahlautomat
                 {
                     try
                     {
-                        // WinForms kann Controls nicht wirklich alpha-blenden.
-                        // Wir zeichnen deshalb einen semi-transparenten Overlay-Hintergrund über die TabPage.
-                        var g = e.Graphics;
-                        g.SmoothingMode = SmoothingMode.AntiAlias;
-                        using (var br = new SolidBrush(Color.FromArgb(80, 255, 255, 255)))
-                        {
-                            g.FillRectangle(br, tabAbrechnen.ClientRectangle);
-                        }
+                        // Keine zusätzliche Fläche malen: das Form zeichnet bereits das Hintergrundbild.
+                        // Die Card zeichnet ihren eigenen semi-transparenten Hintergrund.
                     }
                     catch { }
                 };
@@ -789,7 +783,7 @@ namespace TaMi_Einzahlautomat
             };
             Controls.Add(tabControl);
 
-            tabAbrechnen = new TabPage("Abrechnen") { BackColor = Color.White };
+            tabAbrechnen = new TabPage("Abrechnen") { BackColor = Color.Transparent };
             tabWechseln = new TabPage("Wechseln") { BackColor = Color.White };
             tabControl.TabPages.Add(tabAbrechnen);
             tabControl.TabPages.Add(tabWechseln);
@@ -2531,11 +2525,11 @@ namespace TaMi_Einzahlautomat
                                     var pgEntry = new KassenbuchEntry { PersId = _personal.PID, SchichtId = 0, Typ = "Personalguthaben", Buchungstext = AccountingRules.ComposePgEinzahlungText(_personal), Kost1 = zpg.Kost1, Kost2 = zpg.Kost2, Konto = zpg.Konto, Betrag19 = 0m, Betrag7 = 0m, Betrag0 = -Math.Round(vonGuthaben, 2), SaldoPersonalguthaben = neuerSaldo, FirmenId = -1, AutomatenName = AppSettings.AutomatenName, Kassenbestand = GetCurrentKassenbestandEuro() };
                                     await db.InsertKassenbuchAsync(pgEntry); _personalGuthaben = neuerSaldo; lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}";
                                 }
-                                lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}";
+                                    if (lblEingezahlt != null) lblEingezahlt.Text = _eingezahltSession.ToString("C2");
                             }
                             else
                             {
-                                decimal gut = -(-Convert.ToDecimal(_currentAuszahlungRow["Betrag19"]) + -Convert.ToDecimal(_currentAuszahlungRow["Betrag7"]) + -Convert.ToDecimal(_currentAuszahlungRow["Betrag0"])); _eingezahltSession += gut; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}";
+                                decimal gut = -(-Convert.ToDecimal(_currentAuszahlungRow["Betrag19"]) + -Convert.ToDecimal(_currentAuszahlungRow["Betrag7"]) + -Convert.ToDecimal(_currentAuszahlungRow["Betrag0"])); _eingezahltSession += gut; if (lblEingezahlt != null) lblEingezahlt.Text = _eingezahltSession.ToString("C2");
                             }
                             int belegnummer = Convert.ToInt32(_currentAuszahlungRow["Belegnummer"]); await db.MarkZahlungAlsVerbuchtAsync(belegnummer); TryPrintReceipt(typ, betrag19, betrag7, betrag0, buchungstext);
                         }
@@ -2674,7 +2668,7 @@ namespace TaMi_Einzahlautomat
                     _personalGuthaben = neuerSaldo;
                     _eingezahltSession = 0m;
                     lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}";
-                    lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}";
+                    if (lblEingezahlt != null) lblEingezahlt.Text = _eingezahltSession.ToString("C2");
                     UpdateMaxVerfuegbar();
                 }
             }
