@@ -1057,58 +1057,377 @@ namespace TaMi_Einzahlautomat
 
         private void BuildWechselnTab()
         {
-            int startY = 30; int rowH = 70;
-            int startXMuenzImage = 40; int startXMuenzMinus = 180; int startXMuenzCount = 240; int startXMuenzPlus = 320; int startXMuenzAvail = 400;
-            Color primary = Color.FromArgb(33, 150, 243); Color danger = Color.FromArgb(229, 57, 53);
-            for (int i = 0; i < muenzWerte.Length; i++)
+            tabWechseln.BackColor = Color.White;
+            tabWechseln.Padding = new Padding(18);
+
+            Color primary = Color.FromArgb(0, 122, 204);
+            Color danger = Color.FromArgb(211, 47, 47);
+            Color success = Color.FromArgb(46, 125, 50);
+            Color surface = Color.White;
+            Color border = Color.FromArgb(214, 219, 224);
+            Color subText = Color.FromArgb(55, 65, 81);
+
+            var fontTitle = new Font("Segoe UI Variable", 18F, FontStyle.Bold);
+            var fontRow = new Font("Segoe UI Variable", 18F, FontStyle.Regular);
+            var fontCount = new Font("Segoe UI Variable", 20F, FontStyle.Bold);
+            var fontBtn = new Font("Segoe UI Variable", 16F, FontStyle.Bold);
+
+            Func<Control, int, int, int, int, int, int, Region> rr = (ctrl, x, y, w, h, r1, r2) =>
             {
-                var rowY = startY + i * rowH;
-                var pb = new PictureBox { Location = new Point(startXMuenzImage, rowY), Size = new Size(60, 60), SizeMode = PictureBoxSizeMode.Zoom, BorderStyle = BorderStyle.None, BackColor = Color.White };
-                try { pb.Image = GetCoinImageByIndex(i); } catch { }
-                tabWechseln.Controls.Add(pb); picMuenzen[i] = pb;
-                var bMinus = new Button { Text = "–", Location = new Point(startXMuenzMinus, rowY), Size = new Size(48, 48), Tag = i, FlatStyle = FlatStyle.Flat, BackColor = danger, ForeColor = Color.White, Font = new Font("Segoe UI Variable", 24F, FontStyle.Bold) };
-                bMinus.FlatAppearance.BorderSize = 0; bMinus.Click += BtnMinusMuenzen_Click; tabWechseln.Controls.Add(bMinus); btnMinusMuenzen[i] = bMinus;
-                var lbl = new Label { Text = "0", TextAlign = ContentAlignment.MiddleCenter, Location = new Point(startXMuenzCount, rowY), Size = new Size(60, 48), BorderStyle = BorderStyle.FixedSingle, BackColor = Color.White, Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold) };
-                tabWechseln.Controls.Add(lbl); lblAnzahlMuenzen[i] = lbl;
-                var bPlus = new Button { Text = "+", Location = new Point(startXMuenzPlus, rowY), Size = new Size(48, 48), Tag = i, FlatStyle = FlatStyle.Flat, BackColor = primary, ForeColor = Color.White, Font = new Font("Segoe UI Variable", 24F, FontStyle.Bold) };
-                bPlus.FlatAppearance.BorderSize = 0; bPlus.Click += BtnPlusMuenzen_Click; tabWechseln.Controls.Add(bPlus); btnPlusMuenzen[i] = bPlus;
-                var lAvail = new Label { Text = "vorrätig: 0", AutoSize = true, Location = new Point(startXMuenzAvail, rowY + 12), ForeColor = Color.DimGray, Font = new Font("Segoe UI Variable", 18F) };
-                tabWechseln.Controls.Add(lAvail); lblVerfuegbarMuenzen[i] = lAvail;
+                try { return Region.FromHrgn(CreateRoundRectRgn(x, y, x + w, y + h, r1, r2)); } catch { return null; }
+            };
+
+            // --- Layout: zwei Cards (Münzen / Scheine) + Footer ---
+            int cardY = 18;
+            int cardH = 650;
+            int gap = 14;
+            int cardW = (tabWechseln.ClientSize.Width - tabWechseln.Padding.Left - tabWechseln.Padding.Right - gap) / 2;
+            if (cardW < 520) cardW = 520;
+            int leftX = tabWechseln.Padding.Left;
+            int rightX = leftX + cardW + gap;
+
+            Panel MakeCard(string title, int x)
+            {
+                var card = new Panel
+                {
+                    Location = new Point(x, cardY),
+                    Size = new Size(cardW, cardH),
+                    BackColor = surface
+                };
+                try { card.Region = rr(card, 0, 0, card.Width, card.Height, 18, 18); } catch { }
+                card.Paint += (s, e) =>
+                {
+                    try
+                    {
+                        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                        using (var pen = new Pen(border, 1f))
+                        {
+                            var r = card.ClientRectangle;
+                            r.Width -= 1; r.Height -= 1;
+                            e.Graphics.DrawRectangle(pen, r);
+                        }
+                    }
+                    catch { }
+                };
+
+                var lbl = new Label
+                {
+                    Text = title,
+                    Font = fontTitle,
+                    ForeColor = Color.FromArgb(17, 24, 39),
+                    AutoSize = false,
+                    Location = new Point(18, 14),
+                    Size = new Size(card.Width - 36, 34),
+                    BackColor = Color.Transparent
+                };
+                card.Controls.Add(lbl);
+
+                var sep = new Panel
+                {
+                    BackColor = border,
+                    Location = new Point(18, 56),
+                    Size = new Size(card.Width - 36, 1)
+                };
+                card.Controls.Add(sep);
+
+                tabWechseln.Controls.Add(card);
+                return card;
             }
 
-            int startXScheinImage = 600; int startXScheinMinus = 740; int startXScheinCount = 800; int startXScheinPlus = 880; int startXScheinAvail = 960;
-            for (int i = 0; i < scheinWerte.Length; i++)
+            Button MakeIconButton(string text, Color back, Color fore)
             {
-                var rowY = startY + i * rowH;
+                var b = new Button
+                {
+                    Text = text,
+                    Size = new Size(44, 44),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = back,
+                    ForeColor = fore,
+                    Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
+                    TabStop = false
+                };
+                b.FlatAppearance.BorderSize = 0;
+                b.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(back);
+                b.FlatAppearance.MouseOverBackColor = ControlPaint.Light(back);
+                try { b.Region = rr(b, 0, 0, b.Width, b.Height, 12, 12); } catch { }
+                return b;
+            }
+
+            Label MakeCountLabel()
+            {
+                var lbl = new Label
+                {
+                    Text = "0",
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Size = new Size(70, 44),
+                    BorderStyle = BorderStyle.FixedSingle,
+                    BackColor = Color.FromArgb(248, 250, 252),
+                    ForeColor = Color.FromArgb(17, 24, 39),
+                    Font = fontCount
+                };
+                return lbl;
+            }
+
+            var cardCoins = MakeCard("Münzen", leftX);
+            var cardNotes = MakeCard("Scheine", rightX);
+
+            // Tabellenkopf in Cards
+            void AddHeaderRow(Panel card)
+            {
+                var y = 70;
+                var h1 = new Label { Text = "Wert", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(18, y), Size = new Size(120, 26), BackColor = Color.Transparent };
+                var h2 = new Label { Text = "Anzahl", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(170, y), Size = new Size(160, 26), BackColor = Color.Transparent };
+                var h3 = new Label { Text = "Vorrätig", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(card.Width - 170, y), Size = new Size(150, 26), TextAlign = ContentAlignment.MiddleRight, BackColor = Color.Transparent };
+                card.Controls.Add(h1);
+                card.Controls.Add(h2);
+                card.Controls.Add(h3);
+            }
+            AddHeaderRow(cardCoins);
+            AddHeaderRow(cardNotes);
+
+            // Rows
+            int startY = 106;
+            int rowH = 62;
+
+            // Coins
+            for (int i = 0; i < muenzWerte.Length; i++)
+            {
+                int rowY = startY + i * rowH;
 
                 var pb = new PictureBox
                 {
-                    Location = new Point(startXScheinImage, rowY),
-                    Size = new Size(120, 48),
+                    Location = new Point(18, rowY + 6),
+                    Size = new Size(50, 50),
                     SizeMode = PictureBoxSizeMode.Zoom,
                     BorderStyle = BorderStyle.None,
-                    BackColor = Color.White
+                    BackColor = surface
+                };
+                try { pb.Image = GetCoinImageByIndex(i); } catch { }
+                cardCoins.Controls.Add(pb);
+                picMuenzen[i] = pb;
+
+                var bMinus = MakeIconButton("–", danger, Color.White);
+                bMinus.Tag = i;
+                bMinus.Location = new Point(170, rowY + 9);
+                bMinus.Click += BtnMinusMuenzen_Click;
+                cardCoins.Controls.Add(bMinus);
+                btnMinusMuenzen[i] = bMinus;
+
+                var lbl = MakeCountLabel();
+                lbl.Location = new Point(220, rowY + 9);
+                cardCoins.Controls.Add(lbl);
+                lblAnzahlMuenzen[i] = lbl;
+
+                var bPlus = MakeIconButton("+", primary, Color.White);
+                bPlus.Tag = i;
+                bPlus.Location = new Point(296, rowY + 9);
+                bPlus.Click += BtnPlusMuenzen_Click;
+                cardCoins.Controls.Add(bPlus);
+                btnPlusMuenzen[i] = bPlus;
+
+                var lAvail = new Label
+                {
+                    Text = "0",
+                    AutoSize = false,
+                    Location = new Point(cardCoins.Width - 200, rowY + 14),
+                    Size = new Size(180, 30),
+                    TextAlign = ContentAlignment.MiddleRight,
+                    ForeColor = subText,
+                    Font = fontRow,
+                    BackColor = Color.Transparent
+                };
+                cardCoins.Controls.Add(lAvail);
+                lblVerfuegbarMuenzen[i] = lAvail;
+
+                // subtle row separator
+                try
+                {
+                    if (i < muenzWerte.Length - 1)
+                    {
+                        var sep = new Panel { BackColor = Color.FromArgb(242, 244, 247), Location = new Point(18, rowY + rowH - 2), Size = new Size(cardCoins.Width - 36, 1) };
+                        cardCoins.Controls.Add(sep);
+                    }
+                }
+                catch { }
+            }
+
+            // Notes
+            for (int i = 0; i < scheinWerte.Length; i++)
+            {
+                int rowY = startY + i * rowH;
+
+                var pb = new PictureBox
+                {
+                    Location = new Point(18, rowY + 10),
+                    Size = new Size(110, 42),
+                    SizeMode = PictureBoxSizeMode.Zoom,
+                    BorderStyle = BorderStyle.None,
+                    BackColor = surface
                 };
                 try { pb.Image = GetNoteImageByIndex(i); } catch { }
-                tabWechseln.Controls.Add(pb); picScheine[i] = pb;
-                var bMinus = new Button { Text = "–", Location = new Point(startXScheinMinus, rowY), Size = new Size(48, 48), Tag = i, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, Font = new Font("Segoe UI Variable", 24F, FontStyle.Bold) };
-                bMinus.FlatAppearance.BorderSize = 0; bMinus.Click += BtnMinus_Click; tabWechseln.Controls.Add(bMinus); btnMinus[i] = bMinus;
-                var lbl = new Label { Text = "0", TextAlign = ContentAlignment.MiddleCenter, Location = new Point(startXScheinCount, rowY), Size = new Size(60, 48), BorderStyle = BorderStyle.FixedSingle, BackColor = Color.White, Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold) };
-                tabWechseln.Controls.Add(lbl); lblAnzahl[i] = lbl;
-                var bPlus = new Button { Text = "+", Location = new Point(startXScheinPlus, rowY), Size = new Size(48, 48), Tag = i, FlatStyle = FlatStyle.Flat, BackColor = primary, ForeColor = Color.White, Font = new Font("Segoe UI Variable", 24F, FontStyle.Bold) };
-                bPlus.FlatAppearance.BorderSize = 0; bPlus.Click += BtnPlus_Click; tabWechseln.Controls.Add(bPlus); btnPlus[i] = bPlus;
-                var lAvail = new Label { Text = "vorrätig: 0", AutoSize = true, Location = new Point(startXScheinAvail, rowY + 12), ForeColor = Color.DimGray, Font = new Font("Segoe UI Variable", 18F) };
-                tabWechseln.Controls.Add(lAvail); lblVerfuegbar[i] = lAvail;
-                if (scheinWerte[i] >= 100) { pb.Visible = false; bMinus.Visible = false; lbl.Visible = false; bPlus.Visible = false; lAvail.Visible = false; }
+                cardNotes.Controls.Add(pb);
+                picScheine[i] = pb;
+
+                var bMinus = MakeIconButton("–", danger, Color.White);
+                bMinus.Tag = i;
+                bMinus.Location = new Point(170, rowY + 9);
+                bMinus.Click += BtnMinus_Click;
+                cardNotes.Controls.Add(bMinus);
+                btnMinus[i] = bMinus;
+
+                var lbl = MakeCountLabel();
+                lbl.Location = new Point(220, rowY + 9);
+                cardNotes.Controls.Add(lbl);
+                lblAnzahl[i] = lbl;
+
+                var bPlus = MakeIconButton("+", primary, Color.White);
+                bPlus.Tag = i;
+                bPlus.Location = new Point(296, rowY + 9);
+                bPlus.Click += BtnPlus_Click;
+                cardNotes.Controls.Add(bPlus);
+                btnPlus[i] = bPlus;
+
+                var lAvail = new Label
+                {
+                    Text = "0",
+                    AutoSize = false,
+                    Location = new Point(cardNotes.Width - 200, rowY + 14),
+                    Size = new Size(180, 30),
+                    TextAlign = ContentAlignment.MiddleRight,
+                    ForeColor = subText,
+                    Font = fontRow,
+                    BackColor = Color.Transparent
+                };
+                cardNotes.Controls.Add(lAvail);
+                lblVerfuegbar[i] = lAvail;
+
+                if (scheinWerte[i] >= 100)
+                {
+                    pb.Visible = false;
+                    bMinus.Visible = false;
+                    lbl.Visible = false;
+                    bPlus.Visible = false;
+                    lAvail.Visible = false;
+                }
+                else
+                {
+                    try
+                    {
+                        if (i < scheinWerte.Length - 1)
+                        {
+                            var sep = new Panel { BackColor = Color.FromArgb(242, 244, 247), Location = new Point(18, rowY + rowH - 2), Size = new Size(cardNotes.Width - 36, 1) };
+                            cardNotes.Controls.Add(sep);
+                        }
+                    }
+                    catch { }
+                }
             }
-            int labelX = 600; int labelWidth = 350; int maxVerfuegbarY = startY + Math.Max(muenzWerte.Length, scheinWerte.Length) * rowH + 10; int maxAvailX = labelX - 180;
-            lblMaxVerfuegbar = new Label { Text = $"Maximal verfügbar: {(_personalGuthaben + _eingezahltSession):C2}", Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold), ForeColor = Color.FromArgb(33, 150, 243), Location = new Point(maxAvailX, maxVerfuegbarY), Size = new Size(labelWidth + 180, 40), TextAlign = ContentAlignment.MiddleRight, BackColor = Color.Transparent };
-            tabWechseln.Controls.Add(lblMaxVerfuegbar);
-            lblSummeAuszahlung = new Label { AutoSize = false, Font = new Font("Segoe UI", 24F, FontStyle.Bold), Text = "Summe: 0,00 €", TextAlign = ContentAlignment.MiddleRight, Location = new Point(labelX, maxVerfuegbarY + 44), Size = new Size(labelWidth, 48) };
-            tabWechseln.Controls.Add(lblSummeAuszahlung);
-            btnAuszahlen = new Button { Text = "Auszahlen", Location = new Point(labelX + labelWidth + 30, maxVerfuegbarY + 40), Size = new Size(180, 60), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(46, 125, 50), ForeColor = Color.White, Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold) };
-            btnAuszahlen.FlatAppearance.BorderSize = 0; btnAuszahlen.Click += btnAuszahlen_Click; tabWechseln.Controls.Add(btnAuszahlen);
-            SafeRefreshAvailability(); UpdateSummeAuszahlung(); UpdateMaxVerfuegbar();
+
+            // Footer actions area
+            int footerY = cardY + cardH + 14;
+            int footerH = 120;
+            var footer = new Panel
+            {
+                Location = new Point(leftX, footerY),
+                Size = new Size((rightX + cardW) - leftX, footerH),
+                BackColor = surface
+            };
+            try { footer.Region = rr(footer, 0, 0, footer.Width, footer.Height, 18, 18); } catch { }
+            footer.Paint += (s, e) =>
+            {
+                try
+                {
+                    using (var pen = new Pen(border, 1f))
+                    {
+                        var r = footer.ClientRectangle;
+                        r.Width -= 1; r.Height -= 1;
+                        e.Graphics.DrawRectangle(pen, r);
+                    }
+                }
+                catch { }
+            };
+            tabWechseln.Controls.Add(footer);
+
+            // Footer: Rechts Button, links daneben groß die Summe, darüber kleiner Maximal verfügbar
+            int innerPad = 18;
+            int buttonW = 180;
+            int buttonH = 52;
+            int buttonX = footer.Width - innerPad - buttonW;
+
+            int infoRight = buttonX - 16; // Abstand zum Button
+            int infoX = innerPad;
+            int infoW = Math.Max(260, infoRight - infoX);
+
+            var lblMaxText = new Label
+            {
+                Text = "Maximal verfügbar",
+                Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
+                ForeColor = primary,
+                Location = new Point(infoX, 16),
+                Size = new Size(Math.Max(160, infoW - 220), 28),
+                TextAlign = ContentAlignment.MiddleRight,
+                BackColor = Color.Transparent
+            };
+            footer.Controls.Add(lblMaxText);
+
+            lblMaxVerfuegbar = new Label
+            {
+                Text = $"{(_personalGuthaben + _eingezahltSession):C2}",
+                Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
+                ForeColor = primary,
+                Location = new Point(infoX + Math.Max(160, infoW - 220), 16),
+                Size = new Size(220, 28),
+                TextAlign = ContentAlignment.MiddleRight,
+                BackColor = Color.Transparent
+            };
+            footer.Controls.Add(lblMaxVerfuegbar);
+
+            var lblSumText = new Label
+            {
+                Text = "Summe",
+                Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(17, 24, 39),
+                Location = new Point(infoX, 56),
+                Size = new Size(Math.Max(160, infoW - 220), 44),
+                TextAlign = ContentAlignment.MiddleRight,
+                BackColor = Color.Transparent
+            };
+            footer.Controls.Add(lblSumText);
+
+            lblSummeAuszahlung = new Label
+            {
+                AutoSize = false,
+                Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold),
+                Text = "0,00 €",
+                ForeColor = Color.FromArgb(17, 24, 39),
+                TextAlign = ContentAlignment.MiddleRight,
+                Location = new Point(infoX + Math.Max(160, infoW - 220), 56),
+                Size = new Size(220, 44),
+                BackColor = Color.Transparent
+            };
+            footer.Controls.Add(lblSummeAuszahlung);
+
+            btnAuszahlen = new Button
+            {
+                Text = "Auszahlen",
+                Location = new Point(buttonX, 50),
+                Size = new Size(buttonW, buttonH),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = success,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
+                TabStop = false
+            };
+            btnAuszahlen.FlatAppearance.BorderSize = 0;
+            btnAuszahlen.FlatAppearance.MouseOverBackColor = Color.FromArgb(56, 142, 60);
+            btnAuszahlen.FlatAppearance.MouseDownBackColor = Color.FromArgb(27, 94, 32);
+            try { btnAuszahlen.Region = rr(btnAuszahlen, 0, 0, btnAuszahlen.Width, btnAuszahlen.Height, 14, 14); } catch { }
+            btnAuszahlen.Click += btnAuszahlen_Click;
+            footer.Controls.Add(btnAuszahlen);
+
+            SafeRefreshAvailability();
+            UpdateSummeAuszahlung();
+            UpdateMaxVerfuegbar();
         }
 
         private Image GetCoinImageByIndex(int i)
@@ -2061,7 +2380,7 @@ namespace TaMi_Einzahlautomat
         {
             if (_ssp != null) { try { _ssp.Payout_angleichen(); } catch { } }
             try { var ssp2 = Program.NV2002Instance; ssp2?.Payout_angleichen(); } catch { }
-            int[] avail = GetCurrentAvailability(); for (int i = 0; i < 7; i++) if (lblVerfuegbar[i] != null) lblVerfuegbar[i].Text = $"vorrätig: {avail[i]}";
+            int[] avail = GetCurrentAvailability(); for (int i = 0; i < 7; i++) if (lblVerfuegbar[i] != null) lblVerfuegbar[i].Text = $"{avail[i]}";
             UpdateCoinAvailabilityLabels(); UpdatePlusMinusEnabled(); UpdateBusyUI();
         }
 
@@ -2074,7 +2393,7 @@ namespace TaMi_Einzahlautomat
         {
             decimal sumScheine = 0m; for (int i = 0; i < scheinWerte.Length; i++) sumScheine += scheinWerte[i] * auswahlAnzahl[i];
             decimal sumMuenzen = 0m; for (int i = 0; i < muenzWerte.Length; i++) sumMuenzen += (muenzWerte[i] * auswahlAnzahlMuenzen[i]) / 100m;
-            decimal summe = sumScheine + sumMuenzen; if (lblSummeAuszahlung != null) lblSummeAuszahlung.Text = $"Summe: {summe:C2}"; UpdateAuszahlenEnabled();
+            decimal summe = sumScheine + sumMuenzen; if (lblSummeAuszahlung != null) lblSummeAuszahlung.Text = $"{summe:C2}"; UpdateAuszahlenEnabled();
         }
 
         private void UpdatePlusMinusEnabled()
@@ -2372,8 +2691,8 @@ namespace TaMi_Einzahlautomat
             catch { return null; }
         }
 
-                private void UpdateMaxVerfuegbar() { if (lblMaxVerfuegbar != null) lblMaxVerfuegbar.Text = $"Maximal verfügbar: {(_personalGuthaben + _eingezahltSession):C2}"; }
-                private void UpdateCoinAvailabilityLabels() { for (int i = 0; i < 8; i++) { if (lblVerfuegbarMuenzen[i] == null) continue; int a = _coinAvail[i] >= 0 ? _coinAvail[i] : 0; int b = _coin2Avail[i] >= 0 ? _coin2Avail[i] : 0; bool known = false; int total = 0; if (a > 0) { total += a; known = true; } if (b > 0) { total += b; known = true; } lblVerfuegbarMuenzen[i].Text = known ? $"vorrätig: {total}" : "vorrätig: ?"; } }
+                private void UpdateMaxVerfuegbar() { if (lblMaxVerfuegbar != null) lblMaxVerfuegbar.Text = $"{(_personalGuthaben + _eingezahltSession):C2}"; }
+                private void UpdateCoinAvailabilityLabels() { for (int i = 0; i < 8; i++) { if (lblVerfuegbarMuenzen[i] == null) continue; int a = _coinAvail[i] >= 0 ? _coinAvail[i] : 0; int b = _coin2Avail[i] >= 0 ? _coin2Avail[i] : 0; bool known = false; int total = 0; if (a > 0) { total += a; known = true; } if (b > 0) { total += b; known = true; } lblVerfuegbarMuenzen[i].Text = known ? $"{total}" : "-"; } }
                 private int GetCombinedCoinAvail(int idx) { try { int a = (idx >= 0 && idx < _coinAvail.Length) ? _coinAvail[idx] : -1; int b = (idx >= 0 && idx < _coin2Avail.Length) ? _coin2Avail[idx] : -1; if (a < 0 && b < 0) return -1; int sum = 0; if (a > 0) sum += a; if (b > 0) sum += b; return sum; } catch { return -1; } }
                 private void OnCoinDispensedDelta(int cent)
                 {
