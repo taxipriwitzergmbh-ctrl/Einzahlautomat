@@ -1174,10 +1174,10 @@ namespace TaMi_Einzahlautomat
             // Tabellenkopf in Cards
             void AddHeaderRow(Panel card)
             {
-                var y = 70;
-                var h1 = new Label { Text = "Wert", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(18, y), Size = new Size(120, 26), BackColor = Color.Transparent };
-                var h2 = new Label { Text = "Anzahl", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(170, y), Size = new Size(160, 26), BackColor = Color.Transparent };
-                var h3 = new Label { Text = "Vorrätig", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(card.Width - 170, y), Size = new Size(150, 26), TextAlign = ContentAlignment.MiddleRight, BackColor = Color.Transparent };
+                var y = 68;
+                var h1 = new Label { Text = "Wert", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(18, y), Size = new Size(120, 32), BackColor = Color.Transparent };
+                var h2 = new Label { Text = "Anzahl", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(170, y), Size = new Size(160, 32), BackColor = Color.Transparent };
+                var h3 = new Label { Text = "Vorrätig", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(card.Width - 170, y), Size = new Size(150, 32), TextAlign = ContentAlignment.MiddleRight, BackColor = Color.Transparent };
                 card.Controls.Add(h1);
                 card.Controls.Add(h2);
                 card.Controls.Add(h3);
