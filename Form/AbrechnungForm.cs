@@ -21,6 +21,94 @@ namespace TaMi_Einzahlautomat
     {
         private Panel _cardAbrechnen;
         private Region _cardAbrechnenRegion;
+        private int _abrechnenCardShadowSize = 10;
+        private bool _abrechnenTabPaintAttached = false;
+
+        private void EnsureAbrechnenTabPainting()
+        {
+            if (_abrechnenTabPaintAttached) return;
+            _abrechnenTabPaintAttached = true;
+            try
+            {
+                tabAbrechnen.Paint += (s, e) =>
+                {
+                    try
+                    {
+                        // WinForms kann Controls nicht wirklich alpha-blenden.
+                        // Wir zeichnen deshalb einen semi-transparenten Overlay-Hintergrund über die TabPage.
+                        var g = e.Graphics;
+                        g.SmoothingMode = SmoothingMode.AntiAlias;
+                        using (var br = new SolidBrush(Color.FromArgb(80, 255, 255, 255)))
+                        {
+                            g.FillRectangle(br, tabAbrechnen.ClientRectangle);
+                        }
+                    }
+                    catch { }
+                };
+            }
+            catch { }
+        }
+
+        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
+        {
+            if (b == null) return;
+            try
+            {
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 0;
+                b.BackColor = Color.Transparent;
+                b.UseVisualStyleBackColor = false;
+                b.ForeColor = Color.White;
+                b.Paint -= ModernButton_Paint;
+                b.Paint += ModernButton_Paint;
+                b.Tag = new Tuple<Color, Color>(c1, c2);
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 12, 12)); } catch { }
+                b.Resize -= ModernButton_Resize;
+                b.Resize += ModernButton_Resize;
+            }
+            catch { }
+        }
+
+        private void ModernButton_Resize(object sender, EventArgs e)
+        {
+            try
+            {
+                var b = sender as Button;
+                if (b == null) return;
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 12, 12)); } catch { }
+                b.Invalidate();
+            }
+            catch { }
+        }
+
+        private void ModernButton_Paint(object sender, PaintEventArgs e)
+        {
+            var b = sender as Button;
+            if (b == null) return;
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = b.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+
+                var colors = b.Tag as Tuple<Color, Color>;
+                var c1 = colors != null ? colors.Item1 : Color.FromArgb(46, 125, 50);
+                var c2 = colors != null ? colors.Item2 : Color.FromArgb(27, 94, 32);
+
+                using (var br = new LinearGradientBrush(rect, c1, c2, 90f))
+                {
+                    e.Graphics.FillRectangle(br, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+            catch { }
+        }
 
         // Global zugängliche aktuelle Personal-ID (für andere Dialoge wie CreatePaymentForm)
         public static int CurrentPersonalId { get; private set; }
@@ -761,10 +849,13 @@ namespace TaMi_Einzahlautomat
 
         private void BuildAbrechnenTab()
         {
-            tabAbrechnen.BackColor = Color.White;
+            // Glas-/Frosted-Look: TabPage selbst transparent halten und Overlay zeichnen
+            tabAbrechnen.BackColor = Color.Transparent;
+            EnsureAbrechnenTabPainting();
 
-            Color surface = Color.White;
-            Color border = Color.FromArgb(229, 231, 235);
+            Color surface = Color.FromArgb(230, 255, 255, 255); // näher am Screenshot
+            Color surface2 = Color.FromArgb(200, 255, 255, 255);
+            Color border = Color.FromArgb(120, 220, 230, 245);
             Color text = Color.FromArgb(17, 24, 39);
             Color subText = Color.FromArgb(55, 65, 81);
             Color primary = Color.FromArgb(0, 122, 204);
@@ -781,7 +872,62 @@ namespace TaMi_Einzahlautomat
                 _cardAbrechnen = null;
             }
 
+            // Neu aufbauen -> vorherige Shadow-Panels im Tab entfernen
+            try
+            {
+                for (int i = tabAbrechnen.Controls.Count - 1; i >= 0; i--)
+                {
+                    var c = tabAbrechnen.Controls[i];
+                    if (c is Panel p && p.Tag is string t && t == "abrechnen-shadow")
+                    {
+                        tabAbrechnen.Controls.RemoveAt(i);
+                        try { c.Dispose(); } catch { }
+                    }
+                }
+            }
+            catch { }
+
             int pad = 28;
+
+            // Schatten unter der Card (separates Panel, damit Card selbst clicking etc. nicht beeinflusst)
+            Panel shadowPanel = null;
+            try
+            {
+                shadowPanel = new Panel
+                {
+                    Tag = "abrechnen-shadow",
+                    Location = new Point(24 - _abrechnenCardShadowSize, 24 - _abrechnenCardShadowSize),
+                    Size = new Size(tabAbrechnen.ClientSize.Width - 48 + _abrechnenCardShadowSize * 2, tabAbrechnen.ClientSize.Height - 48 + _abrechnenCardShadowSize * 2),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+                    BackColor = Color.Transparent
+                };
+                shadowPanel.Paint += (s, e) =>
+                {
+                    try
+                    {
+                        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                        var r = shadowPanel.ClientRectangle;
+                        r.Inflate(-2, -2);
+
+                        // einfache weiche Schatten-Illusion über mehrere Rechtecke
+                        for (int k = _abrechnenCardShadowSize; k >= 1; k--)
+                        {
+                            int alpha = (int)(18f * (k / (float)_abrechnenCardShadowSize));
+                            using (var pen = new Pen(Color.FromArgb(alpha, 0, 0, 0), 2f))
+                            {
+                                var rr = new Rectangle(r.X + (k - 1), r.Y + (k - 1), r.Width - (k - 1) * 2, r.Height - (k - 1) * 2);
+                                e.Graphics.DrawRectangle(pen, rr);
+                            }
+                        }
+                    }
+                    catch { }
+                };
+
+                tabAbrechnen.Controls.Add(shadowPanel);
+                try { shadowPanel.SendToBack(); } catch { }
+            }
+            catch { shadowPanel = null; }
+
             _cardAbrechnen = new Panel
             {
                 Location = new Point(24, 24),
@@ -794,6 +940,26 @@ namespace TaMi_Einzahlautomat
                 try
                 {
                     e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+                    // Hintergrund (leichter Glas-Verlauf)
+                    var rFill = _cardAbrechnen.ClientRectangle;
+                    using (var brush = new LinearGradientBrush(rFill, surface, surface2, 90f))
+                    {
+                        e.Graphics.FillRectangle(brush, rFill);
+                    }
+
+                    // feine Glanzkante oben
+                    try
+                    {
+                        var top = new Rectangle(rFill.Left, rFill.Top, rFill.Width, Math.Max(1, rFill.Height / 3));
+                        using (var gloss = new LinearGradientBrush(top, Color.FromArgb(90, 255, 255, 255), Color.FromArgb(0, 255, 255, 255), 90f))
+                        {
+                            e.Graphics.FillRectangle(gloss, top);
+                        }
+                    }
+                    catch { }
+
+                    // Border
                     using (var pen = new Pen(border, 1f))
                     {
                         var r = _cardAbrechnen.ClientRectangle;
@@ -811,6 +977,7 @@ namespace TaMi_Einzahlautomat
             }
             catch { }
             tabAbrechnen.Controls.Add(_cardAbrechnen);
+            try { _cardAbrechnen.BringToFront(); } catch { }
 
             tabAbrechnen.SizeChanged += (s, e) =>
             {
@@ -822,6 +989,18 @@ namespace TaMi_Einzahlautomat
                     var rgn = Region.FromHrgn(CreateRoundRectRgn(0, 0, _cardAbrechnen.Width, _cardAbrechnen.Height, 18, 18));
                     _cardAbrechnenRegion = rgn;
                     _cardAbrechnen.Region = rgn;
+
+                    // Shadow panel an Card-Size anpassen
+                    try
+                    {
+                        if (shadowPanel != null)
+                        {
+                            shadowPanel.Location = new Point(_cardAbrechnen.Left - _abrechnenCardShadowSize, _cardAbrechnen.Top - _abrechnenCardShadowSize);
+                            shadowPanel.Size = new Size(_cardAbrechnen.Width + _abrechnenCardShadowSize * 2, _cardAbrechnen.Height + _abrechnenCardShadowSize * 2);
+                            shadowPanel.Invalidate();
+                        }
+                    }
+                    catch { }
                 }
                 catch { }
             };
@@ -874,13 +1053,38 @@ namespace TaMi_Einzahlautomat
                 Location = new Point(pad, y),
                 Size = new Size(_cardAbrechnen.Width - pad * 2, 52),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                BackColor = Color.FromArgb(246, 248, 252),
+                BackColor = Color.Transparent,
                 ForeColor = primary,
                 AutoSize = false,
                 Padding = new Padding(12, 10, 12, 10),
                 TextAlign = ContentAlignment.TopLeft
             };
             try { lblBelegInfo.AutoEllipsis = true; } catch { }
+            // Glasiger Banner-Hintergrund (eigene Paint-Proc, damit Transparenz sauber ist)
+            try
+            {
+                lblBelegInfo.Paint += (s, pe) =>
+                {
+                    try
+                    {
+                        var g = pe.Graphics;
+                        g.SmoothingMode = SmoothingMode.AntiAlias;
+                        var r = lblBelegInfo.ClientRectangle;
+                        r.Width -= 1; r.Height -= 1;
+                        using (var br = new LinearGradientBrush(r, Color.FromArgb(120, 255, 255, 255), Color.FromArgb(75, 255, 255, 255), 90f))
+                        {
+                            g.FillRectangle(br, r);
+                        }
+                        using (var pen = new Pen(Color.FromArgb(90, 200, 220, 245), 1f))
+                        {
+                            g.DrawRectangle(pen, r);
+                        }
+                        TextRenderer.DrawText(g, lblBelegInfo.Text ?? string.Empty, lblBelegInfo.Font, Rectangle.Inflate(lblBelegInfo.ClientRectangle, -12, -10), lblBelegInfo.ForeColor, TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.EndEllipsis);
+                    }
+                    catch { }
+                };
+            }
+            catch { }
             _cardAbrechnen.Controls.Add(lblBelegInfo);
 
             y += 72;
@@ -1112,8 +1316,7 @@ namespace TaMi_Einzahlautomat
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
             };
-            btnAbrechnen.FlatAppearance.BorderSize = 0;
-            try { btnAbrechnen.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnAbrechnen.Width, btnAbrechnen.Height, 14, 14)); } catch { }
+            ApplyModernButtonStyle(btnAbrechnen, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32));
             btnAbrechnen.Click += btnAbrechnen_Click;
             _cardAbrechnen.Controls.Add(btnAbrechnen);
 
@@ -1128,8 +1331,7 @@ namespace TaMi_Einzahlautomat
                 FlatStyle = FlatStyle.Flat,
                 Visible = PaymentSettingsStore.IsEnabled()
             };
-            btnCreatePayment.FlatAppearance.BorderSize = 0;
-            try { btnCreatePayment.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnCreatePayment.Width, btnCreatePayment.Height, 14, 14)); } catch { }
+            ApplyModernButtonStyle(btnCreatePayment, Color.FromArgb(33, 150, 243), Color.FromArgb(0, 122, 204));
             btnCreatePayment.Click += async (s, e) =>
             {
                 using (var dlg = new CreatePaymentForm())
