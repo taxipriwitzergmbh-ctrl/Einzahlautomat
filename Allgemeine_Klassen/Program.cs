@@ -595,7 +595,8 @@ namespace TaMi_Einzahlautomat
 
         public static void CheckForUpdateNow(Form owner)
         {
-            try { Task.Run(() => PromptUpdateIfAvailableWithOwner(owner)); } catch { }
+            // Manuell (Button): Up-to-date Hinweis anzeigen
+            try { Task.Run(() => PromptUpdateIfAvailableWithOwner(owner, showUpToDateMessage: true)); } catch { }
         }
 
         private static bool ReadKioskFlagFromIni()
@@ -649,10 +650,11 @@ namespace TaMi_Einzahlautomat
         private const string UpdateMsiUrl = "http://kassenautomat.priwitzer-dienstleistungsgmbh.de/Update_Einzahlautomat/Einzahlautomat_Setup.msi";
         private static async Task PromptUpdateIfAvailable()
         {
-            await PromptUpdateIfAvailableWithOwner(_background).ConfigureAwait(false);
+            // Automatischer/Background-Check (z.B. beim Start): keine "Up-to-date" Meldung anzeigen
+            await PromptUpdateIfAvailableWithOwner(_background, showUpToDateMessage: false).ConfigureAwait(false);
         }
 
-        private static async Task PromptUpdateIfAvailableWithOwner(Form owner)
+        private static async Task PromptUpdateIfAvailableWithOwner(Form owner, bool showUpToDateMessage)
         {
             try
             {
@@ -676,8 +678,36 @@ namespace TaMi_Einzahlautomat
                 Version localVer;
                 if (!Version.TryParse(localVerStr, out localVer)) localVer = new Version(0, 0, 0, 0);
 
-                Version remoteVer = GetMsiProductVersion(tempMsi) ?? new Version(0, 0, 0, 0);
-                if (remoteVer <= localVer) return; // not newer
+                 Version remoteVer = GetMsiProductVersion(tempMsi) ?? new Version(0, 0, 0, 0);
+                 if (remoteVer <= localVer)
+                 {
+                     // Aktuell (oder neuer)
+                     if (showUpToDateMessage)
+                     {
+                         var uiUpToDate = owner ?? _background;
+                         if (uiUpToDate != null && !uiUpToDate.IsDisposed)
+                         {
+                             try
+                             {
+                                 uiUpToDate.BeginInvoke(new Action(() =>
+                                 {
+                                     try
+                                     {
+                                         MessageBox.Show(
+                                             uiUpToDate,
+                                             "Sie haben die aktuelle Version " + localVer + ".\r\nBesser als das wird’s heute nicht.",
+                                             "Update",
+                                             MessageBoxButtons.OK,
+                                             MessageBoxIcon.Information);
+                                     }
+                                     catch { }
+                                 }));
+                             }
+                             catch { }
+                         }
+                     }
+                     return; // not newer
+                 }
 
                 // Ask user on UI thread
                 var ui = owner ?? _background;
