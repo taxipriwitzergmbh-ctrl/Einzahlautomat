@@ -1320,13 +1320,13 @@ namespace TaMi_Einzahlautomat
                 catch { }
             };
             // Inneres Glas-Panel (wie Screenshot)
-            int innerPanelTop = 156;
+            int innerPanelTop = 190;
             _abrechnenInnerPanel = new Panel
             {
                 Location = new Point(pad, innerPanelTop),
-                Size = new Size(_cardAbrechnen.Width - pad * 2, _cardAbrechnen.Height - innerPanelTop - 22),
+                Size = new Size(_cardAbrechnen.Width - pad * 2, _cardAbrechnen.Height - innerPanelTop - 70),
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
-                BackColor = Color.FromArgb(120, 255, 255, 255)
+                BackColor = Color.FromArgb(100, 255, 255, 255)
             };
             _abrechnenInnerPanel.Paint += (s, e) =>
             {
@@ -1334,7 +1334,7 @@ namespace TaMi_Einzahlautomat
                 {
                     e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                     var rFill = _abrechnenInnerPanel.ClientRectangle;
-                    using (var br = new LinearGradientBrush(rFill, Color.FromArgb(120, 255, 255, 255), Color.FromArgb(85, 255, 255, 255), 90f))
+                    using (var br = new LinearGradientBrush(rFill, Color.FromArgb(100, 255, 255, 255), Color.FromArgb(85, 255, 255, 255), 90f))
                     {
                         e.Graphics.FillRectangle(br, rFill);
                     }
@@ -1362,7 +1362,7 @@ namespace TaMi_Einzahlautomat
                 {
                     if (_abrechnenInnerPanel == null) return;
                     _abrechnenInnerPanel.Width = Math.Max(1, _cardAbrechnen.Width - pad * 2);
-                    _abrechnenInnerPanel.Height = Math.Max(1, _cardAbrechnen.Height - innerPanelTop - 22);
+                    _abrechnenInnerPanel.Height = Math.Max(1, _cardAbrechnen.Height - innerPanelTop - 70);
                     _abrechnenInnerPanel.Left = pad;
                     _abrechnenInnerPanel.Top = innerPanelTop;
                     _abrechnenInnerPanel.Invalidate();
@@ -1411,9 +1411,9 @@ namespace TaMi_Einzahlautomat
             lblBelegInfo = new Label
             {
                 Text = string.Empty,
-                Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
+                Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
                 Location = new Point(pad, y),
-                Size = new Size(_abrechnenInnerPanel.Width - pad * 2, 46),
+                Size = new Size(_abrechnenInnerPanel.Width - pad * 2, 56),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 BackColor = Color.Transparent,
                 ForeColor = primary,
@@ -1457,24 +1457,59 @@ namespace TaMi_Einzahlautomat
             }
             catch { }
 
-            y += 62;
+            // Mehr Abstand zwischen Beleg-Info-Banner und MwSt-Zeile
+            y += 86;
 
             var b19Init = _details != null ? _details.Betrag19 : 0m;
             var b7Init = _details != null ? _details.Betrag7 : 0m;
             var b0Init = _details != null ? _details.Betrag0 : 0m;
 
-            int colW = (_abrechnenInnerPanel.Width - pad * 2 - 24 * 2) / 3;
-            if (colW < 280) colW = 280;
-            int x1 = pad;
-            int x2 = x1 + colW + 24;
-            int x3 = x2 + colW + 24;
+            // MwSt-Zeile: 7%-€ an der gleichen X-Position wie die Summenwerte ausrichten.
+            int mwstGap = 6;
+            int amountW = 170;
+            int gap2 = 6;
+            int labelW = 240;
+            try
+            {
+                int w1 = TextRenderer.MeasureText("Noch zu zahlen:", fontStrong).Width;
+                int w2 = TextRenderer.MeasureText("Eingezahlt:", fontStrong).Width;
+                int w3 = TextRenderer.MeasureText("Summe:", fontStrong).Width;
+                labelW = Math.Max(140, Math.Max(w1, Math.Max(w2, w3)) + 8);
+            }
+            catch { labelW = 240; }
 
-            lblB19 = new Label { Text = $"19%: {b19Init:C2}", Font = fontBody, ForeColor = text, Location = new Point(x1, y), Size = new Size(colW, 30), BackColor = Color.Transparent };
+            int amountLeftX = pad + labelW + gap2;
+            int euroX = amountLeftX + amountW - TextRenderer.MeasureText("€", fontAmounts).Width;
+
+            lblB19 = new Label { Text = $"19%: {b19Init:C2}", Font = fontBody, ForeColor = text, Location = new Point(pad, y), AutoSize = true, BackColor = Color.Transparent };
             _abrechnenInnerPanel.Controls.Add(lblB19);
-            lblB7 = new Label { Text = $"7%: {b7Init:C2}", Font = fontBody, ForeColor = text, Location = new Point(x2, y), Size = new Size(colW, 30), BackColor = Color.Transparent };
+
+            lblB7 = new Label { Text = $"7%: {b7Init:C2}", Font = fontBody, ForeColor = text, AutoSize = true, BackColor = Color.Transparent };
             _abrechnenInnerPanel.Controls.Add(lblB7);
-            lblB0 = new Label { Text = $"0%: {b0Init:C2}", Font = fontBody, ForeColor = text, Location = new Point(x3, y), Size = new Size(colW, 30), BackColor = Color.Transparent };
+
+            // shift lblB7 so that its '€' aligns with euroX
+            int idxEuro7 = lblB7.Text != null ? lblB7.Text.IndexOf('€') : -1;
+            int euroOffset7 = 0;
+            try
+            {
+                if (idxEuro7 > 0)
+                {
+                    euroOffset7 = TextRenderer.MeasureText(lblB7.Text.Substring(0, idxEuro7), lblB7.Font).Width;
+                }
+            }
+            catch { euroOffset7 = 0; }
+
+            int b7AlignOffset = 4; // kleines Stück nach rechts
+            int b7Left = euroX - euroOffset7 + b7AlignOffset;
+            int minB7Left = lblB19.Right + mwstGap;
+            if (b7Left < minB7Left) b7Left = minB7Left;
+            lblB7.Location = new Point(b7Left, y);
+
+            int gap19to7 = lblB7.Left - lblB19.Right;
+
+            lblB0 = new Label { Text = $"0%: {b0Init:C2}", Font = fontBody, ForeColor = text, AutoSize = true, BackColor = Color.Transparent };
             _abrechnenInnerPanel.Controls.Add(lblB0);
+            lblB0.Location = new Point(lblB7.Right + gap19to7, y);
 
             var sepMwst = new Panel
             {
@@ -1489,17 +1524,7 @@ namespace TaMi_Einzahlautomat
             var sumInit = (_details != null ? _details.SummeZuZahlen : 0m);
 
             // zweispaltiges Layout, damit Eurozeichen fluchten
-            int amountW = 170;
-            int gap2 = 6;
-            int labelW = 240;
-            try
-            {
-                int w1 = TextRenderer.MeasureText("Noch zu zahlen:", fontStrong).Width;
-                int w2 = TextRenderer.MeasureText("Eingezahlt:", fontStrong).Width;
-                int w3 = TextRenderer.MeasureText("Summe:", fontStrong).Width;
-                labelW = Math.Max(140, Math.Max(w1, Math.Max(w2, w3)) + 8);
-            }
-            catch { labelW = 240; }
+            // (amountW/gap2/labelW sind oben bereits bestimmt)
             int rowW = labelW + gap2 + amountW;
 
             // (Separator für Amount-Spalte nicht mehr nötig, Linien kommen als Vollbreite)
@@ -1537,7 +1562,7 @@ namespace TaMi_Einzahlautomat
             _abrechnenInnerPanel.Controls.Add(pnlSummeRow);
             lblSumme = lblSummeValue;
 
-            y += 62;
+            y += 46;
             pnlEingezahltRow = new Panel
             {
                 Location = new Point(pad, y),
@@ -1666,17 +1691,58 @@ namespace TaMi_Einzahlautomat
                         if (lblEingezahltValue != null) { lblEingezahltValue.Left = xVal; lblEingezahltValue.Width = newAmountW; }
                         if (lblNochValue != null) { lblNochValue.Left = xVal; lblNochValue.Width = newAmountW; }
 
-                        // Anpassung MwSt-Spalten
+                        // Anpassung MwSt-Zeile: 7%-€ an Betrags-Spalte ausrichten
                         try
                         {
-                            int newColW = (_abrechnenInnerPanel.Width - pad * 2 - 24 * 2) / 3;
-                            if (newColW < 200) newColW = 200;
-                            int nx1 = pad;
-                            int nx2 = nx1 + newColW + 24;
-                            int nx3 = nx2 + newColW + 24;
-                            if (lblB19 != null) { lblB19.Left = nx1; lblB19.Width = newColW; }
-                            if (lblB7 != null) { lblB7.Left = nx2; lblB7.Width = newColW; }
-                            if (lblB0 != null) { lblB0.Left = nx3; lblB0.Width = newColW; }
+                            int mwstGap2 = 6;
+                            int b7AlignOffset2 = 4; // kleines Stück nach rechts
+                            int newAmountW2 = 170;
+                            int newGap22 = 10;
+                            int newLabelW2 = 240;
+                            try
+                            {
+                                int w1 = TextRenderer.MeasureText("Noch zu zahlen:", fontStrong).Width;
+                                int w2 = TextRenderer.MeasureText("Eingezahlt:", fontStrong).Width;
+                                int w3 = TextRenderer.MeasureText("Summe:", fontStrong).Width;
+                                newLabelW2 = Math.Max(140, Math.Max(w1, Math.Max(w2, w3)) + 8);
+                            }
+                            catch { newLabelW2 = 240; }
+
+                            int amountLeftX2 = pad + newLabelW2 + newGap22;
+                            int euroX2 = amountLeftX2 + newAmountW2 - TextRenderer.MeasureText("€", fontAmounts).Width;
+
+                            if (lblB19 != null)
+                            {
+                                lblB19.AutoSize = true;
+                                lblB19.Left = pad;
+                            }
+                            if (lblB7 != null)
+                            {
+                                lblB7.AutoSize = true;
+                                int idxEuro7_2 = lblB7.Text != null ? lblB7.Text.IndexOf('€') : -1;
+                                int euroOffset7_2 = 0;
+                                try
+                                {
+                                    if (idxEuro7_2 > 0)
+                                    {
+                                        euroOffset7_2 = TextRenderer.MeasureText(lblB7.Text.Substring(0, idxEuro7_2), lblB7.Font).Width;
+                                    }
+                                }
+                                catch { euroOffset7_2 = 0; }
+
+                                int b7Left2 = euroX2 - euroOffset7_2 + b7AlignOffset2;
+                                int minB7Left2 = (lblB19 != null ? lblB19.Right : pad) + mwstGap2;
+                                if (b7Left2 < minB7Left2) b7Left2 = minB7Left2;
+                                lblB7.Left = b7Left2;
+                            }
+                            if (lblB0 != null)
+                            {
+                                lblB0.AutoSize = true;
+                                int gap19to7_2 = 0;
+                                try { if (lblB19 != null && lblB7 != null) gap19to7_2 = lblB7.Left - lblB19.Right; } catch { gap19to7_2 = mwstGap2; }
+                                if (gap19to7_2 <= 0) gap19to7_2 = mwstGap2;
+                                lblB0.Left = (lblB7 != null ? lblB7.Right : (lblB19 != null ? lblB19.Right : pad)) + gap19to7_2;
+                            }
                         }
                         catch { }
                     }
@@ -1703,10 +1769,11 @@ namespace TaMi_Einzahlautomat
 
             btnCreatePayment = new Button
             {
-                Text = "Zahlung anlegen",
+                Text = "Zahlung",
+                // Neben "Buchen" mit identischer Höhe (wie im Screenshot)
                 Location = new Point(pad + 240, y),
-                Size = new Size(260, 60),
-                Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold),
+                Size = new Size(200, 56),
+                Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -2529,7 +2596,7 @@ namespace TaMi_Einzahlautomat
                 if (_currentZahlungIstEinzahlung)
                 {
                     decimal summe = raw19 + raw7 + raw0;
-                    lblB19.Text = $"19%: {raw19:C2}"; lblB7.Text = $"7%: {raw7:C2}"; lblB0.Text = $"0%: {raw0:C2}";
+                    lblB19.Text = $"19%: {raw19:C2}"; lblB7.Text = $"  7%:   {raw7:C2}"; lblB0.Text = $"0%: {raw0:C2}";
                     if (lblSumme != null) lblSumme.Text = summe.ToString("C2");
                     if (lblEingezahlt != null) lblEingezahlt.Text = _eingezahltSession.ToString("C2");
                     var rest = Math.Max(0m, summe - _eingezahltSession); var noch = Math.Max(0m, rest - _personalGuthaben);
@@ -2539,7 +2606,7 @@ namespace TaMi_Einzahlautomat
                 else
                 {
                     decimal summe = -raw19 - raw7 - raw0;
-                    lblB19.Text = $"19%: {-raw19:C2}"; lblB7.Text = $"7%: {-raw7:C2}"; lblB0.Text = $"0%: {-raw0:C2}";
+                    lblB19.Text = $"19%: {-raw19:C2}"; lblB7.Text = $"  7%:   {-raw7:C2}"; lblB0.Text = $"0%: {-raw0:C2}";
                     if (lblSumme != null) lblSumme.Text = summe.ToString("C2");
                     if (lblEingezahlt != null) lblEingezahlt.Text = _eingezahltSession.ToString("C2");
                     if (lblNoch != null) lblNoch.Text = 0m.ToString("C2");
@@ -2551,7 +2618,7 @@ namespace TaMi_Einzahlautomat
             }
             if (_details == null)
             {
-                lblB19.Text = "19%: 0,00 €"; lblB7.Text = "7%: 0,00 €"; lblB0.Text = "0%: 0,00 €";
+                lblB19.Text = "19%: 0,00 €"; lblB7.Text = "7%:   0,00 €"; lblB0.Text = "0%: 0,00 €";
                 if (lblSumme != null) lblSumme.Text = 0m.ToString("C2");
                 if (lblEingezahlt != null) lblEingezahlt.Text = _eingezahltSession.ToString("C2");
                 if (lblNoch != null) lblNoch.Text = 0m.ToString("C2");
@@ -3710,7 +3777,7 @@ namespace TaMi_Einzahlautomat
             if (_currentZahlungIstEinzahlung)
             {
                 decimal summe = raw19 + raw7 + raw0;
-                lblB19.Text = $"19%: {raw19:C2}"; lblB7.Text = $"7%: {raw7:C2}"; lblB0.Text = $"0%: {raw0:C2}";
+                lblB19.Text = $"19%:   {raw19:C2}"; lblB7.Text = $"7%: {raw7:C2}"; lblB0.Text = $"0%: {raw0:C2}";
                 if (lblSumme != null) lblSumme.Text = summe.ToString("C2");
                 if (lblEingezahlt != null) lblEingezahlt.Text = _eingezahltSession.ToString("C2");
                 var rest = Math.Max(0m, summe - _eingezahltSession); var noch = Math.Max(0m, rest - _personalGuthaben);
@@ -3721,7 +3788,7 @@ namespace TaMi_Einzahlautomat
             else
             {
                 decimal summe = -raw19 - raw7 - raw0;
-                lblB19.Text = $"19%: {-raw19:C2}"; lblB7.Text = $"7%: {-raw7:C2}"; lblB0.Text = $"0%: {-raw0:C2}";
+                lblB19.Text = $"19%:   {-raw19:C2}"; lblB7.Text = $"7%: {-raw7:C2}"; lblB0.Text = $"0%: {-raw0:C2}";
                 if (lblSumme != null) lblSumme.Text = summe.ToString("C2");
                 if (lblEingezahlt != null) lblEingezahlt.Text = _eingezahltSession.ToString("C2");
                 if (lblNoch != null) lblNoch.Text = 0m.ToString("C2");
