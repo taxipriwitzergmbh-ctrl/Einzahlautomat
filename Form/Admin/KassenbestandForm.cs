@@ -12,9 +12,69 @@ namespace TaMi_Einzahlautomat
 {
     public class KassenbestandForm : Form
     {
+        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
+        {
+            if (b == null) return;
+            try
+            {
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 0;
+                b.BackColor = Color.Transparent;
+                b.UseVisualStyleBackColor = false;
+                b.ForeColor = Color.White;
+                b.Paint -= ModernButton_Paint;
+                b.Paint += ModernButton_Paint;
+                b.Tag = new Tuple<Color, Color>(c1, c2);
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Resize -= ModernButton_Resize;
+                b.Resize += ModernButton_Resize;
+            }
+            catch { }
+        }
+
+        private void ModernButton_Resize(object sender, EventArgs e)
+        {
+            try
+            {
+                var b = sender as Button;
+                if (b == null) return;
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Invalidate();
+            }
+            catch { }
+        }
+
+        private void ModernButton_Paint(object sender, PaintEventArgs e)
+        {
+            var b = sender as Button;
+            if (b == null) return;
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = b.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+
+                var colors = b.Tag as Tuple<Color, Color>;
+                var c1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
+                var c2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
+
+                using (var br = new LinearGradientBrush(rect, c1, c2, 90f))
+                {
+                    e.Graphics.FillRectangle(br, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+            catch { }
+        }
+
         private Panel headerPanel;
         private Button btnClose;
-        private Button btnRefresh; // NEU: Aktualisieren-Button
         private Label lblTitle;
         private Label lblDiff; // NEU: Kassendifferenz
         private Point _mouseDownLocation;
@@ -135,35 +195,12 @@ namespace TaMi_Einzahlautomat
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 80, 80);
+            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
             btnClose.Click += (s, e) => Close();
             headerPanel.Controls.Add(btnClose);
 
-            // NEU: Aktualisieren-Button
-            btnRefresh = new Button
-            {
-                Text = "\u21BB", // Unicode-Symbol ?
-                Font = new Font("Segoe UI Symbol", 22F, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.FromArgb(33, 150, 243),
-                FlatStyle = FlatStyle.Flat,
-                Size = new Size(48, 48),
-                Location = new Point(ClientSize.Width - 112, 6),
-                TabStop = false,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            btnRefresh.FlatAppearance.BorderSize = 0;
-            btnRefresh.FlatAppearance.MouseOverBackColor = Color.FromArgb(33, 203, 243);
-            btnRefresh.Click += async (s, e) =>
-            {
-                btnRefresh.Enabled = false;
-                loadingLabel.Visible = true;
-                CenterLoadingLabel();
-                await LoadDataAsync();
-                loadingLabel.Visible = false;
-                btnRefresh.Enabled = true;
-            };
-            headerPanel.Controls.Add(btnRefresh); // Button zuletzt hinzuf�gen, damit er oben liegt
+            // Header-Button modern (Gradient + Round)
+            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
     
             try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24)); } catch { }
 
@@ -539,10 +576,38 @@ namespace TaMi_Einzahlautomat
 
         private void HeaderPanel_Paint(object sender, PaintEventArgs e)
         {
-            using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle,
-                Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+            try
             {
-                e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var r = headerPanel.ClientRectangle;
+
+                using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, r);
+                }
+
+                try
+                {
+                    var top = new Rectangle(r.Left, r.Top, r.Width, Math.Max(1, r.Height / 2));
+                    using (var gloss = new LinearGradientBrush(top, Color.FromArgb(70, 255, 255, 255), Color.FromArgb(0, 255, 255, 255), 90f))
+                    {
+                        e.Graphics.FillRectangle(gloss, top);
+                    }
+                }
+                catch { }
+
+                using (var pen = new Pen(Color.FromArgb(120, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawLine(pen, r.Left, r.Bottom - 1, r.Right, r.Bottom - 1);
+                }
+            }
+            catch
+            {
+                using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle,
+                    Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
+                }
             }
         }
         private void HeaderPanel_MouseDown(object sender, MouseEventArgs e)
