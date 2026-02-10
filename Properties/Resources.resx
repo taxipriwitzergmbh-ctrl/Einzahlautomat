@@ -165,6 +165,9 @@
   <data name="Hintergrund" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Ressourcen\Hintergrund.png;System.Drawing.Bitmap, System.Drawing</value>
   </data>
+  <data name="Hintergrund_Abrechnen" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\Hintergrund_Abrechnen.png;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
   <data name="NFC" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Ressourcen\NFC.png;System.Drawing.Bitmap, System.Drawing</value>
   </data>

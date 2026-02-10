@@ -383,6 +383,7 @@
     <Content Include="Ressourcen\5euro.jpg" />
     <Content Include="Ressourcen\Geldautomat_Win11.ico" />
     <Content Include="Ressourcen\Hintergrund.png" />
+    <Content Include="Ressourcen\Hintergrund_Abrechnen.png" />
     <Content Include="Ressourcen\NFC.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

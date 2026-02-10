@@ -19,8 +19,37 @@ namespace TaMi_Einzahlautomat
 {
     public partial class AbrechnungForm : Form
     {
+        private sealed class AbrechnenSurfacePanel : Panel
+        {
+            protected override void OnPaintBackground(PaintEventArgs e)
+            {
+                try
+                {
+                    if (FindForm() is AbrechnungForm f)
+                    {
+                        var s = e.Graphics.Save();
+                        try
+                        {
+                            // map panel coords to form coords
+                            var p = PointToScreen(Point.Empty);
+                            var pf = f.PointToClient(p);
+                            e.Graphics.TranslateTransform(-pf.X, -pf.Y);
+                            f.InvokePaintBackground(f, new PaintEventArgs(e.Graphics, f.ClientRectangle));
+                        }
+                        finally { e.Graphics.Restore(s); }
+                        return;
+                    }
+                }
+                catch { }
+                base.OnPaintBackground(e);
+            }
+        }
+
         private Panel _cardAbrechnen;
         private Region _cardAbrechnenRegion;
+        private Label _abrechnenCardTitle;
+        private Panel _abrechnenInnerPanel;
+        private Region _abrechnenInnerRegion;
         private int _abrechnenCardShadowSize = 10;
         private bool _abrechnenTabPaintAttached = false;
 
@@ -241,6 +270,32 @@ namespace TaMi_Einzahlautomat
         private TabPage tabAbrechnen;
         private TabPage tabWechseln;
 
+        private Panel _abrechnenSurface;
+        private sealed class BackgroundInheritingTabControl : TabControl
+        {
+            protected override void OnPaintBackground(PaintEventArgs e)
+            {
+                try
+                {
+                    if (FindForm() is AbrechnungForm f)
+                    {
+                        var s = e.Graphics.Save();
+                        try
+                        {
+                            var p = PointToScreen(Point.Empty);
+                            var pf = f.PointToClient(p);
+                            e.Graphics.TranslateTransform(-pf.X, -pf.Y);
+                            f.InvokePaintBackground(f, new PaintEventArgs(e.Graphics, f.ClientRectangle));
+                        }
+                        finally { e.Graphics.Restore(s); }
+                        return;
+                    }
+                }
+                catch { }
+                base.OnPaintBackground(e);
+            }
+        }
+
         private Label lblTitel, lblGuthaben, lblB19, lblB7, lblB0, lblSumme, lblEingezahlt, lblNoch;
 
         // Abrechnen-Tab: ausgerichtete Summen (Text links / Betrag rechts)
@@ -303,7 +358,7 @@ namespace TaMi_Einzahlautomat
         private int _activeCoinPayoutDevices = 0;
 
         private Image _bgImage;
-        private const float BackgroundImageOpacity = 0.15f;
+        private const float BackgroundImageOpacity = 1.0f;
         private bool _lastAbmeldenEnabled = true;
 
         public AbrechnungForm(PersonalInfo personal, ShiftDetails details, NV200_SSP ssp) : this(personal, details, ssp, false) { }
@@ -321,10 +376,11 @@ namespace TaMi_Einzahlautomat
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
             UpdateStyles();
             SuspendLayout();
-            BuildModernLayout();
             LoadBackgroundImage();
+            BuildModernLayout();
             ResumeLayout(true);
             EnableDoubleBufferingRecursive(this);
+            try { Invalidate(true); Update(); } catch { }
 
             // NEW: If preloaded details do not match AllowedManIds, ignore them to avoid showing disallowed shift values
             try
@@ -371,7 +427,19 @@ namespace TaMi_Einzahlautomat
 
         private void LoadBackgroundImage()
         {
-            var img = TaMi_Einzahlautomat.Properties.Resources.Hintergrund;
+            // Prefer a dedicated background for this form if available.
+            Image img = null;
+            try
+            {
+                // Resolve dynamically so this still compiles even if the resource is not yet present.
+                img = TaMi_Einzahlautomat.Properties.Resources.ResourceManager.GetObject("Hintergrund_Abrechnen") as Image;
+            }
+            catch { img = null; }
+
+            if (img == null)
+            {
+                try { img = TaMi_Einzahlautomat.Properties.Resources.Hintergrund; } catch { img = null; }
+            }
             if (img == null)
             {
                 try { AppLogger.Log("Resources.Hintergrund ist null – Hintergrund wird nicht angezeigt."); } catch { }
@@ -772,7 +840,7 @@ namespace TaMi_Einzahlautomat
 
             try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24)); } catch { }
 
-            tabControl = new TabControl
+            tabControl = new BackgroundInheritingTabControl
             {
                 Location = new Point(40, 80),
                 Size = new Size(1200, 900),
@@ -781,12 +849,32 @@ namespace TaMi_Einzahlautomat
                 Alignment = TabAlignment.Top,
                 Appearance = TabAppearance.Normal
             };
+            try { tabControl.BackColor = Color.Transparent; } catch { }
             Controls.Add(tabControl);
 
             tabAbrechnen = new TabPage("Abrechnen") { BackColor = Color.Transparent };
             tabWechseln = new TabPage("Wechseln") { BackColor = Color.White };
+            try
+            {
+                tabAbrechnen.UseVisualStyleBackColor = false;
+                tabWechseln.UseVisualStyleBackColor = false;
+            }
+            catch { }
             tabControl.TabPages.Add(tabAbrechnen);
             tabControl.TabPages.Add(tabWechseln);
+
+            // Ensure Abrechnen background uses the form's background (not TabPage default white)
+            try
+            {
+                tabAbrechnen.Controls.Clear();
+                _abrechnenSurface = new AbrechnenSurfacePanel
+                {
+                    Dock = DockStyle.Fill,
+                    BackColor = Color.Transparent
+                };
+                tabAbrechnen.Controls.Add(_abrechnenSurface);
+            }
+            catch { }
 
             tabAbrechnen.SuspendLayout();
             BuildAbrechnenTab();
@@ -847,17 +935,22 @@ namespace TaMi_Einzahlautomat
             tabAbrechnen.BackColor = Color.Transparent;
             EnsureAbrechnenTabPainting();
 
-            Color surface = Color.FromArgb(230, 255, 255, 255); // näher am Screenshot
-            Color surface2 = Color.FromArgb(200, 255, 255, 255);
-            Color border = Color.FromArgb(120, 220, 230, 245);
-            Color text = Color.FromArgb(17, 24, 39);
-            Color subText = Color.FromArgb(55, 65, 81);
+            var host = (Control)(_abrechnenSurface ?? tabAbrechnen);
+
+            Color surface = Color.FromArgb(120, 245, 250, 255);
+            Color surface2 = Color.FromArgb(80, 230, 240, 255);
+            Color border = Color.FromArgb(90, 180, 200, 230);
+            Color text = Color.FromArgb(15, 23, 42);
+            Color subText = Color.FromArgb(51, 65, 85);
             Color primary = Color.FromArgb(0, 122, 204);
+            Color danger = Color.FromArgb(211, 47, 47);
             Color success = Color.FromArgb(46, 125, 50);
 
+            var fontCardTitle = new Font("Segoe UI Variable", 28F, FontStyle.Bold);
             var fontTitle = new Font("Segoe UI Variable", 22F, FontStyle.Bold);
-            var fontBody = new Font("Segoe UI Variable", 18F, FontStyle.Regular);
-            var fontStrong = new Font("Segoe UI Variable", 20F, FontStyle.Bold);
+            var fontBody = new Font("Segoe UI Variable", 16F, FontStyle.Regular);
+            var fontStrong = new Font("Segoe UI Variable", 18F, FontStyle.Bold);
+            var fontAmounts = new Font("Segoe UI Variable", 18F, FontStyle.Bold);
 
             if (_cardAbrechnen != null)
             {
@@ -866,22 +959,27 @@ namespace TaMi_Einzahlautomat
                 _cardAbrechnen = null;
             }
 
+            try { _abrechnenInnerRegion?.Dispose(); } catch { }
+            _abrechnenInnerRegion = null;
+            _abrechnenInnerPanel = null;
+            _abrechnenCardTitle = null;
+
             // Neu aufbauen -> vorherige Shadow-Panels im Tab entfernen
             try
             {
-                for (int i = tabAbrechnen.Controls.Count - 1; i >= 0; i--)
+                for (int i = host.Controls.Count - 1; i >= 0; i--)
                 {
-                    var c = tabAbrechnen.Controls[i];
+                    var c = host.Controls[i];
                     if (c is Panel p && p.Tag is string t && t == "abrechnen-shadow")
                     {
-                        tabAbrechnen.Controls.RemoveAt(i);
+                        host.Controls.RemoveAt(i);
                         try { c.Dispose(); } catch { }
                     }
                 }
             }
             catch { }
 
-            int pad = 28;
+            int pad = 26;
 
             // Schatten unter der Card (separates Panel, damit Card selbst clicking etc. nicht beeinflusst)
             Panel shadowPanel = null;
@@ -891,7 +989,7 @@ namespace TaMi_Einzahlautomat
                 {
                     Tag = "abrechnen-shadow",
                     Location = new Point(24 - _abrechnenCardShadowSize, 24 - _abrechnenCardShadowSize),
-                    Size = new Size(tabAbrechnen.ClientSize.Width - 48 + _abrechnenCardShadowSize * 2, tabAbrechnen.ClientSize.Height - 48 + _abrechnenCardShadowSize * 2),
+                    Size = new Size(host.ClientSize.Width - 48 + _abrechnenCardShadowSize * 2, host.ClientSize.Height - 48 + _abrechnenCardShadowSize * 2),
                     Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                     BackColor = Color.Transparent
                 };
@@ -906,8 +1004,8 @@ namespace TaMi_Einzahlautomat
                         // einfache weiche Schatten-Illusion über mehrere Rechtecke
                         for (int k = _abrechnenCardShadowSize; k >= 1; k--)
                         {
-                            int alpha = (int)(18f * (k / (float)_abrechnenCardShadowSize));
-                            using (var pen = new Pen(Color.FromArgb(alpha, 0, 0, 0), 2f))
+                            int alpha = (int)(14f * (k / (float)_abrechnenCardShadowSize));
+                            using (var pen = new Pen(Color.FromArgb(alpha, 10, 20, 40), 2f))
                             {
                                 var rr = new Rectangle(r.X + (k - 1), r.Y + (k - 1), r.Width - (k - 1) * 2, r.Height - (k - 1) * 2);
                                 e.Graphics.DrawRectangle(pen, rr);
@@ -917,7 +1015,7 @@ namespace TaMi_Einzahlautomat
                     catch { }
                 };
 
-                tabAbrechnen.Controls.Add(shadowPanel);
+                host.Controls.Add(shadowPanel);
                 try { shadowPanel.SendToBack(); } catch { }
             }
             catch { shadowPanel = null; }
@@ -925,9 +1023,9 @@ namespace TaMi_Einzahlautomat
             _cardAbrechnen = new Panel
             {
                 Location = new Point(24, 24),
-                Size = new Size(tabAbrechnen.ClientSize.Width - 48, tabAbrechnen.ClientSize.Height - 48),
+                Size = new Size(host.ClientSize.Width - 48, host.ClientSize.Height - 48),
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
-                BackColor = surface
+                BackColor = Color.Transparent
             };
             _cardAbrechnen.Paint += (s, e) =>
             {
@@ -946,7 +1044,7 @@ namespace TaMi_Einzahlautomat
                     try
                     {
                         var top = new Rectangle(rFill.Left, rFill.Top, rFill.Width, Math.Max(1, rFill.Height / 3));
-                        using (var gloss = new LinearGradientBrush(top, Color.FromArgb(90, 255, 255, 255), Color.FromArgb(0, 255, 255, 255), 90f))
+                        using (var gloss = new LinearGradientBrush(top, Color.FromArgb(70, 255, 255, 255), Color.FromArgb(0, 255, 255, 255), 90f))
                         {
                             e.Graphics.FillRectangle(gloss, top);
                         }
@@ -970,10 +1068,10 @@ namespace TaMi_Einzahlautomat
                 _cardAbrechnen.Region = rgn;
             }
             catch { }
-            tabAbrechnen.Controls.Add(_cardAbrechnen);
+            host.Controls.Add(_cardAbrechnen);
             try { _cardAbrechnen.BringToFront(); } catch { }
 
-            tabAbrechnen.SizeChanged += (s, e) =>
+            host.SizeChanged += (s, e) =>
             {
                 try
                 {
@@ -983,6 +1081,19 @@ namespace TaMi_Einzahlautomat
                     var rgn = Region.FromHrgn(CreateRoundRectRgn(0, 0, _cardAbrechnen.Width, _cardAbrechnen.Height, 18, 18));
                     _cardAbrechnenRegion = rgn;
                     _cardAbrechnen.Region = rgn;
+
+                    try
+                    {
+                        if (_abrechnenInnerPanel != null)
+                        {
+                            _abrechnenInnerRegion?.Dispose();
+                            _abrechnenInnerRegion = null;
+                            var irgn = Region.FromHrgn(CreateRoundRectRgn(0, 0, _abrechnenInnerPanel.Width, _abrechnenInnerPanel.Height, 16, 16));
+                            _abrechnenInnerRegion = irgn;
+                            _abrechnenInnerPanel.Region = irgn;
+                        }
+                    }
+                    catch { }
 
                     // Shadow panel an Card-Size anpassen
                     try
@@ -998,54 +1109,101 @@ namespace TaMi_Einzahlautomat
                 }
                 catch { }
             };
+            // Inneres Glas-Panel (wie Screenshot)
+            int innerPanelTop = 156;
+            _abrechnenInnerPanel = new Panel
+            {
+                Location = new Point(pad, innerPanelTop),
+                Size = new Size(_cardAbrechnen.Width - pad * 2, _cardAbrechnen.Height - innerPanelTop - 22),
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+                BackColor = Color.FromArgb(70, 255, 255, 255)
+            };
+            _abrechnenInnerPanel.Paint += (s, e) =>
+            {
+                try
+                {
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    var rFill = _abrechnenInnerPanel.ClientRectangle;
+                    using (var br = new LinearGradientBrush(rFill, Color.FromArgb(70, 255, 255, 255), Color.FromArgb(35, 255, 255, 255), 90f))
+                    {
+                        e.Graphics.FillRectangle(br, rFill);
+                    }
+                    using (var pen = new Pen(Color.FromArgb(70, 210, 225, 245), 1f))
+                    {
+                        var r = _abrechnenInnerPanel.ClientRectangle;
+                        r.Width -= 1; r.Height -= 1;
+                        e.Graphics.DrawRectangle(pen, r);
+                    }
+                }
+                catch { }
+            };
+            try
+            {
+                var irgn = Region.FromHrgn(CreateRoundRectRgn(0, 0, _abrechnenInnerPanel.Width, _abrechnenInnerPanel.Height, 16, 16));
+                _abrechnenInnerRegion = irgn;
+                _abrechnenInnerPanel.Region = irgn;
+            }
+            catch { }
+            _cardAbrechnen.Controls.Add(_abrechnenInnerPanel);
 
-            int y = pad;
+            _cardAbrechnen.SizeChanged += (s, e) =>
+            {
+                try
+                {
+                    if (_abrechnenInnerPanel == null) return;
+                    _abrechnenInnerPanel.Width = Math.Max(1, _cardAbrechnen.Width - pad * 2);
+                    _abrechnenInnerPanel.Height = Math.Max(1, _cardAbrechnen.Height - innerPanelTop - 22);
+                    _abrechnenInnerPanel.Left = pad;
+                    _abrechnenInnerPanel.Top = innerPanelTop;
+                    _abrechnenInnerPanel.Invalidate();
+                }
+                catch { }
+            };
+
+            _abrechnenCardTitle = new Label
+            {
+                Text = "Schicht abrechnen",
+                Font = fontCardTitle,
+                ForeColor = text,
+                Location = new Point(pad + 8, 24),
+                Size = new Size(_cardAbrechnen.Width - pad * 2, 48),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                BackColor = Color.Transparent
+            };
+            _cardAbrechnen.Controls.Add(_abrechnenCardTitle);
 
             lblTitel = new Label
             {
                 Text = $"Mitarbeiter: {_personal.Vorname} {_personal.Name}",
                 Font = fontTitle,
                 ForeColor = text,
-                Location = new Point(pad, y),
-                Size = new Size(_cardAbrechnen.Width - pad * 2, 44),
+                Location = new Point(pad + 8, 76),
+                Size = new Size(_cardAbrechnen.Width - pad * 2, 36),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 BackColor = Color.Transparent
             };
             _cardAbrechnen.Controls.Add(lblTitel);
 
-            y += 54;
             lblGuthaben = new Label
             {
-                Text = "Personal-Guthaben: 0,00 € (Platzhalter)",
+                Text = "Personal-Guthaben: 0,00 €",
                 Font = fontBody,
                 ForeColor = subText,
-                Location = new Point(pad, y),
-                Size = new Size(_cardAbrechnen.Width - pad * 2, 36),
+                Location = new Point(pad + 8, 114),
+                Size = new Size(_cardAbrechnen.Width - pad * 2, 30),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 BackColor = Color.Transparent
             };
             _cardAbrechnen.Controls.Add(lblGuthaben);
 
-            // Mehr Abstand zwischen Personal-Guthaben und Info-Textfeld
-            y += 78;
-
-            var sep = new Panel
-            {
-                BackColor = Color.FromArgb(242, 244, 247),
-                Location = new Point(pad, y),
-                Size = new Size(_cardAbrechnen.Width - pad * 2, 1),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
-            _cardAbrechnen.Controls.Add(sep);
-
-            y += 18;
+            int y = 16;
 
             lblBelegInfo = new Label
             {
                 Text = string.Empty,
-                Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
+                Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
                 Location = new Point(pad, y),
-                Size = new Size(_cardAbrechnen.Width - pad * 2, 52),
+                Size = new Size(_abrechnenInnerPanel.Width - pad * 2, 46),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 BackColor = Color.Transparent,
                 ForeColor = primary,
@@ -1081,24 +1239,41 @@ namespace TaMi_Einzahlautomat
             catch { }
             _cardAbrechnen.Controls.Add(lblBelegInfo);
 
-            y += 72;
+            // in das innere Panel verschieben
+            try
+            {
+                _cardAbrechnen.Controls.Remove(lblBelegInfo);
+                _abrechnenInnerPanel.Controls.Add(lblBelegInfo);
+            }
+            catch { }
+
+            y += 62;
 
             var b19Init = _details != null ? _details.Betrag19 : 0m;
             var b7Init = _details != null ? _details.Betrag7 : 0m;
             var b0Init = _details != null ? _details.Betrag0 : 0m;
 
-            int colW = (_cardAbrechnen.Width - pad * 2 - 24 * 2) / 3;
+            int colW = (_abrechnenInnerPanel.Width - pad * 2 - 24 * 2) / 3;
             if (colW < 280) colW = 280;
             int x1 = pad;
             int x2 = x1 + colW + 24;
             int x3 = x2 + colW + 24;
 
-            lblB19 = new Label { Text = $"19%: {b19Init:C2}", Font = fontBody, ForeColor = text, Location = new Point(x1, y), Size = new Size(colW, 36), BackColor = Color.Transparent };
-            _cardAbrechnen.Controls.Add(lblB19);
-            lblB7 = new Label { Text = $"7%: {b7Init:C2}", Font = fontBody, ForeColor = text, Location = new Point(x2, y), Size = new Size(colW, 36), BackColor = Color.Transparent };
-            _cardAbrechnen.Controls.Add(lblB7);
-            lblB0 = new Label { Text = $"0%: {b0Init:C2}", Font = fontBody, ForeColor = text, Location = new Point(x3, y), Size = new Size(colW, 36), BackColor = Color.Transparent };
-            _cardAbrechnen.Controls.Add(lblB0);
+            lblB19 = new Label { Text = $"19%: {b19Init:C2}", Font = fontBody, ForeColor = text, Location = new Point(x1, y), Size = new Size(colW, 30), BackColor = Color.Transparent };
+            _abrechnenInnerPanel.Controls.Add(lblB19);
+            lblB7 = new Label { Text = $"7%: {b7Init:C2}", Font = fontBody, ForeColor = text, Location = new Point(x2, y), Size = new Size(colW, 30), BackColor = Color.Transparent };
+            _abrechnenInnerPanel.Controls.Add(lblB7);
+            lblB0 = new Label { Text = $"0%: {b0Init:C2}", Font = fontBody, ForeColor = text, Location = new Point(x3, y), Size = new Size(colW, 30), BackColor = Color.Transparent };
+            _abrechnenInnerPanel.Controls.Add(lblB0);
+
+            var sepMwst = new Panel
+            {
+                BackColor = Color.FromArgb(229, 231, 235),
+                Location = new Point(pad, y + 34),
+                Size = new Size(_abrechnenInnerPanel.Width - pad * 2, 1),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            _abrechnenInnerPanel.Controls.Add(sepMwst);
 
             y += 52;
             var sumInit = (_details != null ? _details.SummeZuZahlen : 0m);
@@ -1117,14 +1292,8 @@ namespace TaMi_Einzahlautomat
             catch { labelW = 240; }
             int rowW = labelW + gap2 + amountW;
 
-            pnlSummeSeparator = new Panel
-            {
-                BackColor = Color.FromArgb(229, 231, 235),
-                Location = new Point(pad + labelW + gap2, y - 10),
-                Size = new Size(amountW, 1),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left
-            };
-            _cardAbrechnen.Controls.Add(pnlSummeSeparator);
+            // (Separator für Amount-Spalte nicht mehr nötig, Linien kommen als Vollbreite)
+            pnlSummeSeparator = null;
 
             pnlSummeRow = new Panel
             {
@@ -1146,8 +1315,8 @@ namespace TaMi_Einzahlautomat
             lblSummeValue = new Label
             {
                 Text = sumInit.ToString("C2"),
-                Font = fontStrong,
-                ForeColor = text,
+                Font = fontAmounts,
+                ForeColor = (sumInit < 0m) ? danger : text,
                 Location = new Point(labelW + gap2, 0),
                 Size = new Size(amountW, 40),
                 BackColor = Color.Transparent,
@@ -1155,7 +1324,7 @@ namespace TaMi_Einzahlautomat
             };
             pnlSummeRow.Controls.Add(lblSummeText);
             pnlSummeRow.Controls.Add(lblSummeValue);
-            _cardAbrechnen.Controls.Add(pnlSummeRow);
+            _abrechnenInnerPanel.Controls.Add(pnlSummeRow);
             lblSumme = lblSummeValue;
 
             y += 62;
@@ -1179,7 +1348,7 @@ namespace TaMi_Einzahlautomat
             lblEingezahltValue = new Label
             {
                 Text = _eingezahltSession.ToString("C2"),
-                Font = fontStrong,
+                Font = fontAmounts,
                 ForeColor = text,
                 Location = new Point(labelW + gap2, 0),
                 Size = new Size(amountW, 40),
@@ -1188,7 +1357,7 @@ namespace TaMi_Einzahlautomat
             };
             pnlEingezahltRow.Controls.Add(lblEingezahltText);
             pnlEingezahltRow.Controls.Add(lblEingezahltValue);
-            _cardAbrechnen.Controls.Add(pnlEingezahltRow);
+            _abrechnenInnerPanel.Controls.Add(pnlEingezahltRow);
             lblEingezahlt = lblEingezahltValue;
 
             // gleicher Abstand wie nach "Summe"
@@ -1215,8 +1384,8 @@ namespace TaMi_Einzahlautomat
             lblNochValue = new Label
             {
                 Text = nochInit.ToString("C2"),
-                Font = fontStrong,
-                ForeColor = text,
+                Font = fontAmounts,
+                ForeColor = (nochInit > 0m) ? danger : success,
                 Location = new Point(labelW + gap2, 0),
                 Size = new Size(amountW, 40),
                 BackColor = Color.Transparent,
@@ -1224,9 +1393,9 @@ namespace TaMi_Einzahlautomat
             };
             pnlNochRow.Controls.Add(lblNochText);
             pnlNochRow.Controls.Add(lblNochValue);
-            _cardAbrechnen.Controls.Add(pnlNochRow);
+            _abrechnenInnerPanel.Controls.Add(pnlNochRow);
             lblNoch = lblNochValue;
-            try { lblNoch.ForeColor = (nochInit > 0m) ? Color.FromArgb(211, 47, 47) : success; } catch { }
+            try { lblNoch.ForeColor = (nochInit > 0m) ? danger : success; } catch { }
 
             // Strich auch über "Noch zu zahlen" (durchgehend)
             try
@@ -1235,17 +1404,17 @@ namespace TaMi_Einzahlautomat
                 {
                     BackColor = Color.FromArgb(229, 231, 235),
                     Location = new Point(pad, y - 10),
-                    Size = new Size(_cardAbrechnen.Width - pad * 2, 1),
+                    Size = new Size(_abrechnenInnerPanel.Width - pad * 2, 1),
                     Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
                 };
-                _cardAbrechnen.Controls.Add(pnlNochSeparator);
-                _cardAbrechnen.SizeChanged += (s, e) =>
+                _abrechnenInnerPanel.Controls.Add(pnlNochSeparator);
+                _abrechnenInnerPanel.SizeChanged += (s, e) =>
                 {
                     try
                     {
                         pnlNochSeparator.Top = pnlNochRow.Top - 10;
                         pnlNochSeparator.Left = pad;
-                        pnlNochSeparator.Width = _cardAbrechnen.Width - pad * 2;
+                        pnlNochSeparator.Width = _abrechnenInnerPanel.Width - pad * 2;
                     }
                     catch { }
                 };
@@ -1255,14 +1424,14 @@ namespace TaMi_Einzahlautomat
             // Bei Resize im Abrechnen-Tab die Betrags-Spalte + Separator sauber ausrichten
             try
             {
-                _cardAbrechnen.SizeChanged += (s, e) =>
+                _abrechnenInnerPanel.SizeChanged += (s, e) =>
                 {
                     try
                     {
                         if (pnlSummeRow == null || pnlEingezahltRow == null || pnlNochRow == null) return;
 
                         int newAmountW = 170;
-                        int newGap2 = 6;
+                        int newGap2 = 10;
                         int newLabelW = 240;
                         try
                         {
@@ -1272,8 +1441,8 @@ namespace TaMi_Einzahlautomat
                             newLabelW = Math.Max(140, Math.Max(w1, Math.Max(w2, w3)) + 8);
                         }
                         catch { newLabelW = 240; }
-                        int newRowW = newLabelW + newGap2 + newAmountW;
 
+                        int newRowW = newLabelW + newGap2 + newAmountW;
                         pnlSummeRow.Width = newRowW;
                         pnlEingezahltRow.Width = newRowW;
                         pnlNochRow.Width = newRowW;
@@ -1287,32 +1456,40 @@ namespace TaMi_Einzahlautomat
                         if (lblEingezahltValue != null) { lblEingezahltValue.Left = xVal; lblEingezahltValue.Width = newAmountW; }
                         if (lblNochValue != null) { lblNochValue.Left = xVal; lblNochValue.Width = newAmountW; }
 
-                        if (pnlSummeSeparator != null)
+                        // Anpassung MwSt-Spalten
+                        try
                         {
-                            pnlSummeSeparator.Left = pad + xVal;
-                            pnlSummeSeparator.Width = newAmountW;
+                            int newColW = (_abrechnenInnerPanel.Width - pad * 2 - 24 * 2) / 3;
+                            if (newColW < 200) newColW = 200;
+                            int nx1 = pad;
+                            int nx2 = nx1 + newColW + 24;
+                            int nx3 = nx2 + newColW + 24;
+                            if (lblB19 != null) { lblB19.Left = nx1; lblB19.Width = newColW; }
+                            if (lblB7 != null) { lblB7.Left = nx2; lblB7.Width = newColW; }
+                            if (lblB0 != null) { lblB0.Left = nx3; lblB0.Width = newColW; }
                         }
+                        catch { }
                     }
                     catch { }
                 };
             }
             catch { }
 
-            // Buttons weiter nach unten
-            y += 170;
+            // Buttons
+            y += 92;
             btnAbrechnen = new Button
             {
                 Text = "Buchen",
                 Location = new Point(pad, y),
-                Size = new Size(220, 60),
-                Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold),
+                Size = new Size(200, 56),
+                Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
                 BackColor = Color.FromArgb(46, 125, 50),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
             };
             ApplyModernButtonStyle(btnAbrechnen, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32));
             btnAbrechnen.Click += btnAbrechnen_Click;
-            _cardAbrechnen.Controls.Add(btnAbrechnen);
+            _abrechnenInnerPanel.Controls.Add(btnAbrechnen);
 
             btnCreatePayment = new Button
             {
@@ -1337,18 +1514,18 @@ namespace TaMi_Einzahlautomat
                     }
                 }
             };
-            _cardAbrechnen.Controls.Add(btnCreatePayment);
+            _abrechnenInnerPanel.Controls.Add(btnCreatePayment);
 
             // y unverändert lassen, keine zusätzlichen Buttons hier
 
-            y += 92;
-            nudManuell = new NumericUpDown { Location = new Point(pad, y), Size = new Size(240, 48), DecimalPlaces = 2, Minimum = -10000, Maximum = 10000, Increment = 5, Font = new Font("Segoe UI Variable", 18F), Visible = false };
-            _cardAbrechnen.Controls.Add(nudManuell);
-            btnManuellAdd = new Button { Text = "Manuell hinzufügen", Location = new Point(pad + 260, y), Size = new Size(300, 48), Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Visible = false };
+            y += 78;
+            nudManuell = new NumericUpDown { Location = new Point(pad, y), Size = new Size(220, 46), DecimalPlaces = 2, Minimum = -10000, Maximum = 10000, Increment = 5, Font = new Font("Segoe UI Variable", 16F), Visible = false };
+            _abrechnenInnerPanel.Controls.Add(nudManuell);
+            btnManuellAdd = new Button { Text = "Manuell hinzufügen", Location = new Point(pad + 240, y), Size = new Size(260, 46), Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Visible = false };
             btnManuellAdd.FlatAppearance.BorderSize = 0;
             try { btnManuellAdd.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnManuellAdd.Width, btnManuellAdd.Height, 12, 12)); } catch { }
             btnManuellAdd.Click += btnManuellAdd_Click;
-            _cardAbrechnen.Controls.Add(btnManuellAdd);
+            _abrechnenInnerPanel.Controls.Add(btnManuellAdd);
 
             if (_ssp != null && !string.IsNullOrWhiteSpace(_ssp.ComPort))
                 UpdateAbrechnenSummaries();

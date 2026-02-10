@@ -10,8 +10,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Projektmappenelemente", "Pr
 		..\KassesystemPRO\KassesystemPRO.vbproj.user = ..\KassesystemPRO\KassesystemPRO.vbproj.user
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaMi-Automatenclient", "..\TaMi Automatenclient\TaMi-Automatenclient.csproj", "{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}"
-EndProject
 Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Einzahlautomat Setup", "Einzahlautomat Setup\Einzahlautomat Setup.vdproj", "{808043C5-F847-A40A-EBE5-28CF3B65B180}"
 EndProject
 Global
@@ -30,14 +28,6 @@ Global
 		{E7F871FB-C2EE-457F-8AAE-8501614398F5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E7F871FB-C2EE-457F-8AAE-8501614398F5}.Release|x86.ActiveCfg = Release|Any CPU
 		{E7F871FB-C2EE-457F-8AAE-8501614398F5}.Release|x86.Build.0 = Release|Any CPU
-		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Debug|x86.Build.0 = Debug|Any CPU
-		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Release|x86.ActiveCfg = Release|Any CPU
-		{FE24F5D5-BB21-49F3-8AF2-FA103F33E06C}.Release|x86.Build.0 = Release|Any CPU
 		{808043C5-F847-A40A-EBE5-28CF3B65B180}.Debug|Any CPU.ActiveCfg = Debug
 		{808043C5-F847-A40A-EBE5-28CF3B65B180}.Debug|Any CPU.Build.0 = Debug
 		{808043C5-F847-A40A-EBE5-28CF3B65B180}.Debug|x86.ActiveCfg = Debug
