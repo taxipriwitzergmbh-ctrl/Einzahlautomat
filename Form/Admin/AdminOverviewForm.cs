@@ -14,9 +14,69 @@ namespace TaMi_Einzahlautomat
 {
     public class AdminOverviewForm : Form
     {
+        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
+        {
+            if (b == null) return;
+            try
+            {
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 0;
+                b.BackColor = Color.Transparent;
+                b.UseVisualStyleBackColor = false;
+                b.ForeColor = Color.White;
+                b.Paint -= ModernButton_Paint;
+                b.Paint += ModernButton_Paint;
+                b.Tag = new Tuple<Color, Color>(c1, c2);
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Resize -= ModernButton_Resize;
+                b.Resize += ModernButton_Resize;
+            }
+            catch { }
+        }
+
+        private void ModernButton_Resize(object sender, EventArgs e)
+        {
+            try
+            {
+                var b = sender as Button;
+                if (b == null) return;
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Invalidate();
+            }
+            catch { }
+        }
+
+        private void ModernButton_Paint(object sender, PaintEventArgs e)
+        {
+            var b = sender as Button;
+            if (b == null) return;
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = b.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+
+                var colors = b.Tag as Tuple<Color, Color>;
+                var c1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
+                var c2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
+
+                using (var br = new LinearGradientBrush(rect, c1, c2, 90f))
+                {
+                    e.Graphics.FillRectangle(br, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+            catch { }
+        }
+
         private Panel headerPanel;
         private Button btnClose;
-        private Button btnMinimize;
         private Label lblTitle;
         private Point _mouseDownLocation;
         // Tabs
@@ -160,6 +220,16 @@ namespace TaMi_Einzahlautomat
             };
             btn.FlatAppearance.BorderSize = 0;
             (parent ?? (Control)this).Controls.Add(btn);
+
+            try
+            {
+                // Moderne Optik wie in AbrechnungForm (Gradient + Round)
+                var darker = ControlPaint.Dark(backColor);
+                ApplyModernButtonStyle(btn, backColor, darker);
+                btn.FlatAppearance.MouseOverBackColor = Color.Transparent;
+            }
+            catch { }
+
             return btn;
         }
 
@@ -211,26 +281,16 @@ namespace TaMi_Einzahlautomat
                 TabStop = false
             };
             btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 80, 80);
+            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
             btnClose.Click += (s, e) => Close();
             headerPanel.Controls.Add(btnClose);
 
-            // Minimieren-Button
-            btnMinimize = new Button
+            // Header-Buttons modern (Gradient + Round) wie in AbrechnungForm
+            try
             {
-                Text = "-",
-                Font = new Font("Segoe UI", 16F, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.Transparent,
-                FlatStyle = FlatStyle.Flat,
-                Size = new Size(48, 48),
-                Location = new Point(ClientSize.Width - 112, 6),
-                TabStop = false
-            };
-            btnMinimize.FlatAppearance.BorderSize = 0;
-            btnMinimize.FlatAppearance.MouseOverBackColor = Color.FromArgb(33, 150, 243, 80);
-            btnMinimize.Click += (s, e) => WindowState = FormWindowState.Minimized;
-            headerPanel.Controls.Add(btnMinimize);
+                ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40));
+            }
+            catch { }
 
             // Korrekte Positionierung im Header sicherstellen (Buttons rechts, Titel kollidiert nicht)
             headerPanel.Resize += (s, e) => UpdateHeaderLayout();
@@ -567,10 +627,37 @@ namespace TaMi_Einzahlautomat
 
         private void HeaderPanel_Paint(object sender, PaintEventArgs e)
         {
-            using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle,
-                Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+            try
             {
-                e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var r = headerPanel.ClientRectangle;
+
+                using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, r);
+                }
+
+                // subtle highlight band
+                try
+                {
+                    var top = new Rectangle(r.Left, r.Top, r.Width, Math.Max(1, r.Height / 2));
+                    using (var gloss = new LinearGradientBrush(top, Color.FromArgb(70, 255, 255, 255), Color.FromArgb(0, 255, 255, 255), 90f))
+                    {
+                        e.Graphics.FillRectangle(gloss, top);
+                    }
+                }
+                catch { }
+
+                // bottom separator
+                using (var pen = new Pen(Color.FromArgb(120, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawLine(pen, r.Left, r.Bottom - 1, r.Right, r.Bottom - 1);
+                }
+            }
+            catch
+            {
+                using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
             }
         }
 
@@ -601,14 +688,12 @@ namespace TaMi_Einzahlautomat
                 // Buttons rechtsb�ndig ausrichten
                 if (btnClose != null)
                     btnClose.Location = new Point(Math.Max(0, headerPanel.ClientSize.Width - marginRight - btnClose.Width), top);
-                if (btnMinimize != null && btnClose != null)
-                    btnMinimize.Location = new Point(Math.Max(0, btnClose.Left - spacing - btnMinimize.Width), top);
 
                 // Titelbreite so setzen, dass er nicht in die Buttons ragt
-                if (lblTitle != null && btnMinimize != null)
+                if (lblTitle != null && btnClose != null)
                 {
                     int left = lblTitle.Left; // normalerweise 24
-                    int rightLimit = btnMinimize.Left - spacing; // bis vor die Buttons
+                    int rightLimit = btnClose.Left - spacing; // bis vor die Buttons
                     int newWidth = Math.Max(120, rightLimit - left);
                     lblTitle.Size = new Size(newWidth, lblTitle.Height);
                 }
