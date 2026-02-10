@@ -578,7 +578,7 @@ namespace TaMi_Einzahlautomat
 
             lblTitle = new Label
             {
-                Text = "Schicht abrechnen",
+                Text = "Einzahlautomat",
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold),
@@ -602,7 +602,7 @@ namespace TaMi_Einzahlautomat
             };
             btnAbmelden.FlatAppearance.BorderSize = 0;
             btnAbmelden.FlatAppearance.MouseOverBackColor = Color.FromArgb(211, 47, 47);
-            btnAbmelden.Region = System.Drawing.Region.FromHrgn(CreateRoundRectRgn(0, 0, btnAbmelden.Width, btnAbmelden.Height, 14, 14));
+            try { btnAbmelden.Region = System.Drawing.Region.FromHrgn(CreateRoundRectRgn(0, 0, btnAbmelden.Width, btnAbmelden.Height, 14, 14)); } catch { }
             btnAbmelden.Click += btnAbmelden_Click;
             headerPanel.Controls.Add(btnAbmelden);
 
@@ -613,8 +613,8 @@ namespace TaMi_Einzahlautomat
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(33, 150, 243),
                 FlatStyle = FlatStyle.Flat,
-                Size = new Size(56, 56),
-                Location = new Point(ClientSize.Width - 220, 2),
+                Size = new Size(56, 44),
+                Location = new Point(ClientSize.Width - 220, 8),
                 TabStop = false,
                 Visible = _isAdmin
             };
@@ -684,8 +684,8 @@ namespace TaMi_Einzahlautomat
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(76, 175, 80),
                 FlatStyle = FlatStyle.Flat,
-                Size = new Size(56, 56),
-                Location = new Point(ClientSize.Width - 280, 2),
+                Size = new Size(56, 44),
+                Location = new Point(ClientSize.Width - 280, 8),
                 TabStop = false,
                 Visible = docsEnabled
             };
@@ -774,8 +774,8 @@ namespace TaMi_Einzahlautomat
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(255, 143, 0),
                 FlatStyle = FlatStyle.Flat,
-                Size = new Size(56, 56),
-                Location = new Point(ClientSize.Width - 340, 2),
+                Size = new Size(56, 44),
+                Location = new Point(ClientSize.Width - 340, 8),
                 TabStop = false,
                 Visible = hoursEnabled
             };
@@ -837,6 +837,152 @@ namespace TaMi_Einzahlautomat
                 catch { }
             };
             headerPanel.Controls.Add(btnHours);
+
+            // Header modernisieren (Gradient + moderne Buttons wie in Vorlage)
+            try
+            {
+                // After applying ModernButtonStyle to header icon buttons, re-attach icon painting.
+                // Otherwise the ModernButton_Paint handler would hide these symbols.
+                PaintEventHandler docsIconPaint = null;
+                PaintEventHandler hoursIconPaint = null;
+                try
+                {
+                    docsIconPaint = (s, pe) =>
+                    {
+                        try
+                        {
+                            var g = pe.Graphics;
+                            g.SmoothingMode = SmoothingMode.AntiAlias;
+                            var btn = (Button)s;
+                            var r = btn.ClientRectangle;
+                            int margin = 12;
+                            int fold = 6;
+                            var page = new Rectangle(r.Left + margin, r.Top + 8, r.Width - margin * 2, r.Height - 16);
+                            using (var pen = new Pen(Color.White, 2f))
+                            {
+                                g.DrawRectangle(pen, page);
+                                g.DrawLine(pen, page.Right - fold, page.Top, page.Right, page.Top + fold);
+                                g.DrawLine(pen, page.Right - fold, page.Top, page.Right - fold, page.Top + fold);
+
+                                int tx = page.Left + 4;
+                                int rx = page.Right - 4;
+                                int y1 = page.Top + 6;
+                                int y2 = y1 + 6;
+                                int y3 = y2 + 6;
+                                g.DrawLine(pen, tx, y1, rx - fold, y1);
+                                g.DrawLine(pen, tx, y2, rx - 6, y2);
+                                g.DrawLine(pen, tx, y3, rx - 10, y3);
+                            }
+                        }
+                        catch { }
+                    };
+
+                    hoursIconPaint = (s, pe) =>
+                    {
+                        try
+                        {
+                            var g = pe.Graphics;
+                            g.SmoothingMode = SmoothingMode.AntiAlias;
+                            var r = ((Button)s).ClientRectangle;
+                            int cx = r.Left + r.Width / 2;
+                            int cy = r.Top + r.Height / 2;
+                            int radius = Math.Min(r.Width, r.Height) / 2 - 12;
+                            using (var pen = new Pen(Color.White, 3f))
+                            {
+                                g.DrawEllipse(pen, cx - radius, cy - radius, radius * 2, radius * 2);
+                                g.DrawLine(pen, cx, cy, cx, cy - radius + 6);
+                                g.DrawLine(pen, cx, cy, cx + radius - 8, cy);
+                            }
+                        }
+                        catch { }
+                    };
+                }
+                catch { }
+
+                Action layoutHeaderButtons = () =>
+                {
+                    try
+                    {
+                        int right = ClientSize.Width - 20;
+                        int gap = 10;
+                        int yAbmelden = 8;
+                        int yIcon = 8;
+                        try
+                        {
+                            // Align all header buttons vertically centered
+                            int headerH = headerPanel != null ? headerPanel.Height : 60;
+                            yAbmelden = (headerH - (btnAbmelden != null ? btnAbmelden.Height : 44)) / 2;
+                            yIcon = (headerH - 44) / 2;
+                        }
+                        catch { yAbmelden = 8; yIcon = 8; }
+                        if (btnAbmelden != null)
+                        {
+                            btnAbmelden.Location = new Point(right - btnAbmelden.Width, yAbmelden);
+                            right = btnAbmelden.Left - gap;
+                        }
+                        if (btnAdmin != null && btnAdmin.Visible)
+                        {
+                            btnAdmin.Location = new Point(right - btnAdmin.Width, yIcon);
+                            right = btnAdmin.Left - gap;
+                        }
+                        if (btnDocuments != null && btnDocuments.Visible)
+                        {
+                            btnDocuments.Location = new Point(right - btnDocuments.Width, yIcon);
+                            right = btnDocuments.Left - gap;
+                        }
+                        if (btnHours != null && btnHours.Visible)
+                        {
+                            btnHours.Location = new Point(right - btnHours.Width, yIcon);
+                            right = btnHours.Left - gap;
+                        }
+                    }
+                    catch { }
+                };
+
+                // Modern button styles (gradient + rounded + border)
+                ApplyModernButtonStyle(btnAbmelden, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40));
+                btnAbmelden.FlatAppearance.MouseOverBackColor = Color.Transparent;
+
+                ApplyModernButtonStyle(btnAdmin, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
+                btnAdmin.FlatAppearance.MouseOverBackColor = Color.Transparent;
+                try { btnAdmin.Font = new Font("Segoe UI Symbol", 18F, FontStyle.Bold); } catch { }
+
+                ApplyModernButtonStyle(btnDocuments, Color.FromArgb(76, 175, 80), Color.FromArgb(27, 94, 32));
+                btnDocuments.FlatAppearance.MouseOverBackColor = Color.Transparent;
+                try
+                {
+                    if (docsIconPaint != null)
+                    {
+                        btnDocuments.Paint -= docsIconPaint;
+                        btnDocuments.Paint += docsIconPaint;
+                    }
+                }
+                catch { }
+
+                ApplyModernButtonStyle(btnHours, Color.FromArgb(255, 179, 0), Color.FromArgb(245, 124, 0));
+                btnHours.FlatAppearance.MouseOverBackColor = Color.Transparent;
+                try
+                {
+                    if (hoursIconPaint != null)
+                    {
+                        btnHours.Paint -= hoursIconPaint;
+                        btnHours.Paint += hoursIconPaint;
+                    }
+                }
+                catch { }
+
+                layoutHeaderButtons();
+                SizeChanged += (s, e) => layoutHeaderButtons();
+                try
+                {
+                    headerPanel.Layout += (s, e) =>
+                    {
+                        try { layoutHeaderButtons(); } catch { }
+                    };
+                }
+                catch { }
+            }
+            catch { }
 
             try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24)); } catch { }
 
@@ -947,8 +1093,9 @@ namespace TaMi_Einzahlautomat
             Color success = Color.FromArgb(46, 125, 50);
 
             var fontCardTitle = new Font("Segoe UI Variable", 28F, FontStyle.Bold);
-            var fontTitle = new Font("Segoe UI Variable", 22F, FontStyle.Bold);
             var fontBody = new Font("Segoe UI Variable", 16F, FontStyle.Regular);
+            // Mitarbeiter-Zeile: nur leicht größer als Personal-Guthaben
+            var fontTitle = new Font("Segoe UI Variable", 18F, FontStyle.Bold);
             var fontStrong = new Font("Segoe UI Variable", 18F, FontStyle.Bold);
             var fontAmounts = new Font("Segoe UI Variable", 18F, FontStyle.Bold);
 
@@ -985,11 +1132,13 @@ namespace TaMi_Einzahlautomat
             Panel shadowPanel = null;
             try
             {
+                // No outer margin: card should touch the tab client area (no visible gap).
+                int outerMargin = 0;
                 shadowPanel = new Panel
                 {
                     Tag = "abrechnen-shadow",
-                    Location = new Point(24 - _abrechnenCardShadowSize, 24 - _abrechnenCardShadowSize),
-                    Size = new Size(host.ClientSize.Width - 48 + _abrechnenCardShadowSize * 2, host.ClientSize.Height - 48 + _abrechnenCardShadowSize * 2),
+                    Location = new Point(outerMargin - _abrechnenCardShadowSize, outerMargin - _abrechnenCardShadowSize),
+                    Size = new Size(host.ClientSize.Width - (outerMargin * 2) + _abrechnenCardShadowSize * 2, host.ClientSize.Height - (outerMargin * 2) + _abrechnenCardShadowSize * 2),
                     Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                     BackColor = Color.Transparent
                 };
@@ -1022,8 +1171,8 @@ namespace TaMi_Einzahlautomat
 
             _cardAbrechnen = new Panel
             {
-                Location = new Point(24, 24),
-                Size = new Size(host.ClientSize.Width - 48, host.ClientSize.Height - 48),
+                Location = new Point(0, 0),
+                Size = new Size(host.ClientSize.Width, host.ClientSize.Height),
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 BackColor = Color.Transparent
             };
@@ -1162,7 +1311,7 @@ namespace TaMi_Einzahlautomat
 
             _abrechnenCardTitle = new Label
             {
-                Text = "Schicht abrechnen",
+                Text = "Abrechnungen",
                 Font = fontCardTitle,
                 ForeColor = text,
                 Location = new Point(pad + 8, 24),
@@ -2450,7 +2599,39 @@ namespace TaMi_Einzahlautomat
 
         private void HeaderPanel_Paint(object sender, PaintEventArgs e)
         {
-            using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f)) e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var r = headerPanel.ClientRectangle;
+
+                // Base gradient like the template: darker left -> lighter right
+                using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, r);
+                }
+
+                // subtle highlight band
+                try
+                {
+                    var top = new Rectangle(r.Left, r.Top, r.Width, Math.Max(1, r.Height / 2));
+                    using (var gloss = new LinearGradientBrush(top, Color.FromArgb(70, 255, 255, 255), Color.FromArgb(0, 255, 255, 255), 90f))
+                    {
+                        e.Graphics.FillRectangle(gloss, top);
+                    }
+                }
+                catch { }
+
+                // bottom separator
+                using (var pen = new Pen(Color.FromArgb(120, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawLine(pen, r.Left, r.Bottom - 1, r.Right, r.Bottom - 1);
+                }
+            }
+            catch
+            {
+                using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
+            }
         }
         private void HeaderPanel_MouseDown(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) _mouseDownLocation = e.Location; }
         private void HeaderPanel_MouseMove(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) { Left += e.X - _mouseDownLocation.X; Top += e.Y - _mouseDownLocation.Y; } }
