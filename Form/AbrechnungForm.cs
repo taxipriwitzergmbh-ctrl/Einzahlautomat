@@ -274,6 +274,53 @@ namespace TaMi_Einzahlautomat
         private Panel _wechselnSurface;
         private sealed class BackgroundInheritingTabControl : TabControl
         {
+            private const int TCM_ADJUSTRECT = 0x1328;
+
+            [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+            private struct RECT
+            {
+                public int Left;
+                public int Top;
+                public int Right;
+                public int Bottom;
+            }
+
+            protected override CreateParams CreateParams
+            {
+                get
+                {
+                    var cp = base.CreateParams;
+                    // remove the default client edge border (the visible rectangle around tab pages)
+                    const int WS_EX_CLIENTEDGE = 0x00000200;
+                    cp.ExStyle &= ~WS_EX_CLIENTEDGE;
+                    // also remove the normal border which can still draw a 1px frame
+                    const int WS_BORDER = 0x00800000;
+                    cp.Style &= ~WS_BORDER;
+                    return cp;
+                }
+            }
+
+            protected override void WndProc(ref Message m)
+            {
+                base.WndProc(ref m);
+
+                try
+                {
+                    if (m.Msg == TCM_ADJUSTRECT && m.LParam != IntPtr.Zero)
+                    {
+                        // Expand the display rectangle slightly so the native control doesn't paint
+                        // an inset frame around the tab pages.
+                        var rc = (RECT)System.Runtime.InteropServices.Marshal.PtrToStructure(m.LParam, typeof(RECT));
+                        rc.Left -= 4;
+                        rc.Top -= 2;
+                        rc.Right += 4;
+                        rc.Bottom += 4;
+                        System.Runtime.InteropServices.Marshal.StructureToPtr(rc, m.LParam, true);
+                    }
+                }
+                catch { }
+            }
+
             protected override void OnPaintBackground(PaintEventArgs e)
             {
                 try
@@ -1279,7 +1326,7 @@ namespace TaMi_Einzahlautomat
                 Location = new Point(pad, innerPanelTop),
                 Size = new Size(_cardAbrechnen.Width - pad * 2, _cardAbrechnen.Height - innerPanelTop - 22),
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
-                BackColor = Color.FromArgb(70, 255, 255, 255)
+                BackColor = Color.FromArgb(120, 255, 255, 255)
             };
             _abrechnenInnerPanel.Paint += (s, e) =>
             {
@@ -1287,7 +1334,7 @@ namespace TaMi_Einzahlautomat
                 {
                     e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                     var rFill = _abrechnenInnerPanel.ClientRectangle;
-                    using (var br = new LinearGradientBrush(rFill, Color.FromArgb(70, 255, 255, 255), Color.FromArgb(35, 255, 255, 255), 90f))
+                    using (var br = new LinearGradientBrush(rFill, Color.FromArgb(120, 255, 255, 255), Color.FromArgb(85, 255, 255, 255), 90f))
                     {
                         e.Graphics.FillRectangle(br, rFill);
                     }
@@ -1884,28 +1931,98 @@ namespace TaMi_Einzahlautomat
         private void BuildWechselnTab()
         {
             tabWechseln.BackColor = Color.Transparent;
-            tabWechseln.Padding = new Padding(18);
 
             var host = (Control)(_wechselnSurface ?? tabWechseln);
+            // Build UI into the surface so the form background can shine through.
+            // The TabPage itself stays transparent; padding must be applied to the host.
+            try { tabWechseln.Padding = new Padding(0); } catch { }
             try
             {
                 if (!ReferenceEquals(host, tabWechseln))
                 {
-                    // Ensure we build into the surface, not the TabPage.
                     tabWechseln.Controls.Clear();
+                    host.Dock = DockStyle.Fill;
                     tabWechseln.Controls.Add(host);
                 }
             }
             catch { }
 
+            try { host.Padding = new Padding(18); } catch { }
+            try { host.BackColor = Color.Transparent; } catch { }
             try { host.Controls.Clear(); } catch { }
+
+            // Background glass layer (like Abrechnen): fills the whole tab client area so there is
+            // no "empty" transparent zone near the tab header / former border area.
+            Panel glassLayer = null;
+            try
+            {
+                glassLayer = new Panel
+                {
+                    Location = new Point(0, 0),
+                    Size = new Size(host.ClientSize.Width, host.ClientSize.Height),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+                    BackColor = Color.Transparent
+                };
+
+                glassLayer.Paint += (s, e) =>
+                {
+                    try
+                    {
+                        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                        var r = glassLayer.ClientRectangle;
+                        if (r.Width <= 1 || r.Height <= 1) return;
+
+                        var fill = Color.FromArgb(70, 255, 255, 255);
+                        var fill2 = Color.FromArgb(35, 255, 255, 255);
+                        var glassBorder = Color.FromArgb(90, 180, 200, 230);
+
+                        using (var br = new LinearGradientBrush(r, fill, fill2, 90f))
+                        {
+                            e.Graphics.FillRectangle(br, r);
+                        }
+
+                        using (var pen = new Pen(glassBorder, 1f))
+                        {
+                            var rr2 = r;
+                            rr2.Width -= 1;
+                            rr2.Height -= 1;
+                            e.Graphics.DrawRectangle(pen, rr2);
+                        }
+                    }
+                    catch { }
+                };
+
+                try
+                {
+                    glassLayer.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, glassLayer.Width, glassLayer.Height, 18, 18));
+                }
+                catch { }
+
+                host.Controls.Add(glassLayer);
+                try { glassLayer.SendToBack(); } catch { }
+                try { glassLayer.Enabled = false; } catch { }
+
+                host.SizeChanged += (s, e) =>
+                {
+                    try
+                    {
+                        if (glassLayer == null) return;
+                        try { glassLayer.Region?.Dispose(); } catch { }
+                        try { glassLayer.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, glassLayer.Width, glassLayer.Height, 18, 18)); } catch { }
+                        glassLayer.Invalidate();
+                    }
+                    catch { }
+                };
+            }
+            catch { }
 
             Color primary = Color.FromArgb(0, 122, 204);
             Color danger = Color.FromArgb(211, 47, 47);
             Color success = Color.FromArgb(46, 125, 50);
-            Color surface = Color.FromArgb(120, 245, 250, 255);
-            Color surface2 = Color.FromArgb(80, 230, 240, 255);
-            Color innerSurface = Color.FromArgb(70, 255, 255, 255);
+            // Less transparent surfaces so cards/footer stand out more
+            Color surface = Color.FromArgb(210, 245, 250, 255);
+            Color surface2 = Color.FromArgb(185, 230, 240, 255);
+            Color innerSurface = Color.FromArgb(175, 255, 255, 255);
             Color border = Color.FromArgb(90, 180, 200, 230);
             Color subText = Color.FromArgb(55, 65, 81);
 
@@ -1923,9 +2040,9 @@ namespace TaMi_Einzahlautomat
             int cardY = 18;
             int cardH = 650;
             int gap = 14;
-            int cardW = (host.ClientSize.Width - tabWechseln.Padding.Left - tabWechseln.Padding.Right - gap) / 2;
+            int cardW = (host.ClientSize.Width - host.Padding.Left - host.Padding.Right - gap) / 2;
             if (cardW < 520) cardW = 520;
-            int leftX = tabWechseln.Padding.Left;
+            int leftX = host.Padding.Left;
             int rightX = leftX + cardW + gap;
 
             Panel MakeCard(string title, int x)
@@ -2026,6 +2143,8 @@ namespace TaMi_Einzahlautomat
 
             var cardCoins = MakeCard("Münzen", leftX);
             var cardNotes = MakeCard("Scheine", rightX);
+            try { cardCoins.BringToFront(); } catch { }
+            try { cardNotes.BringToFront(); } catch { }
 
             // Tabellenkopf in Cards
             void AddHeaderRow(Panel card)
@@ -2184,10 +2303,19 @@ namespace TaMi_Einzahlautomat
             int footerH = 120;
             var footer = new Panel
             {
-                Location = new Point(leftX, footerY),
-                Size = new Size((rightX + cardW) - leftX, footerH),
+                Location = new Point(cardCoins.Left, footerY),
+                // Span under both cards but DO NOT include the gap twice.
+                // Use the visible card edges as reference.
+                Size = new Size(cardNotes.Right - cardCoins.Right, footerH),
                 BackColor = Color.Transparent
             };
+            try
+            {
+                // Ensure pixel-perfect right alignment with the Scheine-card
+                footer.Left = cardCoins.Left;
+                footer.Width = cardNotes.Right - cardCoins.Right;
+            }
+            catch { }
             try { footer.Region = rr(footer, 0, 0, footer.Width, footer.Height, 18, 18); } catch { }
             footer.Paint += (s, e) =>
             {
@@ -2209,6 +2337,7 @@ namespace TaMi_Einzahlautomat
                 catch { }
             };
             host.Controls.Add(footer);
+            try { footer.BringToFront(); } catch { }
 
             // Reposition on resize (surface can resize independently of TabPage)
             try
@@ -2217,12 +2346,13 @@ namespace TaMi_Einzahlautomat
                 {
                     try
                     {
-                        int newCardW = (host.ClientSize.Width - tabWechseln.Padding.Left - tabWechseln.Padding.Right - gap) / 2;
+                        int newCardW = (host.ClientSize.Width - host.Padding.Left - host.Padding.Right - gap) / 2;
                         if (newCardW < 520) newCardW = 520;
                         cardCoins.Width = newCardW;
                         cardNotes.Width = newCardW;
-                        cardNotes.Left = tabWechseln.Padding.Left + newCardW + gap;
-                        footer.Width = (cardNotes.Left + newCardW) - tabWechseln.Padding.Left;
+                        cardNotes.Left = host.Padding.Left + newCardW + gap;
+                        footer.Left = cardCoins.Left;
+                        footer.Width = cardNotes.Right - footer.Left - 60;
 
                         // keep separators aligned with card widths
                         foreach (Control c in cardCoins.Controls)
@@ -2315,6 +2445,35 @@ namespace TaMi_Einzahlautomat
             try { btnAuszahlen.Region = rr(btnAuszahlen, 0, 0, btnAuszahlen.Width, btnAuszahlen.Height, 14, 14); } catch { }
             btnAuszahlen.Click += btnAuszahlen_Click;
             footer.Controls.Add(btnAuszahlen);
+
+            // Keep footer visuals + inner layout aligned on resize
+            try
+            {
+                host.SizeChanged += (s, e) =>
+                {
+                    try
+                    {
+                        // update rounded region to match new width/height
+                        try { footer.Region?.Dispose(); } catch { }
+                        try { footer.Region = rr(footer, 0, 0, footer.Width, footer.Height, 18, 18); } catch { }
+
+                        int bx = footer.Width - innerPad - buttonW;
+                        if (btnAuszahlen != null) btnAuszahlen.Left = bx;
+
+                        int infoR = bx - 16;
+                        int iw = Math.Max(260, infoR - infoX);
+                        int leftW = Math.Max(160, iw - 220);
+
+                        if (lblMaxText != null) lblMaxText.Width = leftW;
+                        if (lblMaxVerfuegbar != null) lblMaxVerfuegbar.Left = infoX + leftW;
+
+                        if (lblSumText != null) lblSumText.Width = leftW;
+                        if (lblSummeAuszahlung != null) lblSummeAuszahlung.Left = infoX + leftW;
+                    }
+                    catch { }
+                };
+            }
+            catch { }
 
             SafeRefreshAvailability();
             UpdateSummeAuszahlung();

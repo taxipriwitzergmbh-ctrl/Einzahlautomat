@@ -118,7 +118,7 @@
     <value>..\Ressourcen\100euro.jpg;System.Drawing.Bitmap, System.Drawing</value>
   </data>
   <data name="_10cent" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Ressourcen\10cent.bmp;System.Drawing.Bitmap, System.Drawing</value>
+    <value>..\Ressourcen\10cent.png;System.Drawing.Bitmap, System.Drawing</value>
   </data>
   <data name="_10euro" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Ressourcen\10euro.jpg;System.Drawing.Bitmap, System.Drawing</value>
@@ -127,10 +127,10 @@
     <value>..\Ressourcen\1cent.png;System.Drawing.Bitmap, System.Drawing</value>
   </data>
   <data name="_1euro" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Ressourcen\1euro.bmp;System.Drawing.Bitmap, System.Drawing</value>
+    <value>..\Ressourcen\1euro.png;System.Drawing.Bitmap, System.Drawing</value>
   </data>
   <data name="_20cent" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Ressourcen\20cent.bmp;System.Drawing.Bitmap, System.Drawing</value>
+    <value>..\Ressourcen\20cent.png;System.Drawing.Bitmap, System.Drawing</value>
   </data>
   <data name="_20euro" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Ressourcen\20euro.jpg;System.Drawing.Bitmap, System.Drawing</value>
@@ -142,10 +142,10 @@
     <value>..\Ressourcen\2cent1.png;System.Drawing.Bitmap, System.Drawing</value>
   </data>
   <data name="_2euro" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Ressourcen\2euro.bmp;System.Drawing.Bitmap, System.Drawing</value>
+    <value>..\Ressourcen\2euro.png;System.Drawing.Bitmap, System.Drawing</value>
   </data>
   <data name="_50cent" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Ressourcen\50cent.bmp;System.Drawing.Bitmap, System.Drawing</value>
+    <value>..\Ressourcen\50cent.png;System.Drawing.Bitmap, System.Drawing</value>
   </data>
   <data name="_50euro" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Ressourcen\50euro.jpg;System.Drawing.Bitmap, System.Drawing</value>
