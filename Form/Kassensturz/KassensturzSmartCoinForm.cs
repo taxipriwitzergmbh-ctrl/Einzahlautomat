@@ -1,14 +1,80 @@
-using System;
+ï»¿using System;
 using System.Drawing;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using TaMi_Einzahlautomat.Coins;
 using System.Linq;
+using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
 
 namespace TaMi_Einzahlautomat
 {
     public class KassensturzSmartCoinForm : Form
     {
+        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
+        {
+            if (b == null) return;
+            try
+            {
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 0;
+                b.BackColor = Color.Transparent;
+                b.UseVisualStyleBackColor = false;
+                b.ForeColor = Color.White;
+                b.Paint -= ModernButton_Paint;
+                b.Paint += ModernButton_Paint;
+                b.Tag = new Tuple<Color, Color>(c1, c2);
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Resize -= ModernButton_Resize;
+                b.Resize += ModernButton_Resize;
+            }
+            catch { }
+        }
+
+        private void ModernButton_Resize(object sender, EventArgs e)
+        {
+            try
+            {
+                var b = sender as Button;
+                if (b == null) return;
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Invalidate();
+            }
+            catch { }
+        }
+
+        private void ModernButton_Paint(object sender, PaintEventArgs e)
+        {
+            var b = sender as Button;
+            if (b == null) return;
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = b.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+
+                var colors = b.Tag as Tuple<Color, Color>;
+                var c1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
+                var c2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
+
+                using (var br = new LinearGradientBrush(rect, c1, c2, 90f))
+                {
+                    e.Graphics.FillRectangle(br, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+            catch { }
+        }
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
+
         private Label[] lblLinksBestand;
         private Label lblLinksSumme;
         private Label[] lblRechtsBestand;
@@ -37,7 +103,7 @@ namespace TaMi_Einzahlautomat
         private const string SnapshotKey = "SavedLevels"; // Format: v1;tsTicks;lv0,lv1,...,lv7
         private bool _snapshotLoaded = false; // zeigt ob persistenter Snapshot aktiv ist
 
-        private Label _lblSnapshotInfo; // Hinweis für aktiven Snapshot
+        private Label _lblSnapshotInfo; // Hinweis fï¿½r aktiven Snapshot
 
         // Startlog Marker
         private bool _startLogged = false;
@@ -61,7 +127,7 @@ namespace TaMi_Einzahlautomat
                     var lv = smartCoin?.GetCoinAvailability();
                     startBestand = lv != null ? (int[])lv.Clone() : new int[8];
                     startSumme = BerechneSumme(startBestand);
-                    AppLogger.Log($"[Kassensturz/SmartCoin] Start Münz-Bestand: {FormatCoins(startBestand)} = {startSumme:0.00} €");
+                    AppLogger.Log($"[Kassensturz/SmartCoin] Start MÃ¼nz-Bestand: {FormatCoins(startBestand)} = {startSumme:0.00} â‚¬");
                     _startLogged = true;
                 }
             }
@@ -72,14 +138,14 @@ namespace TaMi_Einzahlautomat
         {
             if (lv == null || lv.Length < 8) return "-";
             decimal[] euro = {0.01m,0.02m,0.05m,0.10m,0.20m,0.50m,1m,2m};
-            try { return string.Join(",", Enumerable.Range(0,8).Select(i => euro[i].ToString("0.00") + "€=" + lv[i])); } catch { return "-"; }
+            try { return string.Join(",", Enumerable.Range(0,8).Select(i => euro[i].ToString("0.00") + "â‚¬=" + lv[i])); } catch { return "-"; }
         }
 
         private void SafeInit()
         {
             if (smartCoin == null)
             {
-                BuildFallbackLayout("SmartCoin Gerät nicht verfügbar.");
+                BuildFallbackLayout("SmartCoin GerÃ¤t nicht verfÃ¼gbar.");
                 return;
             }
 
@@ -104,7 +170,7 @@ namespace TaMi_Einzahlautomat
 
             InitializeLayout();
             ZeigeInitialBestand();
-            // Initialer Refresh NUR starten wenn Handle bereits existiert – sonst per Load-Event nachholen
+            // Initialer Refresh NUR starten wenn Handle bereits existiert ï¿½ sonst per Load-Event nachholen
             if (IsHandleCreated)
             {
                 try { BeginInvoke((Action)(() => RefreshBestandCoins())); } catch { }
@@ -130,7 +196,7 @@ namespace TaMi_Einzahlautomat
             // Hole die Singleton-Instanz, wie sie im AdminCoinForm verwendet wird
             if (CoinManager.Instance is SmartCoinV1 sc1)
                 return sc1;
-            // Fallback: eigene Instanz, falls CoinManager.Instance nicht verfügbar
+            // Fallback: eigene Instanz, falls CoinManager.Instance nicht verfï¿½gbar
             return smartCoin;
         }
 
@@ -160,7 +226,7 @@ namespace TaMi_Einzahlautomat
             for (int i = 0; i < 8; i++)
             {
                 int v = initialBestand != null && i < initialBestand.Length ? initialBestand[i] : -1;
-                lblLinksBestand[i].Text = $"{euroWerte[i],4:N2} €: {(v >= 0 ? v.ToString() : "?")}";
+                lblLinksBestand[i].Text = $"{euroWerte[i],4:N2} â‚¬: {(v >= 0 ? v.ToString() : "?")}";
             }
             lblLinksSumme.Text = $"Summe: {initialSumme:C2}";
         }
@@ -181,6 +247,7 @@ namespace TaMi_Einzahlautomat
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 BackColor = Color.FromArgb(33, 150, 243)
             };
+            headerPanel.Paint += HeaderPanel_Paint;
             headerPanel.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) _mouseDownLocation = e.Location; };
             headerPanel.MouseMove += (s, e) => { if (e.Button == MouseButtons.Left) { Left += e.X - _mouseDownLocation.X; Top += e.Y - _mouseDownLocation.Y; } };
             Controls.Add(headerPanel);
@@ -210,9 +277,10 @@ namespace TaMi_Einzahlautomat
                 TabStop = false
             };
             btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 80, 80);
+            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
             btnClose.Click += (s, e) => Close();
             headerPanel.Controls.Add(btnClose);
+            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
 
             // Linke Seite: Startbestand
             var lblLinksTitel = new Label
@@ -224,7 +292,7 @@ namespace TaMi_Einzahlautomat
             };
             Controls.Add(lblLinksTitel);
 
-            string[] denomText = { "1 c", "2 c", "5 c", "10 c", "20 c", "50 c", "1 €", "2 €" };
+            string[] denomText = { "1 c", "2 c", "5 c", "10 c", "20 c", "50 c", "1 â‚¬", "2 â‚¬" };
             lblLinksBestand = new Label[8];
             for (int i = 0; i < denomText.Length; i++)
             {
@@ -279,10 +347,10 @@ namespace TaMi_Einzahlautomat
             };
             Controls.Add(lblRechtsSumme);
 
-            // Button Münzen entleeren
+            // Button Mï¿½nzen entleeren
             btnEntleeren = new Button
             {
-                Text = "Münzen entleeren",
+                Text = "MÃ¼nzen entleeren",
                 Location = new Point(300, 180),
                 Size = new Size(200, 60),
                 Font = new Font("Segoe UI Variable", 15F, FontStyle.Bold),
@@ -291,6 +359,7 @@ namespace TaMi_Einzahlautomat
                 FlatStyle = FlatStyle.Flat
             };
             btnEntleeren.FlatAppearance.BorderSize = 0;
+            ApplyModernButtonStyle(btnEntleeren, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
             btnEntleeren.Click += BtnEntleeren_Click;
             Controls.Add(btnEntleeren);
 
@@ -306,10 +375,10 @@ namespace TaMi_Einzahlautomat
             };
             Controls.Add(lblDifferenz);
 
-            // Button Alle Münzen eingezahlt
+            // Button Alle Mï¿½nzen eingezahlt
             btnAlleEingezahlt = new Button
             {
-                Text = "Alle Münzen eingezahlt",
+                Text = "Alle MÃ¼nzen eingezahlt",
                 Location = new Point(300, 550),
                 Size = new Size(200, 40),
                 Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold),
@@ -318,6 +387,7 @@ namespace TaMi_Einzahlautomat
                 FlatStyle = FlatStyle.Flat
             };
             btnAlleEingezahlt.FlatAppearance.BorderSize = 0;
+            ApplyModernButtonStyle(btnAlleEingezahlt, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32));
             btnAlleEingezahlt.Click += BtnAlleEingezahlt_Click; // NEU
             Controls.Add(btnAlleEingezahlt);
 
@@ -346,12 +416,49 @@ namespace TaMi_Einzahlautomat
         private void ShowSnapshotInfo()
         {
             if (_lblSnapshotInfo == null) return;
-            _lblSnapshotInfo.Text = "Aktiver Kassensturz-Snapshot vorhanden – 'Münzen entleeren' speichert keinen neuen Bestand (Fortführen) oder 'Neuer Start' wählen.";
+            _lblSnapshotInfo.Text = "Aktiver Kassensturz-Snapshot vorhanden â€“ 'MÃ¼nzen entleeren' speichert keinen neuen Bestand (FortfÃ¼hren) oder 'Neuer Start' wÃ¤hlen.";
             _lblSnapshotInfo.Visible = true;
         }
         private void HideSnapshotInfo()
         {
             if (_lblSnapshotInfo == null) return; _lblSnapshotInfo.Visible = false; _lblSnapshotInfo.Text = string.Empty;
+        }
+
+        private void HeaderPanel_Paint(object sender, PaintEventArgs e)
+        {
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var r = headerPanel.ClientRectangle;
+
+                using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, r);
+                }
+
+                try
+                {
+                    var top = new Rectangle(r.Left, r.Top, r.Width, Math.Max(1, r.Height / 2));
+                    using (var gloss = new LinearGradientBrush(top, Color.FromArgb(70, 255, 255, 255), Color.FromArgb(0, 255, 255, 255), 90f))
+                    {
+                        e.Graphics.FillRectangle(gloss, top);
+                    }
+                }
+                catch { }
+
+                using (var pen = new Pen(Color.FromArgb(120, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawLine(pen, r.Left, r.Bottom - 1, r.Right, r.Bottom - 1);
+                }
+            }
+            catch
+            {
+                using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle,
+                    Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
+                }
+            }
         }
 
         private void LoadStartBestand()
@@ -373,7 +480,7 @@ namespace TaMi_Einzahlautomat
             RefreshBestandCoins();
         }
 
-        // Public/Legacy Wrapper – startet asynchronen Refresh ohne Blockade
+        // Public/Legacy Wrapper ï¿½ startet asynchronen Refresh ohne Blockade
         private void RefreshBestandCoins()
         {
             _ = RefreshBestandCoinsAsync();
@@ -399,7 +506,7 @@ namespace TaMi_Einzahlautomat
                 try { levels = smartCoin.GetCoinAvailability(); } catch { }
                 UpdateCoinsUiFromLevels(levels);
 
-                // NEU: Wenn kein Snapshot aktiv ist (nach 'Alle Münzen eingezahlt'),
+                // NEU: Wenn kein Snapshot aktiv ist (nach 'Alle Mï¿½nzen eingezahlt'),
                 // wird der linke Start-Bestand automatisch auf den aktuellen Stand gesetzt.
                 if (!_snapshotLoaded && levels != null && levels.Length >= 8)
                 {
@@ -423,15 +530,15 @@ namespace TaMi_Einzahlautomat
                 {
                     if (v == -2)
                     {
-                        // Keine Änderung, Wert bleibt wie er ist
+                        // Keine ï¿½nderung, Wert bleibt wie er ist
                     }
                     else if (v < 0)
                     {
-                        lblRechtsBestand[i].Text = $"{euroWerte[i],4:N2} €: ?";
+                        lblRechtsBestand[i].Text = $"{euroWerte[i],4:N2} â‚¬: ?";
                     }
                     else
                     {
-                        lblRechtsBestand[i].Text = $"{euroWerte[i],4:N2} €: {v}";
+                        lblRechtsBestand[i].Text = $"{euroWerte[i],4:N2} â‚¬: {v}";
                         summe += v * euroWerte[i];
                     }
                 }
@@ -444,11 +551,11 @@ namespace TaMi_Einzahlautomat
         private void UpdateDifferenz()
         {
             decimal diff = aktuellSumme - initialSumme;
-            string text = "Differenz: " + diff.ToString("N2") + " €"; // N2 + Euro-Zeichen für konsistente Gruppierung
+            string text = "Differenz: " + diff.ToString("N2") + " â‚¬"; // N2 + Euro-Zeichen fï¿½r konsistente Gruppierung
             if (lblDifferenz != null)
             {
                 lblDifferenz.Text = text;
-                // Dynamisch verbreitern falls nötig
+                // Dynamisch verbreitern falls nÃ¶tig
                 try
                 {
                     var sz = TextRenderer.MeasureText(text, lblDifferenz.Font);
@@ -465,10 +572,10 @@ namespace TaMi_Einzahlautomat
 
         private async void BtnEntleeren_Click(object sender, EventArgs e)
         {
-            // Wenn bereits Snapshot aktiv: Nachfrage ob fortführen oder neu starten
+            // Wenn bereits Snapshot aktiv: Nachfrage ob fortfÃ¼hren oder neu starten
             if (_snapshotLoaded)
             {
-                var res = MessageBox.Show(this, "Es läuft noch ein aktueller Kassensturz.\nWählen Sie 'Ja' um fortzufahren (alter Bestand bleibt) oder 'Nein' für einen neuen Start (Bestand wird neu gespeichert).", "Aktiver Kassensturz", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1);
+                var res = MessageBox.Show(this, "Es lÃ¤uft noch ein aktueller Kassensturz.\nWÃ¤hlen Sie 'Ja' um fortzufahren (alter Bestand bleibt) oder 'Nein' fÃ¼r einen neuen Start (Bestand wird neu gespeichert).", "Aktiver Kassensturz", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1);
                 if (res == DialogResult.Cancel) return; // Abbruch
                 if (res == DialogResult.No)
                 {
@@ -480,13 +587,13 @@ namespace TaMi_Einzahlautomat
                         initialBestand = (int[])live.Clone();
                         initialSumme = BerechneSumme(initialBestand);
                         ZeigeInitialBestand();
-                        SaveSnapshot(live); // überschreibt alten
+                        SaveSnapshot(live); // ï¿½berschreibt alten
                         ShowSnapshotInfo();
                         entleert = false; // neuen Vorgang beginnen
                     }
                     catch { }
                 }
-                // Bei Ja (fortführen) einfach weiter ohne neuen Snapshot
+                // Bei Ja (fortfÃ¼hren) einfach weiter ohne neuen Snapshot
             }
             else
             {
@@ -504,13 +611,13 @@ namespace TaMi_Einzahlautomat
 
             if (entleert)
             {
-                // Bereits entleert, aber evtl. erneut entleeren erlaubt – Nachfrage ob wirklich nochmal
-                var again = MessageBox.Show(this, "SmartEmpty wurde bereits ausgeführt. Nochmals entleeren?", "Bestätigung", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                // Bereits entleert, aber evtl. erneut entleeren erlaubt â€“ Nachfrage ob wirklich nochmal
+                var again = MessageBox.Show(this, "SmartEmpty wurde bereits ausgefÃ¼hrt. Nochmals entleeren?", "BestÃ¤tigung", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                 if (again != DialogResult.Yes) return;
             }
 
             var result = MessageBox.Show(
-                "Achten Sie darauf, dass der SmartCoin die Münzen beim Kassensturz nach unten entleert und nicht in den normalen Auswurf. Haben Sie einen Eimer untergestellt?",
+                "Achten Sie darauf, dass der SmartCoin die MÃ¼nzen beim Kassensturz nach unten entleert und nicht in den normalen Auswurf. Haben Sie einen Eimer untergestellt?",
                 "Hinweis",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Information
@@ -530,7 +637,7 @@ namespace TaMi_Einzahlautomat
                 countdownForm.Text = "Achtung";
                 var lbl = new Label { Text = string.Empty, Dock = DockStyle.Fill, Font = new Font("Segoe UI", 24F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
                 countdownForm.Controls.Add(lbl);
-                countdownForm.Show(this); // Modalität vermeiden, UI bleibt reaktionsfähig
+                countdownForm.Show(this); // Modalitï¿½t vermeiden, UI bleibt reaktionsfï¿½hig
                 for (int i = 3; i >= 1; i--)
                 {
                     lbl.Text = i.ToString();
@@ -544,7 +651,7 @@ namespace TaMi_Einzahlautomat
             try
             {
                 btnEntleeren.Enabled = false;
-                _tmrBestand.Enabled = false; // während SmartEmpty keine Poll-Requests
+                _tmrBestand.Enabled = false; // wï¿½hrend SmartEmpty keine Poll-Requests
                 await Task.Run(() =>
                 {
                     try { smartCoin?.SmartEmpty(); } catch { }
@@ -553,7 +660,7 @@ namespace TaMi_Einzahlautomat
             }
             finally
             {
-                await Task.Delay(1500); // etwas warten bis Gerät Levels aktualisiert
+                await Task.Delay(1500); // etwas warten bis Gerï¿½t Levels aktualisiert
                 _tmrBestand.Enabled = true;
                 RefreshBestandCoins();
                 btnEntleeren.Enabled = true;
@@ -582,7 +689,7 @@ namespace TaMi_Einzahlautomat
                     aktuellerBestand = end != null ? (int[])end.Clone() : new int[8];
                     aktuellSumme = BerechneSumme(aktuellerBestand);
                     decimal diff = aktuellSumme - startSumme;
-                    AppLogger.Log($"[Kassensturz/SmartCoin] Ende Münz-Bestand: {FormatCoins(aktuellerBestand)} = {aktuellSumme:0.00} € | Differenz: {diff:0.00} €");
+                    AppLogger.Log($"[Kassensturz/SmartCoin] Ende MÃ¼nz-Bestand: {FormatCoins(aktuellerBestand)} = {aktuellSumme:0.00} â‚¬ | Differenz: {diff:0.00} â‚¬");
                 }
             }
             catch { }
@@ -627,7 +734,7 @@ namespace TaMi_Einzahlautomat
                 ZeigeInitialBestand();
                 entleert = false; _snapshotLoaded = false;
                 HideSnapshotInfo();
-                lblDifferenz.Text = "Differenz: 0,00 €";
+                lblDifferenz.Text = "Differenz: 0,00 â‚¬";
             }
             catch { }
         }
@@ -673,17 +780,17 @@ namespace TaMi_Einzahlautomat
         private void ClearSnapshot()
         {
             try { IniHelper.WriteValue(SnapshotSection, SnapshotKey, string.Empty, AppSettings.IniPath); } catch { }
-            try { AppLogger.Log("[SmartCoin] Snapshot gelöscht"); } catch { }
+            try { AppLogger.Log("[SmartCoin] Snapshot gelÃ¶scht"); } catch { }
         }
 
-        // Fallback Oberfläche bei fehlender SmartCoin-Initialisierung
+        // Fallback Oberflï¿½che bei fehlender SmartCoin-Initialisierung
         private void BuildFallbackLayout(string reason)
         {
             try { Controls.Clear(); } catch { }
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterScreen;
             ClientSize = new Size(520, 220);
-            Text = "SmartCoin nicht verfügbar";
+            Text = "SmartCoin nicht verfÃ¼gbar";
             var lbl = new Label
             {
                 Text = "SmartCoin Modul konnte nicht initialisiert werden.\r\n" + (reason ?? "Unbekannter Fehler"),
@@ -693,7 +800,7 @@ namespace TaMi_Einzahlautomat
                 ForeColor = Color.DarkRed
             };
             Controls.Add(lbl);
-            var btn = new Button { Text = "Schließen", Dock = DockStyle.Bottom, Height = 44, BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            var btn = new Button { Text = "SchlieÃŸen", Dock = DockStyle.Bottom, Height = 44, BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             btn.FlatAppearance.BorderSize = 0; btn.Click += (s, e) => Close();
             Controls.Add(btn);
         }

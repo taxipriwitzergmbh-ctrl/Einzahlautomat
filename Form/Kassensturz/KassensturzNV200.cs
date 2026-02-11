@@ -1,12 +1,78 @@
-using System;
+ï»¿using System;
 using System.Drawing;
 using System.Windows.Forms;
-using System.Linq; // hinzugefügt für Enumerable
+using System.Linq; // hinzugefï¿½gt fï¿½r Enumerable
+using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
 
 namespace TaMi_Einzahlautomat
 {
     public class KassensturzNV200 : Form
     {
+        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
+        {
+            if (b == null) return;
+            try
+            {
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 0;
+                b.BackColor = Color.Transparent;
+                b.UseVisualStyleBackColor = false;
+                b.ForeColor = Color.White;
+                b.Paint -= ModernButton_Paint;
+                b.Paint += ModernButton_Paint;
+                b.Tag = new Tuple<Color, Color>(c1, c2);
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Resize -= ModernButton_Resize;
+                b.Resize += ModernButton_Resize;
+            }
+            catch { }
+        }
+
+        private void ModernButton_Resize(object sender, EventArgs e)
+        {
+            try
+            {
+                var b = sender as Button;
+                if (b == null) return;
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Invalidate();
+            }
+            catch { }
+        }
+
+        private void ModernButton_Paint(object sender, PaintEventArgs e)
+        {
+            var b = sender as Button;
+            if (b == null) return;
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = b.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+
+                var colors = b.Tag as Tuple<Color, Color>;
+                var c1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
+                var c2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
+
+                using (var br = new LinearGradientBrush(rect, c1, c2, 90f))
+                {
+                    e.Graphics.FillRectangle(br, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+            catch { }
+        }
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
+
         private NV200_SSP _ssp;
         private TabControl tabControl;
         private TabPage tabCashbox;
@@ -52,12 +118,12 @@ namespace TaMi_Einzahlautomat
         // Original MAX-Werte sichern um w?hrend des Kassensturzes alles in den Payout zu routen
         private int _origMax5, _origMax10, _origMax20, _origMax50, _origMax100, _origMax200, _origMax500;
 
-        // Merker für Startlog (nur einmal)
+        // Merker fï¿½r Startlog (nur einmal)
         private bool _startLogged = false;
 
-        // Laufzeitdarstellung während Auszahlung
+        // Laufzeitdarstellung wï¿½hrend Auszahlung
         private bool _dispensingActive = false;
-        private int[] _dispenseViewCounts = null; // gespiegelt/erwartete Payout-Bestände (während Auszahlung)
+        private int[] _dispenseViewCounts = null; // gespiegelt/erwartete Payout-Bestï¿½nde (wï¿½hrend Auszahlung)
 
         public KassensturzNV200(NV200_SSP ssp)
         {
@@ -110,7 +176,7 @@ namespace TaMi_Einzahlautomat
                 {
                     initialPayout = GetPayoutCounts();
                     initialPayoutSum = BerechneSumme(initialPayout);
-                    AppLogger.Log($"[Kassensturz/NV200] Start Payout-Bestand: {FormatCounts(initialPayout)} = {initialPayoutSum:0.00} €");
+                    AppLogger.Log($"[Kassensturz/NV200] Start Payout-Bestand: {FormatCounts(initialPayout)} = {initialPayoutSum:0.00} ï¿½");
                     _startLogged = true;
                 }
             }
@@ -121,7 +187,7 @@ namespace TaMi_Einzahlautomat
         {
             if (c == null || c.Length < 7) return "-";
             int[] w = {5,10,20,50,100,200,500};
-            try { return string.Join(",", Enumerable.Range(0,7).Select(i => w[i] + "€=" + c[i])); } catch { return "-"; }
+            try { return string.Join(",", Enumerable.Range(0,7).Select(i => w[i] + "ï¿½=" + c[i])); } catch { return "-"; }
         }
 
         private void ElevateMaxCounts()
@@ -136,10 +202,20 @@ namespace TaMi_Einzahlautomat
         private void InitializeLayout()
         {
             FormBorderStyle = FormBorderStyle.None; StartPosition = FormStartPosition.CenterScreen; ClientSize = new Size(800, 600); BackColor = Color.White; DoubleBuffered = true;
-            headerPanel = new Panel { Location = new Point(0, 0), Size = new Size(ClientSize.Width, 60), Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, BackColor = Color.FromArgb(33, 150, 243) }; headerPanel.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) _mouseDownLocation = e.Location; }; headerPanel.MouseMove += (s, e) => { if (e.Button == MouseButtons.Left) { Left += e.X - _mouseDownLocation.X; Top += e.Y - _mouseDownLocation.Y; } }; Controls.Add(headerPanel); headerPanel.BringToFront();
+            headerPanel = new Panel { Location = new Point(0, 0), Size = new Size(ClientSize.Width, 60), Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, BackColor = Color.FromArgb(33, 150, 243) };
+            headerPanel.Paint += HeaderPanel_Paint;
+            headerPanel.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) _mouseDownLocation = e.Location; };
+            headerPanel.MouseMove += (s, e) => { if (e.Button == MouseButtons.Left) { Left += e.X - _mouseDownLocation.X; Top += e.Y - _mouseDownLocation.Y; } };
+            Controls.Add(headerPanel);
+            headerPanel.BringToFront();
             lblTitle = new Label { Text = "Kassensturz NV200", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(24, 0), Size = new Size(360, 60), BackColor = Color.Transparent }; headerPanel.Controls.Add(lblTitle);
             _lblHeaderStatus = new Label { Text = "Status: -", AutoSize = false, TextAlign = ContentAlignment.MiddleRight, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, Location = new Point(ClientSize.Width - 320, 0), Size = new Size(220, 60), Anchor = AnchorStyles.Top | AnchorStyles.Right }; headerPanel.Controls.Add(_lblHeaderStatus);
-            btnClose = new Button { Text = "\u2715", Font = new Font("Segoe UI Symbol", 18F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 56, 6), TabStop = false, Anchor = AnchorStyles.Top | AnchorStyles.Right }; btnClose.FlatAppearance.BorderSize = 0; btnClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 80, 80); btnClose.Click += (s, e) => Close(); headerPanel.Controls.Add(btnClose);
+            btnClose = new Button { Text = "\u2715", Font = new Font("Segoe UI Symbol", 18F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 56, 6), TabStop = false, Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            btnClose.FlatAppearance.BorderSize = 0;
+            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
+            btnClose.Click += (s, e) => Close();
+            headerPanel.Controls.Add(btnClose);
+            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
             _lblSnapshotInfo = new Label { Text = string.Empty, Location = new Point(20, 60), Size = new Size(ClientSize.Width - 40, 20), ForeColor = Color.DarkOrange, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, Visible = _snapshotLoaded }; Controls.Add(_lblSnapshotInfo);
             tabControl = new TabControl { Location = new Point(0, 80), Size = new Size(ClientSize.Width, ClientSize.Height - 80), Font = new Font("Segoe UI", 12F, FontStyle.Bold), Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right }; Controls.Add(tabControl);
             tabCashbox = new TabPage("Cashbox"); cashboxForm = new CashboxCountForm(_ssp) { Dock = DockStyle.Fill }; tabCashbox.Controls.Add(cashboxForm); tabControl.TabPages.Add(tabCashbox);
@@ -147,27 +223,51 @@ namespace TaMi_Einzahlautomat
             if (_snapshotLoaded) ShowSnapshotInfo();
         }
 
-        private void ShowSnapshotInfo() { if (_lblSnapshotInfo == null) return; _lblSnapshotInfo.Text = "Aktiver Kassensturz-Snapshot – 'Payout leeren' speichert keinen neuen Bestand (Fortführen) oder mit 'Neuer Start' überschreiben."; _lblSnapshotInfo.Visible = true; }
+        private void HeaderPanel_Paint(object sender, PaintEventArgs e)
+        {
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var r = headerPanel.ClientRectangle;
+
+                using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, r);
+                }
+
+                // Gloss/Separator bewusst entfernt (kein heller Streifen im Header)
+            }
+            catch
+            {
+                using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
+                }
+            }
+        }
+
+        private void ShowSnapshotInfo() { if (_lblSnapshotInfo == null) return; _lblSnapshotInfo.Text = "Aktiver Kassensturz-Snapshot ï¿½ 'Payout leeren' speichert keinen neuen Bestand (Fortfï¿½hren) oder mit 'Neuer Start' ï¿½berschreiben."; _lblSnapshotInfo.Visible = true; }
         private void HideSnapshotInfo() { if (_lblSnapshotInfo == null) return; _lblSnapshotInfo.Visible = false; _lblSnapshotInfo.Text = string.Empty; }
 
         private void BuildPayoutPanel()
         {
             payoutPanel.Controls.Clear();
             var lblLinksTitel = new Label { Text = "Bestand vor", Location = new Point(40, 40), Size = new Size(220, 30), Font = new Font("Segoe UI", 13F, FontStyle.Bold) }; payoutPanel.Controls.Add(lblLinksTitel);
-            string[] denomText = { "5 €", "10 €", "20 €", "50 €", "100 €", "200 €", "500 €" };
+            string[] denomText = { "5 ï¿½", "10 ï¿½", "20 ï¿½", "50 ï¿½", "100 ï¿½", "200 ï¿½", "500 ï¿½" };
             lblLinksBestand = new Label[7]; lblRechtsBestand = new Label[7];
             for (int i = 0; i < denomText.Length; i++) { lblLinksBestand[i] = new Label { Text = $"{denomText[i],4}: -", Location = new Point(60, 80 + i * 32), Size = new Size(140, 28), Font = new Font("Segoe UI", 12F) }; payoutPanel.Controls.Add(lblLinksBestand[i]); }
             lblLinksSumme = new Label { Text = "Summe: -", Location = new Point(60, 80 + denomText.Length * 32), Size = new Size(200, 32), Font = new Font("Segoe UI", 13F, FontStyle.Bold) }; payoutPanel.Controls.Add(lblLinksSumme);
             var lblRechtsTitel = new Label { Text = "Aktueller Bestand:", Location = new Point(560, 40), Size = new Size(200, 30), Font = new Font("Segoe UI", 13F, FontStyle.Bold) }; payoutPanel.Controls.Add(lblRechtsTitel);
             for (int i = 0; i < denomText.Length; i++) { lblRechtsBestand[i] = new Label { Text = $"{denomText[i],4}: -", Location = new Point(580, 80 + i * 32), Size = new Size(140, 28), Font = new Font("Segoe UI", 12F) }; payoutPanel.Controls.Add(lblRechtsBestand[i]); }
             lblRechtsSumme = new Label { Text = "Summe: -", Location = new Point(580, 80 + denomText.Length * 32), Size = new Size(200, 32), Font = new Font("Segoe UI", 13F, FontStyle.Bold) }; payoutPanel.Controls.Add(lblRechtsSumme);
-            btnAlleAuszahlen = new Button { Text = "Payout leeren\r\n(alle Scheine)", Size = new Size(240, 80), Font = new Font("Segoe UI Variable", 15F, FontStyle.Bold), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat }; btnAlleAuszahlen.FlatAppearance.BorderSize = 0; btnAlleAuszahlen.Click += BtnPayoutLeeren_Click; payoutPanel.Controls.Add(btnAlleAuszahlen);
+            btnAlleAuszahlen = new Button { Text = "Payout leeren\r\n(alle Scheine)", Size = new Size(240, 80), Font = new Font("Segoe UI Variable", 15F, FontStyle.Bold), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat }; btnAlleAuszahlen.FlatAppearance.BorderSize = 0; try { ApplyModernButtonStyle(btnAlleAuszahlen, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { } btnAlleAuszahlen.Click += BtnPayoutLeeren_Click; payoutPanel.Controls.Add(btnAlleAuszahlen);
             btnInCashboxFahren = new Button { Text = "In Cashbox fahren\r\n(Payout -> Cashbox)", Size = new Size(240, 64), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.FromArgb(3, 155, 229), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             btnInCashboxFahren.FlatAppearance.BorderSize = 0;
+            try { ApplyModernButtonStyle(btnInCashboxFahren, Color.FromArgb(3, 155, 229), Color.FromArgb(0, 87, 155)); } catch { }
             btnInCashboxFahren.Click += BtnInCashboxFahren_Click;
             payoutPanel.Controls.Add(btnInCashboxFahren);
             lblDifferenz = new Label { Text = "Differenz: -", AutoSize = false, Size = new Size(400, 40), Font = new Font("Segoe UI", 15F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter }; payoutPanel.Controls.Add(lblDifferenz);
-            btnAlleEingezahlt = new Button { Text = "Alle Scheine eingezahlt", Size = new Size(240, 48), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.FromArgb(46, 125, 50), ForeColor = Color.White, FlatStyle = FlatStyle.Flat }; btnAlleEingezahlt.FlatAppearance.BorderSize = 0; btnAlleEingezahlt.Click += BtnAlleEingezahlt_Click; payoutPanel.Controls.Add(btnAlleEingezahlt);
+            btnAlleEingezahlt = new Button { Text = "Alle Scheine eingezahlt", Size = new Size(240, 48), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.FromArgb(46, 125, 50), ForeColor = Color.White, FlatStyle = FlatStyle.Flat }; btnAlleEingezahlt.FlatAppearance.BorderSize = 0; try { ApplyModernButtonStyle(btnAlleEingezahlt, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32)); } catch { } btnAlleEingezahlt.Click += BtnAlleEingezahlt_Click; payoutPanel.Controls.Add(btnAlleEingezahlt);
             payoutPanel.Resize += (s, e) => LayoutPayoutDynamic();
             LayoutPayoutDynamic();
         }
@@ -190,7 +290,7 @@ namespace TaMi_Einzahlautomat
 
             var confirm = MessageBox.Show(this,
                 "Alle Scheine im Payout in die Cashbox fahren?",
-                "Bestätigen",
+                "Bestï¿½tigen",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question,
                 MessageBoxDefaultButton.Button2);
@@ -224,14 +324,14 @@ namespace TaMi_Einzahlautomat
         private void BtnPayoutLeeren_Click(object sender, System.EventArgs e)
         {
             if (_ssp == null) return;
-            // Kassensturz aktiv: Personalguthaben darf sich nicht ändern
+            // Kassensturz aktiv: Personalguthaben darf sich nicht ï¿½ndern
             try { AppLogger.KassensturzScopeEnter(); } catch { }
 
-            // Snapshot / Startlogik unverändert
+            // Snapshot / Startlogik unverï¿½ndert
             if (_snapshotLoaded)
             {
                 var res = MessageBox.Show(this,
-                    "Es läuft noch ein aktiver Kassensturz.\nJa = fortfahren | Nein = Neuer Start | Abbrechen = Abbruch",
+                    "Es lï¿½uft noch ein aktiver Kassensturz.\nJa = fortfahren | Nein = Neuer Start | Abbrechen = Abbruch",
                     "Aktiver Kassensturz",
                     MessageBoxButtons.YesNoCancel,
                     MessageBoxIcon.Question,
@@ -256,14 +356,14 @@ namespace TaMi_Einzahlautomat
                 ShowSnapshotInfo();
             }
 
-            // WICHTIG: MessageBox jetzt VOR dem Start der Auszahlung (nicht blockierend während Events)
+            // WICHTIG: MessageBox jetzt VOR dem Start der Auszahlung (nicht blockierend wï¿½hrend Events)
             MessageBox.Show(this,
                 "Der Payout-Bereich wird geleert! Alle Scheine werden jetzt ausgezahlt.",
                 "Info",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
 
-            // Auszahlung starten (UI jetzt frei für Events/Timer)
+            // Auszahlung starten (UI jetzt frei fï¿½r Events/Timer)
             int[] payoutCounts = GetPayoutCounts();
             try
             {
@@ -274,7 +374,7 @@ namespace TaMi_Einzahlautomat
                 try { AppLogger.Log("[Kassensturz/NV200] Fehler bei PayoutByDenomination: " + ex.Message); } catch { }
             }
 
-            // Sofort ein erstes Refresh anstoßen (falls interne Werte schon 0 gesetzt wurden)
+            // Sofort ein erstes Refresh anstoï¿½en (falls interne Werte schon 0 gesetzt wurden)
             RefreshPayout();
 
             // Fallback: nach 2s erneut aktualisieren
@@ -305,7 +405,7 @@ namespace TaMi_Einzahlautomat
         private void RefreshPayout()
         {
             if (initialPayout == null) { initialPayout = GetPayoutCounts(); initialPayoutSum = BerechneSumme(initialPayout); }
-            // Während einer Auszahlung keine Level-Requests senden (würden ohnehin übersprungen)
+            // Wï¿½hrend einer Auszahlung keine Level-Requests senden (wï¿½rden ohnehin ï¿½bersprungen)
             if (_ssp != null && !_dispensingActive) { try { _ssp.Payout_angleichen(); } catch { } }
 
             int[] countsToShow = _dispensingActive && _dispenseViewCounts != null ? _dispenseViewCounts : GetPayoutCounts();
@@ -316,8 +416,8 @@ namespace TaMi_Einzahlautomat
             {
                 int vL = initialPayout != null && i < initialPayout.Length ? initialPayout[i] : -1;
                 int vR = countsToShow != null && i < countsToShow.Length ? countsToShow[i] : -1;
-                if (lblLinksBestand != null && i < lblLinksBestand.Length) lblLinksBestand[i].Text = $"{werte[i]} €: {(vL >= 0 ? vL.ToString() : "?")}";
-                if (lblRechtsBestand != null && i < lblRechtsBestand.Length) lblRechtsBestand[i].Text = $"{werte[i]} €: {(vR >= 0 ? vR.ToString() : "?")}";
+                if (lblLinksBestand != null && i < lblLinksBestand.Length) lblLinksBestand[i].Text = $"{werte[i]} â‚¬: {(vL >= 0 ? vL.ToString() : "?")}";
+                if (lblRechtsBestand != null && i < lblRechtsBestand.Length) lblRechtsBestand[i].Text = $"{werte[i]} â‚¬: {(vR >= 0 ? vR.ToString() : "?")}";
             }
             if (lblLinksSumme != null) lblLinksSumme.Text = $"Summe: {initialPayoutSum:C2}";
             if (lblRechtsSumme != null) lblRechtsSumme.Text = $"Summe: {livePayoutSum:C2}";
@@ -354,7 +454,7 @@ namespace TaMi_Einzahlautomat
         private int[] GetPayoutCounts() => new int[] { _ssp?.Payout_5_euro ?? 0, _ssp?.Payout_10_euro ?? 0, _ssp?.Payout_20_euro ?? 0, _ssp?.Payout_50_euro ?? 0, _ssp?.Payout_100_euro ?? 0, _ssp?.Payout_200_euro ?? 0, _ssp?.Payout_500_euro ?? 0 };
         private decimal BerechneSumme(int[] arr) { if (arr == null) return 0m; int[] werte = { 5, 10, 20, 50, 100, 200, 500 }; decimal sum = 0m; for (int i = 0; i < 7; i++) { int v = arr != null && i < arr.Length ? arr[i] : 0; if (v > 0) sum += v * werte[i]; } return sum; }
         private void SaveSnapshot(int[] counts) { if (counts == null || counts.Length < 7) return; try { string payload = string.Join(",", counts); string line = $"v1;{System.DateTime.UtcNow.Ticks};{payload}"; IniHelper.WriteValue(SnapshotSection, _snapshotKey, line, AppSettings.IniPath); try { AppLogger.Log("[NV200] Snapshot gespeichert: " + line); } catch { } } catch { } }
-        private void ClearSnapshot() { try { IniHelper.WriteValue(SnapshotSection, _snapshotKey, string.Empty, AppSettings.IniPath); } catch { } try { AppLogger.Log("[NV200] Snapshot gelöscht"); } catch { } }
+        private void ClearSnapshot() { try { IniHelper.WriteValue(SnapshotSection, _snapshotKey, string.Empty, AppSettings.IniPath); } catch { } try { AppLogger.Log("[NV200] Snapshot gelï¿½scht"); } catch { } }
         private void LoadSnapshotIfExists() { try { string line = IniHelper.ReadValue(SnapshotSection, _snapshotKey, AppSettings.IniPath); if (string.IsNullOrWhiteSpace(line)) return; var parts = line.Split(';'); if (parts.Length < 3) return; var csv = parts[2]; var arr = csv.Split(','); if (arr.Length < 7) return; initialPayout = new int[7]; for (int i = 0; i < 7; i++) { int v; if (!int.TryParse(arr[i], out v)) v = 0; initialPayout[i] = v; } initialPayoutSum = BerechneSumme(initialPayout); _snapshotLoaded = true; } catch { } }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -367,7 +467,7 @@ namespace TaMi_Einzahlautomat
                     livePayout = GetPayoutCounts();
                     livePayoutSum = BerechneSumme(livePayout);
                     decimal diff = initialPayoutSum - livePayoutSum; // entnommen
-                    AppLogger.Log($"[Kassensturz/NV200] Ende Payout-Bestand: {FormatCounts(livePayout)} = {livePayoutSum:0.00} € | Entnommen: {diff:0.00} €");
+                    AppLogger.Log($"[Kassensturz/NV200] Ende Payout-Bestand: {FormatCounts(livePayout)} = {livePayoutSum:0.00} ï¿½ | Entnommen: {diff:0.00} ï¿½");
                 }
             }
             catch { }

@@ -13,7 +13,7 @@ namespace TaMi_Einzahlautomat
         // Modern header
         private Panel headerPanel;
         private Button btnHeaderClose;
-        private Button btnHeaderMinimize;
+        // Minimieren-Button entfernt
         private Label lblTitle;
         private Point _mouseDownLocation;
 
@@ -21,6 +21,68 @@ namespace TaMi_Einzahlautomat
         private DataGridView grid;
         private BindingList<PaymentFieldSetting> _binding;
         private Button btnClose;
+
+        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
+        {
+            if (b == null) return;
+            try
+            {
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 0;
+                b.BackColor = Color.Transparent;
+                b.UseVisualStyleBackColor = false;
+                b.ForeColor = Color.White;
+                b.Paint -= ModernButton_Paint;
+                b.Paint += ModernButton_Paint;
+                b.Tag = new Tuple<Color, Color>(c1, c2);
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Resize -= ModernButton_Resize;
+                b.Resize += ModernButton_Resize;
+            }
+            catch { }
+        }
+
+        private void ModernButton_Resize(object sender, EventArgs e)
+        {
+            try
+            {
+                var b = sender as Button;
+                if (b == null) return;
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Invalidate();
+            }
+            catch { }
+        }
+
+        private void ModernButton_Paint(object sender, PaintEventArgs e)
+        {
+            var b = sender as Button;
+            if (b == null) return;
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = b.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+
+                var colors = b.Tag as Tuple<Color, Color>;
+                var cc1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
+                var cc2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
+
+                using (var br = new LinearGradientBrush(rect, cc1, cc2, 90f))
+                {
+                    e.Graphics.FillRectangle(br, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+
+                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+            catch { }
+        }
 
         public PaymentSettingsForm()
         {
@@ -68,25 +130,12 @@ namespace TaMi_Einzahlautomat
                 TabStop = false
             };
             btnHeaderClose.FlatAppearance.BorderSize = 0;
-            btnHeaderClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 80, 80);
+            btnHeaderClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
             btnHeaderClose.Click += (s, e) => Close();
             headerPanel.Controls.Add(btnHeaderClose);
+            try { ApplyModernButtonStyle(btnHeaderClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
 
-            btnHeaderMinimize = new Button
-            {
-                Text = "–",
-                Font = new Font("Segoe UI", 16F, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.Transparent,
-                FlatStyle = FlatStyle.Flat,
-                Size = new Size(48, 48),
-                Location = new Point(ClientSize.Width - 112, 6),
-                TabStop = false
-            };
-            btnHeaderMinimize.FlatAppearance.BorderSize = 0;
-            btnHeaderMinimize.FlatAppearance.MouseOverBackColor = Color.FromArgb(33, 150, 243, 80);
-            btnHeaderMinimize.Click += (s, e) => WindowState = FormWindowState.Minimized;
-            headerPanel.Controls.Add(btnHeaderMinimize);
+            // Minimieren-Button entfernt
 
             headerPanel.Resize += (s, e) => UpdateHeaderLayout();
             UpdateHeaderLayout();
@@ -197,15 +246,28 @@ namespace TaMi_Einzahlautomat
                 DialogResult = DialogResult.OK;
                 Close();
             };
+            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
             Controls.Add(btnClose);
         }
 
         private void HeaderPanel_Paint(object sender, PaintEventArgs e)
         {
-            using (var b = new LinearGradientBrush(headerPanel.ClientRectangle,
-                       Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+            try
             {
-                e.Graphics.FillRectangle(b, headerPanel.ClientRectangle);
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var r = headerPanel.ClientRectangle;
+                using (var b = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
+                {
+                    e.Graphics.FillRectangle(b, r);
+                }
+            }
+            catch
+            {
+                using (var b = new LinearGradientBrush(headerPanel.ClientRectangle,
+                           Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                {
+                    e.Graphics.FillRectangle(b, headerPanel.ClientRectangle);
+                }
             }
         }
 
@@ -232,12 +294,10 @@ namespace TaMi_Einzahlautomat
                 int top = 6;
                 if (btnHeaderClose != null)
                     btnHeaderClose.Location = new Point(Math.Max(0, headerPanel.ClientSize.Width - marginRight - btnHeaderClose.Width), top);
-                if (btnHeaderMinimize != null && btnHeaderClose != null)
-                    btnHeaderMinimize.Location = new Point(Math.Max(0, btnHeaderClose.Left - spacing - btnHeaderMinimize.Width), top);
-                if (lblTitle != null && btnHeaderMinimize != null)
+                if (lblTitle != null)
                 {
                     int left = lblTitle.Left;
-                    int rightLimit = btnHeaderMinimize.Left - spacing;
+                    int rightLimit = btnHeaderClose.Left - spacing;
                     int newWidth = Math.Max(120, rightLimit - left);
                     lblTitle.Size = new Size(newWidth, lblTitle.Height);
                 }

@@ -1,13 +1,78 @@
-using System;
+ï»¿using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace TaMi_Einzahlautomat
 {
-    // Von Form zu UserControl geändert!
+    // Von Form zu UserControl geï¿½ndert!
     public class CashboxCountForm : UserControl
     {
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
+
+        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
+        {
+            if (b == null) return;
+            try
+            {
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 0;
+                b.BackColor = Color.Transparent;
+                b.UseVisualStyleBackColor = false;
+                b.ForeColor = Color.White;
+                b.Paint -= ModernButton_Paint;
+                b.Paint += ModernButton_Paint;
+                b.Tag = new Tuple<Color, Color>(c1, c2);
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 12, 12)); } catch { }
+                b.Resize -= ModernButton_Resize;
+                b.Resize += ModernButton_Resize;
+            }
+            catch { }
+        }
+
+        private void ModernButton_Resize(object sender, EventArgs e)
+        {
+            try
+            {
+                var b = sender as Button;
+                if (b == null) return;
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 12, 12)); } catch { }
+                b.Invalidate();
+            }
+            catch { }
+        }
+
+        private void ModernButton_Paint(object sender, PaintEventArgs e)
+        {
+            var b = sender as Button;
+            if (b == null) return;
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = b.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+
+                var colors = b.Tag as Tuple<Color, Color>;
+                var c1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
+                var c2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
+
+                using (var br = new LinearGradientBrush(rect, c1, c2, 90f))
+                {
+                    e.Graphics.FillRectangle(br, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+            catch { }
+        }
+
         private readonly NV200_SSP _ssp;
         private Label[] _lblDenom;
         private Label[] _lblCount;
@@ -35,17 +100,17 @@ namespace TaMi_Einzahlautomat
             BackColor = Color.White;
             DoubleBuffered = true;
 
-            // Info-Layout: schmaler und deutlich höher
+            // Info-Layout: schmaler und deutlich hï¿½her
             int infoWidth = 260;          // schmaler
             int infoPad = 16;
             int infoLeftMargin = 40;      // rechter Randabstand
-            int infoHinweisHeight = 100;  // höher
-            int infoQuestionHeight = 80; // höher
+            int infoHinweisHeight = 100;  // hï¿½her
+            int infoQuestionHeight = 80; // hï¿½her
 
             // Hinweisfeld oben rechts
             lblHinweis = new Label
             {
-                Text = "Hauptsächlich ist der Wert wichtig, in der Cashbox ist die Stückelung unrelevant, sie müssen somit nicht die einzelnen Scheine zählen.",
+                Text = "HauptsÃ¤chlich ist der Wert wichtig, in der Cashbox ist die StÃ¼ckelung muss nicht unbedingt passen, sie mÃ¼ssen somit nicht die einzelnen Scheine zÃ¤hlen, sondern den Wert.",
                 Location = new Point(this.Width - (infoWidth + infoLeftMargin), 20),
                 Size = new Size(infoWidth, infoHinweisHeight),
                 Font = new Font("Segoe UI", 11F, FontStyle.Regular),
@@ -60,7 +125,7 @@ namespace TaMi_Einzahlautomat
             // Fragefeld darunter
             lblCashboxQuestion = new Label
             {
-                Text = "Richtige Cashbox? Beim Entnehmen müsste oben rechts bei Status Cashbox remove stehen.",
+                Text = "Richtige Cashbox? Beim Entnehmen mÃ¼sste oben rechts bei Status Cashbox remove stehen.",
                 Location = new Point(this.Width - (infoWidth + infoLeftMargin), 20 + infoHinweisHeight + infoPad),
                 Size = new Size(infoWidth, infoQuestionHeight),
                 Font = new Font("Segoe UI", 11F, FontStyle.Bold),
@@ -73,7 +138,7 @@ namespace TaMi_Einzahlautomat
             Controls.Add(lblCashboxQuestion);
 
             // Geldschein Reihenfolge: 5,10,20,50,100,200,500
-            string[] denomTexts = { "5 €", "10 €", "20 €", "50 €", "100 €", "200 €", "500 €" };
+            string[] denomTexts = { "5 â‚¬", "10 â‚¬", "20 â‚¬", "50 â‚¬", "100 â‚¬", "200 â‚¬", "500 â‚¬" };
             _lblDenom = new Label[7];
             _lblCount = new Label[7];
             _btnMinus = new Button[7];
@@ -105,7 +170,7 @@ namespace TaMi_Einzahlautomat
 
                 var bMinus = new Button
                 {
-                    Text = "–",
+                    Text = "âˆ’",
                     Location = new Point(x, y),
                     Size = new Size(btnWidth, 44),
                     Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold),
@@ -115,6 +180,7 @@ namespace TaMi_Einzahlautomat
                     Tag = i
                 };
                 bMinus.FlatAppearance.BorderSize = 0;
+                try { ApplyModernButtonStyle(bMinus, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
                 bMinus.Click += (s, e) => Change(i: (int)((Button)s).Tag, delta: -1);
                 Controls.Add(bMinus);
                 _btnMinus[i] = bMinus;
@@ -146,6 +212,7 @@ namespace TaMi_Einzahlautomat
                     Tag = i
                 };
                 bPlus.FlatAppearance.BorderSize = 0;
+                try { ApplyModernButtonStyle(bPlus, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
                 bPlus.Click += (s, e) => Change(i: (int)((Button)s).Tag, delta: +1);
                 Controls.Add(bPlus);
                 _btnPlus[i] = bPlus;
@@ -153,7 +220,7 @@ namespace TaMi_Einzahlautomat
 
             _lblSum = new Label
             {
-                Text = "Summe: 0,00 €",
+                Text = "Summe: 0,00 â‚¬",
                 Location = new Point(startX, 40 + 7 * RowH + 20),
                 Size = new Size(300, 44),
                 Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
@@ -172,9 +239,10 @@ namespace TaMi_Einzahlautomat
                 Anchor = AnchorStyles.Right | AnchorStyles.Top
             };
             _btnSave.FlatAppearance.BorderSize = 0;
+            try { ApplyModernButtonStyle(_btnSave, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32)); } catch { }
             _btnSave.Click += (s, e) => SaveAndClose();
             Controls.Add(_btnSave);
-            // Rechtsbündig, gleiche Zeile wie 500 €
+            // Rechtsbï¿½ndig, gleiche Zeile wie 500 ï¿½
             _btnSave.Location = new Point(this.Width - _btnSave.Width - 40, 40 + 6 * RowH);
 
             this.Resize += (s, e) => { AdjustLayout(); };
@@ -244,7 +312,7 @@ namespace TaMi_Einzahlautomat
             {
                 _ssp.SetCashboxCounts(
                     _counts[0], _counts[1], _counts[2], _counts[3], _counts[4], _counts[5], _counts[6]);
-                this.Parent?.Controls.Remove(this); // Schließt das Control
+                this.Parent?.Controls.Remove(this); // Schlieï¿½t das Control
             }
             catch (Exception ex)
             {

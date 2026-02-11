@@ -126,6 +126,68 @@ namespace TaMi_Einzahlautomat
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
 
+        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
+        {
+            if (b == null) return;
+            try
+            {
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 0;
+                b.BackColor = Color.Transparent;
+                b.UseVisualStyleBackColor = false;
+                b.ForeColor = Color.White;
+                b.Paint -= ModernButton_Paint;
+                b.Paint += ModernButton_Paint;
+                b.Tag = new Tuple<Color, Color>(c1, c2);
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Resize -= ModernButton_Resize;
+                b.Resize += ModernButton_Resize;
+            }
+            catch { }
+        }
+
+        private void ModernButton_Resize(object sender, EventArgs e)
+        {
+            try
+            {
+                var b = sender as Button;
+                if (b == null) return;
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Invalidate();
+            }
+            catch { }
+        }
+
+        private void ModernButton_Paint(object sender, PaintEventArgs e)
+        {
+            var b = sender as Button;
+            if (b == null) return;
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = b.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+
+                var colors = b.Tag as Tuple<Color, Color>;
+                var cc1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
+                var cc2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
+
+                using (var br = new LinearGradientBrush(rect, cc1, cc2, 90f))
+                {
+                    e.Graphics.FillRectangle(br, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+
+                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+            catch { }
+        }
+
         private void BuildUi()
         {
             FormBorderStyle = FormBorderStyle.None;
@@ -141,7 +203,8 @@ namespace TaMi_Einzahlautomat
             _headerPanel.Controls.Add(_lblTitle);
 
             _btnHeaderClose = new Button { Text = "\u2715", Font = new Font("Segoe UI Symbol", 16F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 56, 6), Anchor = AnchorStyles.Top | AnchorStyles.Right, TabStop = false };
-            _btnHeaderClose.FlatAppearance.BorderSize = 0; _btnHeaderClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 80, 80); _btnHeaderClose.Click += (s, e) => Close(); _headerPanel.Controls.Add(_btnHeaderClose);
+            _btnHeaderClose.FlatAppearance.BorderSize = 0; _btnHeaderClose.FlatAppearance.MouseOverBackColor = Color.Transparent; _btnHeaderClose.Click += (s, e) => Close(); _headerPanel.Controls.Add(_btnHeaderClose);
+            try { ApplyModernButtonStyle(_btnHeaderClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
 
             try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24)); } catch { }
 
@@ -181,6 +244,7 @@ namespace TaMi_Einzahlautomat
             _txtDocStore = new TextBox { Location = new Point(left + 26, y + 24), Width = 420, Font = new Font("Segoe UI", 11F), Visible = false };
             _btnDocStoreBrowse = new Button { Text = "Pfad wählen...", Location = new Point(_txtDocStore.Right + 12, y + 22), Size = new Size(140, 32), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 10.5F, FontStyle.Bold), Visible = false };
             _btnDocStoreBrowse.FlatAppearance.BorderSize = 0; _btnDocStoreBrowse.Click += (s, e) => BrowseDocStore();
+            try { ApplyModernButtonStyle(_btnDocStoreBrowse, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
             content.Controls.Add(_lblDocStore); content.Controls.Add(_txtDocStore); content.Controls.Add(_btnDocStoreBrowse);
             y += 24 + 24 + 12;
 
@@ -235,11 +299,31 @@ namespace TaMi_Einzahlautomat
             _btnSave.FlatAppearance.BorderSize = 0; _btnSave.Click += (s, e) => SaveValues();
             _btnClose = new Button { Text = "Schließen", Size = new Size(180, 48), BackColor = Color.FromArgb(158, 158, 158), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold) };
             _btnClose.FlatAppearance.BorderSize = 0; _btnClose.Click += (s, e) => Close();
+            try { ApplyModernButtonStyle(_btnSave, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
+            try { ApplyModernButtonStyle(_btnClose, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
             footer.Resize += (s, e) => { int spacing = 16; int total = _btnSave.Width + _btnClose.Width + spacing; int startX = (footer.ClientSize.Width - total) / 2; int yb = (footer.ClientSize.Height - _btnSave.Height) / 2; _btnSave.Location = new Point(Math.Max(10, startX), yb); _btnClose.Location = new Point(_btnSave.Right + spacing, yb); };
             footer.Controls.Add(_btnSave); footer.Controls.Add(_btnClose);
         }
 
-        private void HeaderPanel_Paint(object sender, PaintEventArgs e) { using (var brush = new LinearGradientBrush(_headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f)) { e.Graphics.FillRectangle(brush, _headerPanel.ClientRectangle); } }
+        private void HeaderPanel_Paint(object sender, PaintEventArgs e)
+        {
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var r = _headerPanel.ClientRectangle;
+                using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, r);
+                }
+            }
+            catch
+            {
+                using (var brush = new LinearGradientBrush(_headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, _headerPanel.ClientRectangle);
+                }
+            }
+        }
         private void HeaderPanel_MouseDown(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) _mouseDownLocation = e.Location; }
         private void HeaderPanel_MouseMove(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) { Left += e.X - _mouseDownLocation.X; Top += e.Y - _mouseDownLocation.Y; } }
 

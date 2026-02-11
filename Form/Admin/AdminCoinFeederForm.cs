@@ -46,6 +46,68 @@ namespace TaMi_Einzahlautomat
         private readonly TimeSpan _sendDebounce = TimeSpan.FromSeconds(2);
         private Point _mouseDown;
 
+        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
+        {
+            if (b == null) return;
+            try
+            {
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 0;
+                b.BackColor = Color.Transparent;
+                b.UseVisualStyleBackColor = false;
+                b.ForeColor = Color.White;
+                b.Paint -= ModernButton_Paint;
+                b.Paint += ModernButton_Paint;
+                b.Tag = new Tuple<Color, Color>(c1, c2);
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Resize -= ModernButton_Resize;
+                b.Resize += ModernButton_Resize;
+            }
+            catch { }
+        }
+
+        private void ModernButton_Resize(object sender, EventArgs e)
+        {
+            try
+            {
+                var b = sender as Button;
+                if (b == null) return;
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Invalidate();
+            }
+            catch { }
+        }
+
+        private void ModernButton_Paint(object sender, PaintEventArgs e)
+        {
+            var b = sender as Button;
+            if (b == null) return;
+            try
+            {
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                var rect = b.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+
+                var colors = b.Tag as Tuple<Color, Color>;
+                var cc1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
+                var cc2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
+
+                using (var br = new System.Drawing.Drawing2D.LinearGradientBrush(rect, cc1, cc2, 90f))
+                {
+                    e.Graphics.FillRectangle(br, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+
+                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+            catch { }
+        }
+
         public AdminCoinFeederForm(string iniPath)
         {
             _iniPath = iniPath;
@@ -123,10 +185,22 @@ namespace TaMi_Einzahlautomat
             };
             headerPanel.Paint += (s, e) =>
             {
-                using (var br = new System.Drawing.Drawing2D.LinearGradientBrush(headerPanel.ClientRectangle,
-                           Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                try
                 {
-                    e.Graphics.FillRectangle(br, headerPanel.ClientRectangle);
+                    e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                    var r = headerPanel.ClientRectangle;
+                    using (var br = new System.Drawing.Drawing2D.LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
+                    {
+                        e.Graphics.FillRectangle(br, r);
+                    }
+                }
+                catch
+                {
+                    using (var br = new System.Drawing.Drawing2D.LinearGradientBrush(headerPanel.ClientRectangle,
+                               Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                    {
+                        e.Graphics.FillRectangle(br, headerPanel.ClientRectangle);
+                    }
                 }
             };
             headerPanel.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) _mouseDown = e.Location; };
@@ -166,9 +240,10 @@ namespace TaMi_Einzahlautomat
                 TabStop = false
             };
             btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(229, 57, 53);
+            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
             btnClose.Click += (s, e) => Close();
             headerPanel.Controls.Add(btnClose);
+            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
 
             // Port-Auswahl
             var lblPort = new Label
@@ -187,6 +262,7 @@ namespace TaMi_Einzahlautomat
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Font = new Font("Segoe UI Variable", 12f)
             };
+            try { cmbPorts.FlatStyle = FlatStyle.Flat; cmbPorts.BackColor = Color.FromArgb(245, 247, 250); cmbPorts.ForeColor = Color.FromArgb(33, 37, 41); } catch { }
             cmbPorts.DropDown += (s,e)=> LoadPorts(true);
             Controls.Add(cmbPorts);
 
@@ -207,6 +283,7 @@ namespace TaMi_Einzahlautomat
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Font = new Font("Segoe UI Variable", 12f)
             };
+            try { cmbType.FlatStyle = FlatStyle.Flat; cmbType.BackColor = Color.FromArgb(245, 247, 250); cmbType.ForeColor = Color.FromArgb(33, 37, 41); } catch { }
             cmbType.Items.AddRange(new object[] { "CoinFeeder", "NFC V2" });
             cmbType.SelectedIndexChanged += (s, e) => { SaveTypeToIni(); UpdateUiState(); };
             Controls.Add(cmbType);
@@ -215,24 +292,28 @@ namespace TaMi_Einzahlautomat
             btnDetect.Size = new Size(120,36);
             btnDetect.Click += (s,e)=> StartDetectPortMode();
             Controls.Add(btnDetect);
+            try { ApplyModernButtonStyle(btnDetect, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
 
             btnApply = MakeSmallButton("Übernehmen", new Point(380, 76), Color.FromArgb(46, 125, 50));
             btnApply.Size = new Size(140, 36);
             btnApply.Click += (s, e) => ApplyPortChange();
             Controls.Add(btnApply);
+            try { ApplyModernButtonStyle(btnApply, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32)); } catch { }
 
             btnReconnect = MakeSmallButton("Reopen", new Point(530, 76), Color.FromArgb(33, 150, 243));
             btnReconnect.Size = new Size(110, 36);
             btnReconnect.Click += (s, e) => ReopenCurrentPort();
             Controls.Add(btnReconnect);
+            try { ApplyModernButtonStyle(btnReconnect, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
 
             lblStatus = new Label
             {
                 Text = "Status: -",
                 Location = new Point(660, 80),
-                Size = new Size(270, 30),
+                Size = new Size(300, 52),
                 Font = new Font("Segoe UI Variable", 11f, FontStyle.Italic),
-                ForeColor = Color.DimGray
+                ForeColor = Color.DimGray,
+                AutoSize = false
             };
             Controls.Add(lblStatus);
 
@@ -275,28 +356,24 @@ namespace TaMi_Einzahlautomat
             btnGreen = MakeActionButton("NV200/1 Grün (2005$)", new Point(bx, by), bw, bh, Color.FromArgb(46, 125, 50));
             btnGreen.Click += (s, e) => SafeSend("2005$");
             Controls.Add(btnGreen);
+            try { ApplyModernButtonStyle(btnGreen, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32)); } catch { }
 
             btnGreenA = MakeActionButton("NV200/2 Grün (2005a$)", new Point(bx, by + (bh + pad)), bw, bh, Color.FromArgb(56, 142, 60));
             btnGreenA.Click += (s, e) => SafeSend("2005a$");
             Controls.Add(btnGreenA);
+            try { ApplyModernButtonStyle(btnGreenA, Color.FromArgb(56, 142, 60), Color.FromArgb(27, 94, 32)); } catch { }
 
             btnRed = MakeActionButton("NV200/1 Rot (2004$)", new Point(bx, by + 2 * (bh + pad)), bw, bh, Color.FromArgb(211, 47, 47));
             btnRed.Click += (s, e) => SafeSend("2004$");
             Controls.Add(btnRed);
+            try { ApplyModernButtonStyle(btnRed, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
 
             btnRedA = MakeActionButton("NV200/2 Rot (2004a$)", new Point(bx, by + 3 * (bh + pad)), bw, bh, Color.FromArgb(198, 40, 40));
             btnRedA.Click += (s, e) => SafeSend("2004a$");
             Controls.Add(btnRedA);
+            try { ApplyModernButtonStyle(btnRedA, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
 
-            var lblHint = new Label
-            {
-                Text = "Hinweis: Port-Änderung speichert INI (Section [CoinFeeder]/ComPort). Terminator einheitlich: LF (\\n).",
-                Location = new Point(24, 600 - 26),
-                AutoSize = true,
-                Font = new Font("Segoe UI Variable", 9.5f),
-                ForeColor = Color.DimGray
-            };
-            Controls.Add(lblHint);
+            // Hinweislabel entfernt (LF (\n) Anzeige)
 
             FormClosed += OnFormClosed;
 
@@ -503,7 +580,7 @@ namespace TaMi_Einzahlautomat
                 btnRed.Enabled = open;
                 btnRedA.Enabled = open;
                 btnReconnect.Enabled = (cmbPorts.SelectedItem != null);
-                lblStatus.Text = $"Status: Port={_feeder?.PortName ?? "-"} | Open={(open ? "Ja" : "Nein")}";
+                lblStatus.Text = $"Port: {_feeder?.PortName ?? "-"}{Environment.NewLine}Open: {(open ? "Ja" : "Nein")}";
                 lblStatus.ForeColor = open ? Color.FromArgb(0, 128, 0) : Color.FromArgb(183, 28, 28);
 
                 // Im NFC-Modus keine LED-Steuerung

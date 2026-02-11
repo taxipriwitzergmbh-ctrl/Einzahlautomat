@@ -222,7 +222,7 @@
     <Compile Include="Form\Admin\MailSettingsForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form\PaymentSettingsForm.cs">
+    <Compile Include="Form\Admin\PaymentSettingsForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Form\Admin\PersonalVerwaltungForm.cs">

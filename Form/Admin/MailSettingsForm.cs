@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Net;
 using System.Net.Mail;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,6 +16,75 @@ namespace TaMi_Einzahlautomat
 {
     public class MailSettingsForm : Form
     {
+        private Panel _headerPanel;
+        private Label _lblTitle;
+        private Button _btnHeaderClose;
+        private Point _mouseDownLocation;
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
+
+        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
+        {
+            if (b == null) return;
+            try
+            {
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 0;
+                b.BackColor = Color.Transparent;
+                b.UseVisualStyleBackColor = false;
+                b.ForeColor = Color.White;
+                b.Paint -= ModernButton_Paint;
+                b.Paint += ModernButton_Paint;
+                b.Tag = new Tuple<Color, Color>(c1, c2);
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Resize -= ModernButton_Resize;
+                b.Resize += ModernButton_Resize;
+            }
+            catch { }
+        }
+
+        private void ModernButton_Resize(object sender, EventArgs e)
+        {
+            try
+            {
+                var b = sender as Button;
+                if (b == null) return;
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Invalidate();
+            }
+            catch { }
+        }
+
+        private void ModernButton_Paint(object sender, PaintEventArgs e)
+        {
+            var b = sender as Button;
+            if (b == null) return;
+            try
+            {
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                var rect = b.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+
+                var colors = b.Tag as Tuple<Color, Color>;
+                var cc1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
+                var cc2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
+
+                using (var br = new System.Drawing.Drawing2D.LinearGradientBrush(rect, cc1, cc2, 90f))
+                {
+                    e.Graphics.FillRectangle(br, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+
+                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+            catch { }
+        }
         private ComboBox cboAccount;          // Dienstkonto für Fehler/Support
         private ComboBox cboAccount2;         // Dienstkonto für Dokumente/Quittungen/Zeiterfassung
         private TextBox txtFromName1;         // Absendername Dienstkonto 1
@@ -56,15 +126,49 @@ namespace TaMi_Einzahlautomat
 
         public MailSettingsForm()
         {
-            FormBorderStyle = FormBorderStyle.FixedDialog;
+            FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(560, 320);
-            Text = "Maileinstellungen";
+            ClientSize = new Size(640, 380);
+            BackColor = Color.White;
+            DoubleBuffered = true;
 
-            int xLabel = 20, xField = 230, wField = 300; int y = 20, h = 24, gap = 10;
+            _headerPanel = new Panel { Location = new Point(0, 0), Size = new Size(ClientSize.Width, 60), Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+            _headerPanel.Paint += (s, e) =>
+            {
+                try
+                {
+                    e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                    var r = _headerPanel.ClientRectangle;
+                    using (var b = new System.Drawing.Drawing2D.LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
+                        e.Graphics.FillRectangle(b, r);
+                }
+                catch
+                {
+                    using (var b = new System.Drawing.Drawing2D.LinearGradientBrush(_headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                        e.Graphics.FillRectangle(b, _headerPanel.ClientRectangle);
+                }
+            };
+            _headerPanel.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) _mouseDownLocation = e.Location; };
+            _headerPanel.MouseMove += (s, e) => { if (e.Button == MouseButtons.Left) { Left += e.X - _mouseDownLocation.X; Top += e.Y - _mouseDownLocation.Y; } };
+            Controls.Add(_headerPanel);
+
+            _lblTitle = new Label { Text = "Maileinstellungen", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(24, 0), Size = new Size(420, 60), BackColor = Color.Transparent };
+            _headerPanel.Controls.Add(_lblTitle);
+
+            _btnHeaderClose = new Button { Text = "\u2715", Font = new Font("Segoe UI Symbol", 18F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 56, 6), Anchor = AnchorStyles.Top | AnchorStyles.Right, TabStop = false };
+            _btnHeaderClose.FlatAppearance.BorderSize = 0;
+            _btnHeaderClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
+            _btnHeaderClose.Click += (s, e) => Close();
+            _headerPanel.Controls.Add(_btnHeaderClose);
+            try { ApplyModernButtonStyle(_btnHeaderClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
+
+            try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24)); } catch { }
+
+            int xLabel = 24, xField = 260, wField = 340; int y = 80, h = 24, gap = 10;
 
             var lblAccount = new Label { Text = "Dienstkonto (Fehler/Support)", Location = new Point(xLabel, y), Size = new Size(200, h) };
             cboAccount = new ComboBox { Location = new Point(xField, y), Size = new Size(wField, h), DropDownStyle = ComboBoxStyle.DropDownList };
+            try { cboAccount.FlatStyle = FlatStyle.Flat; cboAccount.BackColor = Color.FromArgb(245, 247, 250); cboAccount.ForeColor = Color.FromArgb(33, 37, 41); } catch { }
             y += h + gap;
 
             var lblFromName1 = new Label { Text = "Absendername (Fehler/Support)", Location = new Point(xLabel, y), Size = new Size(200, h) };
@@ -73,6 +177,7 @@ namespace TaMi_Einzahlautomat
 
             var lblAccount2 = new Label { Text = "Dienstkonto (Dok./Quitt./Zeit)", Location = new Point(xLabel, y), Size = new Size(200, h) };
             cboAccount2 = new ComboBox { Location = new Point(xField, y), Size = new Size(wField, h), DropDownStyle = ComboBoxStyle.DropDownList };
+            try { cboAccount2.FlatStyle = FlatStyle.Flat; cboAccount2.BackColor = Color.FromArgb(245, 247, 250); cboAccount2.ForeColor = Color.FromArgb(33, 37, 41); } catch { }
             y += h + gap;
 
             var lblFromName2 = new Label { Text = "Absendername (Dok./Quitt./Zeit)", Location = new Point(xLabel, y), Size = new Size(200, h) };
@@ -89,6 +194,10 @@ namespace TaMi_Einzahlautomat
             btnTest = new Button { Text = "Verbindung prüfen", Location = new Point(xLabel, y), Size = new Size(180, 30) };
             btnSave = new Button { Text = "Speichern", Location = new Point(xField, y), Size = new Size(120, 30) };
             btnCancel = new Button { Text = "Abbrechen", Location = new Point(xField + 130, y), Size = new Size(120, 30) };
+
+            try { ApplyModernButtonStyle(btnTest, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
+            try { ApplyModernButtonStyle(btnSave, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
+            try { ApplyModernButtonStyle(btnCancel, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
 
             btnTest.Click += async (s, e) => await TestConnectionAsync();
             btnSave.Click += (s, e) => SaveSettings();

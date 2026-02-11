@@ -13,7 +13,7 @@ namespace TaMi_Einzahlautomat
     {
         private Panel headerPanel;
         private Button btnClose;
-        private Button btnMinimize;
+        // Minimieren-Button entfernt
         private Label lblTitle;
         private Point _mouseDownLocation;
         private TextBox txtPid; private Label lblName; private Label lblVorname; private TextBox txtNfc; private TextBox txtFahrercode; private Button btnSave; private Panel numPadPanel; private Button btnClearNfc; private Button btnShowHideCode; private Button btnClearCode; private Button btnNfcUebernehmen; private int _currentPid = 0; private TextBox _lastFocusedTextBox; private Label lblStatus; private Label lblEintritt; private Label lblAustritt; private PersonalInfo _loadedPersonal;
@@ -21,6 +21,68 @@ namespace TaMi_Einzahlautomat
 
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
+
+        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
+        {
+            if (b == null) return;
+            try
+            {
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 0;
+                b.BackColor = Color.Transparent;
+                b.UseVisualStyleBackColor = false;
+                b.ForeColor = Color.White;
+                b.Paint -= ModernButton_Paint;
+                b.Paint += ModernButton_Paint;
+                b.Tag = new Tuple<Color, Color>(c1, c2);
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Resize -= ModernButton_Resize;
+                b.Resize += ModernButton_Resize;
+            }
+            catch { }
+        }
+
+        private void ModernButton_Resize(object sender, EventArgs e)
+        {
+            try
+            {
+                var b = sender as Button;
+                if (b == null) return;
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Invalidate();
+            }
+            catch { }
+        }
+
+        private void ModernButton_Paint(object sender, PaintEventArgs e)
+        {
+            var b = sender as Button;
+            if (b == null) return;
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = b.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+
+                var colors = b.Tag as Tuple<Color, Color>;
+                var cc1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
+                var cc2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
+
+                using (var br = new LinearGradientBrush(rect, cc1, cc2, 90f))
+                {
+                    e.Graphics.FillRectangle(br, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+
+                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+            catch { }
+        }
 
         public PersonalVerwaltungForm() { InitUi(); }
 
@@ -73,25 +135,13 @@ namespace TaMi_Einzahlautomat
                 TabStop = false
             };
             btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 80, 80);
+            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
             btnClose.Click += (s, e) => Close();
             headerPanel.Controls.Add(btnClose);
 
-            btnMinimize = new Button
-            {
-                Text = "–",
-                Font = new Font("Segoe UI", 16F, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.Transparent,
-                FlatStyle = FlatStyle.Flat,
-                Size = new Size(48, 48),
-                Location = new Point(ClientSize.Width - 112, 6),
-                TabStop = false
-            };
-            btnMinimize.FlatAppearance.BorderSize = 0;
-            btnMinimize.FlatAppearance.MouseOverBackColor = Color.FromArgb(33, 150, 243, 80);
-            btnMinimize.Click += (s, e) => WindowState = FormWindowState.Minimized;
-            headerPanel.Controls.Add(btnMinimize);
+            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
+
+            // Minimieren-Button entfernt
 
             // Abgerundete Ecken
             try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24)); } catch { }
@@ -106,6 +156,7 @@ namespace TaMi_Einzahlautomat
             btnLoad.FlatAppearance.BorderSize = 0;
             btnLoad.Click += async (s, e) => await LoadPersonalAsync();
             Controls.Add(btnLoad);
+            try { ApplyModernButtonStyle(btnLoad, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
 
             y += 90;
             lblName = new Label { Text = "Name:", Location = new Point(24, y), Size = new Size(560, 30), Font = new Font("Segoe UI Variable", 12F) };
@@ -129,10 +180,12 @@ namespace TaMi_Einzahlautomat
             btnClearNfc.FlatAppearance.BorderSize = 0;
             btnClearNfc.Click += (s, e) => txtNfc.Text = string.Empty;
             Controls.Add(btnClearNfc);
+            try { ApplyModernButtonStyle(btnClearNfc, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
             btnNfcUebernehmen = new Button { Text = "NFC übernehmen", Location = new Point(444, y + 28), Size = new Size(140, 36), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 10F, FontStyle.Bold) };
             btnNfcUebernehmen.FlatAppearance.BorderSize = 0;
             btnNfcUebernehmen.Click += (s, e) => TryTakeLastNfc();
             Controls.Add(btnNfcUebernehmen);
+            try { ApplyModernButtonStyle(btnNfcUebernehmen, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
 
             y += 80;
             var lblFcode = new Label { Text = "Fahrercode:", Location = new Point(24, y), AutoSize = true, Font = new Font("Segoe UI Variable", 12F) };
@@ -148,12 +201,14 @@ namespace TaMi_Einzahlautomat
             btnClearCode.FlatAppearance.BorderSize = 0;
             btnClearCode.Click += (s, e) => txtFahrercode.Text = string.Empty;
             Controls.Add(btnClearCode);
+            try { ApplyModernButtonStyle(btnClearCode, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
 
             y += 90;
             btnSave = new Button { Text = "Speichern", Location = new Point(24, y), Size = new Size(180, 48), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 14F, FontStyle.Bold) };
             btnSave.FlatAppearance.BorderSize = 0;
             btnSave.Click += async (s, e) => await SaveAsync();
             Controls.Add(btnSave);
+            try { ApplyModernButtonStyle(btnSave, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
 
             int keypadBtnH = 50; int keypadPad = 8; int keypadRows = 4; int keypadHeight = keypadRows * (keypadBtnH + keypadPad) - keypadPad;
             numPadPanel = new Panel { Location = new Point(24, y + 70), Size = new Size(560, keypadHeight + 4), AutoScroll = false, Anchor = AnchorStyles.Left | AnchorStyles.Bottom | AnchorStyles.Right };
@@ -176,10 +231,22 @@ namespace TaMi_Einzahlautomat
 
         private void HeaderPanel_Paint(object sender, PaintEventArgs e)
         {
-            using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle,
-                Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+            try
             {
-                e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var r = headerPanel.ClientRectangle;
+                using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, r);
+                }
+            }
+            catch
+            {
+                using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle,
+                    Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
+                }
             }
         }
         private void HeaderPanel_MouseDown(object sender, MouseEventArgs e)
@@ -216,6 +283,15 @@ namespace TaMi_Einzahlautomat
                 b.FlatAppearance.BorderSize = 0;
                 b.Click += (s, e) => OnNumPad((string)((Button)s).Tag);
                 numPadPanel.Controls.Add(b);
+
+                try
+                {
+                    var key = keys[i];
+                    if (key == "OK") ApplyModernButtonStyle(b, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32));
+                    else if (key == "<") ApplyModernButtonStyle(b, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79));
+                    else ApplyModernButtonStyle(b, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
+                }
+                catch { }
             }
         }
 

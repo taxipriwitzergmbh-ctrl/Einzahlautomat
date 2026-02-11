@@ -2915,22 +2915,7 @@ namespace TaMi_Einzahlautomat
                     e.Graphics.FillRectangle(brush, r);
                 }
 
-                // subtle highlight band
-                try
-                {
-                    var top = new Rectangle(r.Left, r.Top, r.Width, Math.Max(1, r.Height / 2));
-                    using (var gloss = new LinearGradientBrush(top, Color.FromArgb(70, 255, 255, 255), Color.FromArgb(0, 255, 255, 255), 90f))
-                    {
-                        e.Graphics.FillRectangle(gloss, top);
-                    }
-                }
-                catch { }
-
-                // bottom separator
-                using (var pen = new Pen(Color.FromArgb(120, 255, 255, 255), 1f))
-                {
-                    e.Graphics.DrawLine(pen, r.Left, r.Bottom - 1, r.Right, r.Bottom - 1);
-                }
+                // Gloss/Separator bewusst entfernt (kein heller Streifen im Header)
             }
             catch
             {

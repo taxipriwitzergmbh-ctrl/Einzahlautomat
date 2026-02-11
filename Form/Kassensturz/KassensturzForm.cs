@@ -1,13 +1,82 @@
-using System;
+ï»¿using System;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Threading.Tasks;
 using TaMi_Einzahlautomat.Coins;
+using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
 
 namespace TaMi_Einzahlautomat
 {
     public class KassensturzForm : Form
     {
+        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
+        {
+            if (b == null) return;
+            try
+            {
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 0;
+                b.BackColor = Color.Transparent;
+                b.UseVisualStyleBackColor = false;
+                b.ForeColor = Color.White;
+                b.Paint -= ModernButton_Paint;
+                b.Paint += ModernButton_Paint;
+                b.Tag = new Tuple<Color, Color>(c1, c2);
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Resize -= ModernButton_Resize;
+                b.Resize += ModernButton_Resize;
+            }
+            catch { }
+        }
+
+        private void ModernButton_Resize(object sender, EventArgs e)
+        {
+            try
+            {
+                var b = sender as Button;
+                if (b == null) return;
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Invalidate();
+            }
+            catch { }
+        }
+
+        private void ModernButton_Paint(object sender, PaintEventArgs e)
+        {
+            var b = sender as Button;
+            if (b == null) return;
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = b.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+
+                var colors = b.Tag as Tuple<Color, Color>;
+                var c1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
+                var c2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
+
+                using (var br = new LinearGradientBrush(rect, c1, c2, 90f))
+                {
+                    e.Graphics.FillRectangle(br, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+            catch { }
+        }
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
+
+        private Timer _tmrTotals;
+        private bool _totalsBusy;
+
         private Label lblKassendifferenz;
         private Label lblHinweis;
         private Button btnNV200_1;
@@ -24,17 +93,60 @@ namespace TaMi_Einzahlautomat
         {
             InitializeLayout();
             LoadKassendifferenzAsync();
+
+            try
+            {
+                _tmrTotals = new Timer();
+                _tmrTotals.Interval = 5000;
+                _tmrTotals.Tick += async (s, e) => await RefreshTotalsAsync();
+                _tmrTotals.Start();
+            }
+            catch { }
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            try { _ = RefreshTotalsAsync(); } catch { }
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            try
+            {
+                if (_tmrTotals != null)
+                {
+                    _tmrTotals.Stop();
+                    _tmrTotals.Dispose();
+                    _tmrTotals = null;
+                }
+            }
+            catch { }
+            base.OnFormClosed(e);
+        }
+
+        private async Task RefreshTotalsAsync()
+        {
+            if (_totalsBusy) return;
+            _totalsBusy = true;
+            try
+            {
+                var diff = await GetKassendifferenzAsync(true);
+                try { SetDiff(diff); } catch { }
+            }
+            catch { }
+            finally { _totalsBusy = false; }
         }
 
         private void InitializeLayout()
         {
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(500, 640); // Fenster noch größer
+            ClientSize = new Size(500, 640); // Fenster noch grï¿½ï¿½er
             BackColor = Color.White;
             DoubleBuffered = true;
 
-            // Prüfen, ob NV200/2 global deaktiviert ist (Flag oder INI)
+            // Prï¿½fen, ob NV200/2 global deaktiviert ist (Flag oder INI)
             bool nv2Disabled = false;
             try
             {
@@ -48,14 +160,14 @@ namespace TaMi_Einzahlautomat
             }
             catch { }
 
-            // Header (wie in den anderen Fenstern ganz oben und zuerst hinzugefügt)
+            // Header (wie in den anderen Fenstern ganz oben und zuerst hinzugefï¿½gt)
             headerPanel = new Panel
             {
                 Location = new Point(0, 0),
                 Size = new Size(ClientSize.Width, 60),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             };
-            headerPanel.BackColor = Color.FromArgb(33, 150, 243);
+            headerPanel.Paint += HeaderPanel_Paint;
             headerPanel.MouseDown += HeaderPanel_MouseDown;
             headerPanel.MouseMove += HeaderPanel_MouseMove;
             Controls.Add(headerPanel);
@@ -86,9 +198,11 @@ namespace TaMi_Einzahlautomat
                 TabStop = false
             };
             btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 80, 80);
+            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
             btnClose.Click += (s, e) => Close();
             headerPanel.Controls.Add(btnClose);
+
+            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
 
             // Kassendifferenz und Hinweisfeld unterhalb des Headers
             lblKassendifferenz = new Label
@@ -104,7 +218,7 @@ namespace TaMi_Einzahlautomat
 
             lblHinweis = new Label
             {
-                Text = "Beim Kassensturz werden die einzelnen Komponenten entleert, wieder befüllt und gezählt. So kann der tatsächliche Bestand exakt ermittelt werden. Durch Drücken der Buttons werden die jeweiligen Geräte entleert, neu befüllt und gezählt.",
+                Text = "Beim Kassensturz werden die einzelnen Komponenten entleert, wieder befÃ¼llt und gezÃ¤hlt. So kann der tatsÃ¤chliche Bestand exakt ermittelt werden.",
                 Font = new Font("Segoe UI", 11F, FontStyle.Regular),
                 ForeColor = Color.DimGray,
                 Location = new Point(20, 108),
@@ -132,6 +246,7 @@ namespace TaMi_Einzahlautomat
                 FlatStyle = FlatStyle.Flat
             };
             btnNV200_1.FlatAppearance.BorderSize = 0;
+            ApplyModernButtonStyle(btnNV200_1, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
             btnNV200_1.Click += BtnNV200_1_Click;
             Controls.Add(btnNV200_1);
 
@@ -146,10 +261,11 @@ namespace TaMi_Einzahlautomat
                 FlatStyle = FlatStyle.Flat
             };
             btnNV200_2.FlatAppearance.BorderSize = 0;
+            ApplyModernButtonStyle(btnNV200_2, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
             btnNV200_2.Click += BtnNV200_2_Click;
             Controls.Add(btnNV200_2);
 
-            // SmartCoin Buttons standardmäßig anlegen
+            // SmartCoin Buttons standardmï¿½ï¿½ig anlegen
             btnSmartcoin1 = new Button
             {
                 Text = "Smartcoin 1",
@@ -161,6 +277,7 @@ namespace TaMi_Einzahlautomat
                 FlatStyle = FlatStyle.Flat
             };
             btnSmartcoin1.FlatAppearance.BorderSize = 0;
+            ApplyModernButtonStyle(btnSmartcoin1, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
             btnSmartcoin1.Click += BtnSmartcoin1_Click;
             Controls.Add(btnSmartcoin1);
 
@@ -175,6 +292,7 @@ namespace TaMi_Einzahlautomat
                 FlatStyle = FlatStyle.Flat
             };
             btnSmartcoin2.FlatAppearance.BorderSize = 0;
+            ApplyModernButtonStyle(btnSmartcoin2, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
             btnSmartcoin2.Click += BtnSmartcoin2_Click;
             Controls.Add(btnSmartcoin2);
 
@@ -190,7 +308,7 @@ namespace TaMi_Einzahlautomat
 
                     btnRm5 = new Button
                     {
-                        Text = "Münzen RM5",
+                        Text = "MÃ¼nzen RM5",
                         Size = new Size(btnWidth, btnHeight),
                         Location = new Point(startX, startY + 2 * (btnHeight + spacing)), // Position von Smartcoin 1
                         Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
@@ -199,6 +317,7 @@ namespace TaMi_Einzahlautomat
                         FlatStyle = FlatStyle.Flat
                     };
                     btnRm5.FlatAppearance.BorderSize = 0;
+                    ApplyModernButtonStyle(btnRm5, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
                     btnRm5.Click += BtnRm5_Click;
                     Controls.Add(btnRm5);
                 }
@@ -231,11 +350,35 @@ namespace TaMi_Einzahlautomat
             };
         }
 
+        private void HeaderPanel_Paint(object sender, PaintEventArgs e)
+        {
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var r = headerPanel.ClientRectangle;
+
+                using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, r);
+                }
+
+                // Gloss/Separator bewusst entfernt (kein heller Streifen im Header)
+            }
+            catch
+            {
+                using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle,
+                    Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
+                }
+            }
+        }
+
         private bool IsRm5Active()
         {
             try
             {
-                // Erst aktives Gerät prüfen
+                // Erst aktives Gerï¿½t prï¿½fen
                 if (CoinManager.Instance != null && CoinManager.Instance is Rm5CctalkValidator) return true;
                 // INI lesen
                 string t = IniHelper.ReadValue("SmartCoin", "Typ", AppSettings.IniPath);
@@ -253,7 +396,7 @@ namespace TaMi_Einzahlautomat
                 var rm5 = CoinManager.Instance as Rm5CctalkValidator;
                 if (rm5 == null)
                 {
-                    MessageBox.Show(this, "RM5 nicht verfügbar.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(this, "RM5 nicht verfÃ¼gbar.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
                 if (!rm5.Connected) { try { rm5.Connect(); } catch { } }
@@ -293,7 +436,7 @@ namespace TaMi_Einzahlautomat
             lblKassendifferenz.ForeColor = diff == 0m ? Color.FromArgb(46, 125, 50) : Color.OrangeRed;
         }
 
-        // NEU: Hilfsroutine – versucht bis zu 'tries' mal frische Level zu holen
+        // NEU: Hilfsroutine ï¿½ versucht bis zu 'tries' mal frische Level zu holen
         private async Task<int[]> TryGetFreshLevelsAsync(SmartCoinV1 sc, int tries = 4, int delayMs = 180)
         {
             if (sc == null) return null;
@@ -311,7 +454,7 @@ namespace TaMi_Einzahlautomat
                     if (anyKnown) return last;
                 }
             }
-            return null; // keine verlässlichen frischen Daten
+            return null; // keine verlï¿½sslichen frischen Daten
         }
 
         private decimal SumCoinsEuro(int[] lv)
@@ -325,12 +468,21 @@ namespace TaMi_Einzahlautomat
 
         private async Task<decimal> GetKassendifferenzAsync()
         {
-            var sn = KassenSummary.Difference; if (sn.HasValue) return sn.Value;
+            return await GetKassendifferenzAsync(false);
+        }
+
+        private async Task<decimal> GetKassendifferenzAsync(bool forceFresh)
+        {
+            if (!forceFresh)
+            {
+                var sn = KassenSummary.Difference;
+                if (sn.HasValue) return sn.Value;
+            }
 
             decimal sumAutomat = 0m; decimal sumKassen = 0m;
             string autoName = AppSettings.AutomatenName; if (string.IsNullOrWhiteSpace(autoName)) autoName = AppSettings.LoadAutomatenNameFromIni() ?? "";
 
-            // DB Kassenbestände laden (inkl. Personalguthaben – kein Filter mehr)
+            // DB Kassenbestï¿½nde laden (inkl. Personalguthaben ï¿½ kein Filter mehr)
             using (var db = new DatabaseHelper())
             {
                 var dt = await db.GetLatestKassenbestaendeAsync(autoName);
@@ -376,7 +528,7 @@ namespace TaMi_Einzahlautomat
                 catch { }
             }
 
-            // Münzen addieren (wenn irgendein Level bekannt ist)
+            // Mï¿½nzen addieren (wenn irgendein Level bekannt ist)
             if (lv1 != null) sumAutomat += SumCoinsEuro(lv1);
             if (lv2 != null) sumAutomat += SumCoinsEuro(lv2);
 
@@ -433,7 +585,7 @@ namespace TaMi_Einzahlautomat
                 var smartCoin = CoinManager.Instance as SmartCoinV1;
                 if (smartCoin == null)
                 {
-                    MessageBox.Show(this, "SmartCoin 1 nicht verfügbar oder falscher Gerätetyp.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(this, "SmartCoin 1 nicht verfÃ¼gbar oder falscher Gerï¿½tetyp.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
                 try { if (!smartCoin.Connected) smartCoin.Connect(); } catch { }
@@ -447,7 +599,7 @@ namespace TaMi_Einzahlautomat
             catch (Exception ex)
             {
                 try { AppLogger.Log("[Kassensturz] SmartCoin1 Fehler: " + ex.Message); } catch { }
-                MessageBox.Show(this, "Fehler beim Öffnen SmartCoin1: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, "Fehler beim Ã¶ffnen SmartCoin1: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -460,7 +612,7 @@ namespace TaMi_Einzahlautomat
                 var smartCoin2 = Coin2Manager.Instance as SmartCoinV1;
                 if (smartCoin2 == null)
                 {
-                    MessageBox.Show(this, "SmartCoin 2 nicht verfügbar oder falscher Gerätetyp.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(this, "SmartCoin 2 nicht verfÃ¼gbar oder falscher Gerï¿½tetyp.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
                 try { if (!smartCoin2.Connected) smartCoin2.Connect(); } catch { }
@@ -474,7 +626,7 @@ namespace TaMi_Einzahlautomat
             catch (Exception ex)
             {
                 try { AppLogger.Log("[Kassensturz] SmartCoin2 Fehler: " + ex.Message); } catch { }
-                MessageBox.Show(this, "Fehler beim Öffnen SmartCoin2: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, "Fehler beim Ã¶ffnen SmartCoin2: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -483,13 +635,13 @@ namespace TaMi_Einzahlautomat
             try
             {
                 var nv200 = Program.NV200Instance;
-                if (nv200 == null) { MessageBox.Show(this, "Kein NV200-Gerät verbunden.", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
+                if (nv200 == null) { MessageBox.Show(this, "Kein NV200-GerÃ¤t verbunden.", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
                 using (var dlg = new KassensturzNV200(nv200)) { dlg.ShowDialog(this); }
             }
             catch (Exception ex)
             {
                 try { AppLogger.Log("[Kassensturz] NV200/1 Fehler: " + ex.Message); } catch { }
-                MessageBox.Show(this, "Fehler beim Öffnen NV200/1: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, "Fehler beim ï¿½ffnen NV200/1: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -498,13 +650,13 @@ namespace TaMi_Einzahlautomat
             try
             {
                 var nv200 = Program.NV2002Instance;
-                if (nv200 == null) { MessageBox.Show(this, "Kein NV200/2-Gerät verbunden.", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
+                if (nv200 == null) { MessageBox.Show(this, "Kein NV200/2-GerÃ¤t verbunden.", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
                 using (var dlg = new KassensturzNV200(nv200)) { dlg.ShowDialog(this); }
             }
             catch (Exception ex)
             {
                 try { AppLogger.Log("[Kassensturz] NV200/2 Fehler: " + ex.Message); } catch { }
-                MessageBox.Show(this, "Fehler beim Öffnen NV200/2: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, "Fehler beim Ã¶ffnen NV200/2: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

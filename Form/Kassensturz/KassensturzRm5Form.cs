@@ -3,12 +3,78 @@ using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
 using TaMi_Einzahlautomat.Coins;
+using System.Drawing.Drawing2D;
 
 namespace TaMi_Einzahlautomat
 {
     public class KassensturzRm5Form : Form
     {
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
+
+        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
+        {
+            if (b == null) return;
+            try
+            {
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 0;
+                b.BackColor = Color.Transparent;
+                b.UseVisualStyleBackColor = false;
+                b.ForeColor = Color.White;
+                b.Paint -= ModernButton_Paint;
+                b.Paint += ModernButton_Paint;
+                b.Tag = new Tuple<Color, Color>(c1, c2);
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Resize -= ModernButton_Resize;
+                b.Resize += ModernButton_Resize;
+            }
+            catch { }
+        }
+
+        private void ModernButton_Resize(object sender, EventArgs e)
+        {
+            try
+            {
+                var b = sender as Button;
+                if (b == null) return;
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Invalidate();
+            }
+            catch { }
+        }
+
+        private void ModernButton_Paint(object sender, PaintEventArgs e)
+        {
+            var b = sender as Button;
+            if (b == null) return;
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = b.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+
+                var colors = b.Tag as Tuple<Color, Color>;
+                var c1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
+                var c2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
+
+                using (var br = new LinearGradientBrush(rect, c1, c2, 90f))
+                {
+                    e.Graphics.FillRectangle(br, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+            catch { }
+        }
+
         private readonly Rm5CctalkValidator _rm5;
         private int[] _preDialogLevels; // Original Levels beim Öffnen
         private Panel headerPanel;
@@ -378,7 +444,8 @@ namespace TaMi_Einzahlautomat
             BackColor = Color.White;
             DoubleBuffered = true;
 
-            headerPanel = new Panel { Location = new Point(0,0), Size = new Size(ClientSize.Width,60), Anchor = AnchorStyles.Top|AnchorStyles.Left|AnchorStyles.Right, BackColor = Color.FromArgb(33,150,243) };
+            headerPanel = new Panel { Location = new Point(0,0), Size = new Size(ClientSize.Width,60), Anchor = AnchorStyles.Top|AnchorStyles.Left|AnchorStyles.Right };
+            headerPanel.Paint += HeaderPanel_Paint;
             headerPanel.MouseDown += (s,e)=> { if (e.Button==MouseButtons.Left) _mouseDownLocation = e.Location; };
             headerPanel.MouseMove += (s,e)=> { if (e.Button==MouseButtons.Left) { Left += e.X - _mouseDownLocation.X; Top += e.Y - _mouseDownLocation.Y; } };
             Controls.Add(headerPanel);
@@ -386,8 +453,28 @@ namespace TaMi_Einzahlautomat
             lblTitle = new Label { Text = "Kassensturz RM5", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable",18F,FontStyle.Bold), ForeColor = Color.White, Location = new Point(24,0), Size = new Size(400,60), BackColor = Color.Transparent };
             headerPanel.Controls.Add(lblTitle);
 
-            btnClose = new Button { Text = "\u2715", Font = new Font("Segoe UI Symbol",18F,FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48,48), Location = new Point(ClientSize.Width - 56, 6), TabStop = false };
-            btnClose.FlatAppearance.BorderSize = 0; btnClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(255,80,80); btnClose.Click += (s,e)=> Close(); headerPanel.Controls.Add(btnClose);
+            btnClose = new Button { Text = "\u2715", Font = new Font("Segoe UI Symbol",18F,FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48,48), Location = new Point(ClientSize.Width - 56, 6), TabStop = false, Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            btnClose.FlatAppearance.BorderSize = 0;
+            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
+            btnClose.Click += (s,e)=> Close();
+            headerPanel.Controls.Add(btnClose);
+            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
+
+            try
+            {
+                headerPanel.Resize += (s, e) =>
+                {
+                    try
+                    {
+                        if (btnClose != null)
+                            btnClose.Location = new Point(headerPanel.ClientSize.Width - btnClose.Width - 12, (headerPanel.Height - btnClose.Height) / 2);
+                        if (lblTitle != null)
+                            lblTitle.Width = Math.Max(120, (btnClose != null ? btnClose.Left : headerPanel.ClientSize.Width) - lblTitle.Left - 8);
+                    }
+                    catch { }
+                };
+            }
+            catch { }
 
             _lblSnapshotInfo = new Label { Text = string.Empty, Location = new Point(40,60), Size = new Size(720,20), ForeColor = Color.DarkOrange, Font = new Font("Segoe UI",9.5f,FontStyle.Bold), Visible = false }; Controls.Add(_lblSnapshotInfo);
 
@@ -400,7 +487,10 @@ namespace TaMi_Einzahlautomat
             lblAktSumme = new Label { Text = "Summe: -", Location = new Point(580,390), Size = new Size(180,32), Font = new Font("Segoe UI",13F,FontStyle.Bold) }; Controls.Add(lblAktSumme);
 
             btnEntleeren = new Button { Text = "Münzen entleeren", Location = new Point(300,180), Size = new Size(200,60), Font = new Font("Segoe UI Variable",15F,FontStyle.Bold), BackColor = Color.FromArgb(33,150,243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            btnEntleeren.FlatAppearance.BorderSize = 0; btnEntleeren.Click += BtnEntleeren_Click; Controls.Add(btnEntleeren);
+            btnEntleeren.FlatAppearance.BorderSize = 0;
+            try { ApplyModernButtonStyle(btnEntleeren, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
+            btnEntleeren.Click += BtnEntleeren_Click;
+            Controls.Add(btnEntleeren);
 
             // NEU: Einzel-Entleerung je M�nzsorte (10c..2�)
             var lblEinzeln = new Label { Text = "Einzeln entleeren:", Location = new Point(300,260), Size = new Size(200,24), Font = new Font("Segoe UI",11F,FontStyle.Bold) };
@@ -420,6 +510,7 @@ namespace TaMi_Einzahlautomat
                     Tag = i
                 };
                 b.FlatAppearance.BorderSize = 0;
+                try { ApplyModernButtonStyle(b, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
                 b.Click += BtnEmptySingle_Click;
                 Controls.Add(b);
                 _btnEmptyByCoin[i] = b;
@@ -431,13 +522,42 @@ namespace TaMi_Einzahlautomat
 
             // Touch: Button zum Umschalten in den manuellen Anpassungsmodus – ganz oben über 'Münzen entleeren' platzieren
             _btnManualAdjust = new Button { Text = "Manuell anpassen", Location = new Point(300, 130), Size = new Size(200, 40), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.FromArgb(96, 125, 139), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            _btnManualAdjust.FlatAppearance.BorderSize = 0; _btnManualAdjust.Click += (s, e) => ToggleManualAdjust(); Controls.Add(_btnManualAdjust);
+            _btnManualAdjust.FlatAppearance.BorderSize = 0;
+            try { ApplyModernButtonStyle(_btnManualAdjust, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
+            _btnManualAdjust.Click += (s, e) => ToggleManualAdjust();
+            Controls.Add(_btnManualAdjust);
 
             btnAlleEingezahlt = new Button { Text = "Alle Münzen eingezahlt", Location = new Point(270,550), Size = new Size(260,40), Font = new Font("Segoe UI Variable",12F,FontStyle.Bold), BackColor = Color.FromArgb(46,125,50), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            btnAlleEingezahlt.FlatAppearance.BorderSize = 0; btnAlleEingezahlt.Click += BtnAlleEingezahlt_Click; Controls.Add(btnAlleEingezahlt);
+            btnAlleEingezahlt.FlatAppearance.BorderSize = 0;
+            try { ApplyModernButtonStyle(btnAlleEingezahlt, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32)); } catch { }
+            btnAlleEingezahlt.Click += BtnAlleEingezahlt_Click;
+            Controls.Add(btnAlleEingezahlt);
 
             this.Paint += (s,e)=>{ using(var pen=new Pen(Color.FromArgb(120,120,120),2)){ e.Graphics.DrawRectangle(pen,1,1,ClientSize.Width-3,ClientSize.Height-3);} };
             if (_snapshotLoaded) ShowSnapshotInfo();
+        }
+
+        private void HeaderPanel_Paint(object sender, PaintEventArgs e)
+        {
+            try
+            {
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                var r = headerPanel.ClientRectangle;
+
+                using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, r);
+                }
+
+                // Gloss/Separator bewusst entfernt (kein heller Streifen im Header)
+            }
+            catch
+            {
+                using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
+                }
+            }
         }
 
         private void ShowSnapshotInfo(){ if (_lblSnapshotInfo!=null){ _lblSnapshotInfo.Text = "Aktiver RM5 Snapshot – 'Münzen entleeren' setzt keinen neuen Startbestand. Für Neustart 'Alle Münzen eingezahlt' wählen."; _lblSnapshotInfo.Visible = true; } }
@@ -770,6 +890,7 @@ namespace TaMi_Einzahlautomat
                             Tag = i
                         };
                         btn.FlatAppearance.BorderSize = 0;
+                        try { btn.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btn.Width, btn.Height, 8, 8)); } catch { }
                         btn.Click += (s, e) => { try { var idx = (int)((Button)s).Tag; _manualAdjustIdx = idx; AdjustSelectedLevel(-1); } catch { } };
                         Controls.Add(btn);
                         _btnMinus[i] = btn; _btnMinus[i].Visible = false;
@@ -789,6 +910,7 @@ namespace TaMi_Einzahlautomat
                             Tag = i
                         };
                         btn.FlatAppearance.BorderSize = 0;
+                        try { btn.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btn.Width, btn.Height, 8, 8)); } catch { }
                         btn.Click += (s, e) => { try { var idx = (int)((Button)s).Tag; _manualAdjustIdx = idx; AdjustSelectedLevel(+1); } catch { } };
                         Controls.Add(btn);
                         _btnPlus[i] = btn; _btnPlus[i].Visible = false;

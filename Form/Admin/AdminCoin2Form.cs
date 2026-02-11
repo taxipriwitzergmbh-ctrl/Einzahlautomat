@@ -11,9 +11,70 @@ namespace TaMi_Einzahlautomat
 {
     public class AdminCoin2Form : Form
     {
+        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
+        {
+            if (b == null) return;
+            try
+            {
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 0;
+                b.BackColor = Color.Transparent;
+                b.UseVisualStyleBackColor = false;
+                b.ForeColor = Color.White;
+                b.Paint -= ModernButton_Paint;
+                b.Paint += ModernButton_Paint;
+                b.Tag = new Tuple<Color, Color>(c1, c2);
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Resize -= ModernButton_Resize;
+                b.Resize += ModernButton_Resize;
+            }
+            catch { }
+        }
+
+        private void ModernButton_Resize(object sender, EventArgs e)
+        {
+            try
+            {
+                var b = sender as Button;
+                if (b == null) return;
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Invalidate();
+            }
+            catch { }
+        }
+
+        private void ModernButton_Paint(object sender, PaintEventArgs e)
+        {
+            var b = sender as Button;
+            if (b == null) return;
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = b.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+
+                var colors = b.Tag as Tuple<Color, Color>;
+                var cc1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
+                var cc2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
+
+                using (var br = new LinearGradientBrush(rect, cc1, cc2, 90f))
+                {
+                    e.Graphics.FillRectangle(br, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+
+                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+            catch { }
+        }
         private Panel headerPanel;
         private Button btnClose;
-        private Button btnMinimize;
+        // Minimieren-Button entfernt
         private Label lblTitle;
         private Point _mouseDownLocation;
 
@@ -119,33 +180,33 @@ namespace TaMi_Einzahlautomat
             headerPanel.MouseMove += (s, e) => { if (e.Button == MouseButtons.Left) { Left += e.X - _mouseDownLocation.X; Top += e.Y - _mouseDownLocation.Y; } };
             Controls.Add(headerPanel);
 
-            lblTitle = new Label { Text = "Admin - M�nzpr�fer/2", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(24, 0), Size = new Size(500, 60), BackColor = Color.Transparent };
+            lblTitle = new Label { Text = "Admin - Münzprüfer/2", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(24, 0), Size = new Size(500, 60), BackColor = Color.Transparent };
             headerPanel.Controls.Add(lblTitle);
 
             btnClose = new Button { Text = "\u2715", Font = new Font("Segoe UI Symbol", 18F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 56, 6), TabStop = false, Anchor = AnchorStyles.Top | AnchorStyles.Right };
             btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 80, 80);
+            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
             btnClose.Click += (s, e) => Close();
             headerPanel.Controls.Add(btnClose);
+            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
 
-            btnMinimize = new Button { Text = "�", Font = new Font("Segoe UI", 18F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 112, 6), TabStop = false, Anchor = AnchorStyles.Top | AnchorStyles.Right };
-            btnMinimize.FlatAppearance.BorderSize = 0;
-            btnMinimize.FlatAppearance.MouseOverBackColor = Color.FromArgb(33, 150, 243, 80);
-            btnMinimize.Click += (s, e) => WindowState = FormWindowState.Minimized;
-            headerPanel.Controls.Add(btnMinimize);
+            // Minimieren-Button entfernt
 
             try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24)); } catch { }
 
             var lblType = new Label { Text = "Version:", Location = new Point(24, 80), Size = new Size(120, 36), Font = new Font("Segoe UI Variable", 12F) };
             cmbType = new ComboBox { Location = new Point(150, 80), Size = new Size(220, 36), Font = new Font("Segoe UI Variable", 12F), DropDownStyle = ComboBoxStyle.DropDownList };
+            try { cmbType.FlatStyle = FlatStyle.Flat; cmbType.BackColor = Color.FromArgb(245, 247, 250); cmbType.ForeColor = Color.FromArgb(33, 37, 41); } catch { }
             cmbType.Items.AddRange(new object[] { "None", "SmartCoinV1" });
 
             var lblCom = new Label { Text = "ComPort:", Location = new Point(24, 130), Size = new Size(120, 36), Font = new Font("Segoe UI Variable", 12F) };
             txtCom = new ComboBox { Location = new Point(150, 130), Size = new Size(180, 36), Font = new Font("Segoe UI Variable", 12F), DropDownStyle = ComboBoxStyle.DropDownList };
             txtCom.DropDown += (s,e)=> LoadComPorts(true); // passiver Refresh
+            try { txtCom.FlatStyle = FlatStyle.Flat; txtCom.BackColor = Color.FromArgb(245, 247, 250); txtCom.ForeColor = Color.FromArgb(33, 37, 41); } catch { }
             btnDetectPort = new Button { Text = "Erkennung", Location = new Point(334,130), Size = new Size(100,36), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(245,247,250) };
             btnDetectPort.FlatAppearance.BorderSize = 0;
             btnDetectPort.Click += (s,e)=> StartDetectPortMode();
+            try { ApplyModernButtonStyle(btnDetectPort, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
 
             var lblAddr = new Label { Text = "SSP Address:", Location = new Point(24, 180), Size = new Size(120, 36), Font = new Font("Segoe UI Variable", 12F) };
             nudAddr = new NumericUpDown { Location = new Point(150, 180), Size = new Size(220, 36), Font = new Font("Segoe UI Variable", 12F), Minimum = 1, Maximum = 255, Value = 16 };
@@ -153,10 +214,11 @@ namespace TaMi_Einzahlautomat
             btnSaveIni = new Button { Text = "Speichern", Location = new Point(24, 230), Size = new Size(120, 44), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White };
             btnSaveIni.FlatAppearance.BorderSize = 0;
             btnSaveIni.Click += (s, e) => SaveIni();
+            try { ApplyModernButtonStyle(btnSaveIni, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
 
             btnConnectToggle = new Button
             {
-                Text = "Events anh�ngen",
+                Text = "Events anhängen",
                 Location = new Point(160, 230),
                 Size = new Size(170, 44),
                 FlatStyle = FlatStyle.Flat,
@@ -166,6 +228,7 @@ namespace TaMi_Einzahlautomat
             btnConnectToggle.FlatAppearance.BorderSize = 0;
             btnConnectToggle.Click += btnConnectToggle_Click;
             Controls.Add(btnConnectToggle);
+            try { ApplyModernButtonStyle(btnConnectToggle, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
 
             btnEnableToggle = new Button { Text = "Enable", Location = new Point(340, 230), Size = new Size(160, 44), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(46, 125, 50), ForeColor = Color.White };
             btnEnableToggle.FlatAppearance.BorderSize = 0;
@@ -180,10 +243,12 @@ namespace TaMi_Einzahlautomat
                 AppendLog(_enabledRequested ? "Enable angefordert." : "Disable angefordert.");
                 UpdateEnableButtonVisual();
             };
+            try { ApplyModernButtonStyle(btnEnableToggle, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32)); } catch { }
 
             btnQueryLevels = new Button { Text = "Bestand abfragen", Location = new Point(520, 230), Size = new Size(180, 44), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White };
             btnQueryLevels.FlatAppearance.BorderSize = 0;
             btnQueryLevels.Click += (s, e) => { QueryLevels(); RefreshBestandCoins(); };
+            try { ApplyModernButtonStyle(btnQueryLevels, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
 
             txtLog = new TextBox { Multiline = true, ScrollBars = ScrollBars.Both, ReadOnly = true, Location = new Point(24, 290), Size = new Size(520, 380), Font = new Font("Consolas", 11F) };
 
@@ -208,6 +273,7 @@ namespace TaMi_Einzahlautomat
                 AutoSize = true,
                 Checked = DeviceDisabled
             };
+            try { _chkDisabled.ForeColor = Color.FromArgb(33, 37, 41); _chkDisabled.Font = new Font("Segoe UI Variable", 10F, FontStyle.Bold); } catch { }
             _chkDisabled.CheckedChanged += (s, e) =>
             {
                 DeviceDisabled = _chkDisabled.Checked;
@@ -257,10 +323,10 @@ namespace TaMi_Einzahlautomat
             };
             Controls.Add(_panelBestand);
 
-            var lblTitel = new Label { Text = "Kassenbestand (M�nzen, St�ck):", Location = new Point(10, 10), AutoSize = true, Font = new Font("Segoe UI Variable", 13F, FontStyle.Bold) };
+            var lblTitel = new Label { Text = "Kassenbestand (Münzen, Stück):", Location = new Point(10, 10), AutoSize = true, Font = new Font("Segoe UI Variable", 13F, FontStyle.Bold) };
             _panelBestand.Controls.Add(lblTitel);
 
-            string[] denomText = { "1 c", "2 c", "5 c", "10 c", "20 c", "50 c", "1 �", "2 �" };
+            string[] denomText = { "1 c", "2 c", "5 c", "10 c", "20 c", "50 c", "1 €", "2 €" };
             for (int i = 0; i < denomText.Length; i++)
             {
                 var ldenom = new Label { Text = $"{denomText[i],4}:", Location = new Point(20, 50 + i * 38), AutoSize = true, Font = new Font("Segoe UI Variable", 12F) };
@@ -284,13 +350,14 @@ namespace TaMi_Einzahlautomat
             int lastRowY = 50 + (denomText.Length - 1) * 38; // y der 2� Zeile
             int sumY = lastRowY + 38; // eine Zeile darunter
 
-            _lblBestandSumCoins = new Label { Text = "Gesamt: 0,00 �", Location = new Point(20, sumY), AutoSize = true, Font = new Font("Segoe UI Variable", 13F, FontStyle.Bold) };
+            _lblBestandSumCoins = new Label { Text = "Gesamt: 0,00 €", Location = new Point(20, sumY), AutoSize = true, Font = new Font("Segoe UI Variable", 13F, FontStyle.Bold) };
             _panelBestand.Controls.Add(_lblBestandSumCoins);
 
             // Refresh-Button jetzt eine weitere Zeile unter der Summe platzieren
             _btnBestandRefresh = new Button { Text = "Aktualisieren", Location = new Point(20, sumY + 34), Size = new Size(110, 38), Anchor = AnchorStyles.Right | AnchorStyles.Bottom };
             _btnBestandRefresh.Click += (s, e) => RefreshBestandCoins();
             _panelBestand.Controls.Add(_btnBestandRefresh);
+            try { ApplyModernButtonStyle(_btnBestandRefresh, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
 
             _tmrBestand = new Timer { Interval = 3000 };
             _tmrBestand.Tick += (s, e) => RefreshBestandCoins();
@@ -370,8 +437,8 @@ namespace TaMi_Einzahlautomat
 
         private void QueryLevels()
         {
-            if (DeviceDisabled) { AppendLog("Ger�t deaktiviert � keine Abfrage."); return; }
-            if (_coin == null) { AppendLog("Kein M?nzpr?fer-Objekt vorhanden."); return; }
+            if (DeviceDisabled) { AppendLog("Gerät deaktiviert - keine Abfrage."); return; }
+            if (_coin == null) { AppendLog("Kein Münzprüfer-Objekt vorhanden."); return; }
             if (!_coin.Connected) { AppendLog("Hinweis: erst verbinden."); return; }
             if (!IsReadyStatus(_statusText))
             {
@@ -394,7 +461,7 @@ namespace TaMi_Einzahlautomat
                 }
                 else
                 {
-                    AppendLog("Dieses M�nzger�t unterst�tzt die Level-Abfrage hier nicht.");
+                    AppendLog("Dieses Münzgerät unterstützt die Level-Abfrage hier nicht.");
                 }
             }
             catch (Exception ex)
@@ -447,7 +514,7 @@ namespace TaMi_Einzahlautomat
         {
             if (lv == null || lv.Length < 8) return "(keine Daten)";
             Func<int, string> Safe = i => lv[i] < 0 ? "?" : lv[i].ToString();
-            return $"1c={Safe(0)}, 2c={Safe(1)}, 5c={Safe(2)}, 10c={Safe(3)}, 20c={Safe(4)}, 50c={Safe(5)}, 1�={Safe(6)}, 2�={Safe(7)}";
+            return $"1c={Safe(0)}, 2c={Safe(1)}, 5c={Safe(2)}, 10c={Safe(3)}, 20c={Safe(4)}, 50c={Safe(5)}, 1€={Safe(6)}, 2€={Safe(7)}";
         }
 
         private void UpdateEnableButtonVisual()
@@ -651,11 +718,11 @@ namespace TaMi_Einzahlautomat
                 if (_lblScLastEvt != null)
                 {
                     if (_lastCoinEventUtc == DateTime.MinValue)
-                        _lblScLastEvt.Text = "Letzte Aktivit�t: �";
+                        _lblScLastEvt.Text = "Letzte Aktivität: -";
                     else
                     {
                         var ago = DateTime.UtcNow - _lastCoinEventUtc;
-                        _lblScLastEvt.Text = $"Letzte Aktivit�t: {_lastCoinEventUtc.ToLocalTime():HH:mm:ss} ({Math.Max(0, (int)ago.TotalSeconds)} s)";
+                        _lblScLastEvt.Text = $"Letzte Aktivität: {_lastCoinEventUtc.ToLocalTime():HH:mm:ss} ({Math.Max(0, (int)ago.TotalSeconds)} s)";
                     }
                 }
             }
@@ -670,9 +737,21 @@ namespace TaMi_Einzahlautomat
 
         private void HeaderPanel_Paint(object sender, PaintEventArgs e)
         {
-            using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+            try
             {
-                e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var r = headerPanel.ClientRectangle;
+                using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, r);
+                }
+            }
+            catch
+            {
+                using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                {
+                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
+                }
             }
         }
 
@@ -735,22 +814,22 @@ namespace TaMi_Einzahlautomat
 
         private void btnConnectToggle_Click(object sender, EventArgs e)
         {
-            if (DeviceDisabled) { AppendLog("Ger�t deaktiviert � keine Events."); return; }
+            if (DeviceDisabled) { AppendLog("Gerät deaktiviert – keine Events."); return; }
             if (_coin == null)
             {
-                AppendLog("Kein M?nzpr?fer-Objekt vorhanden.");
+                AppendLog("Kein Münzprüfer-Objekt vorhanden.");
                 return;
             }
 
             if (_eventsAttached)
             {
                 DetachCoinEvents();
-                AppendLog("Events gel�st.");
+                AppendLog("Events gelöst.");
             }
             else
             {
                 AttachCoinEvents();
-                AppendLog("Events angeh�ngt.");
+                AppendLog("Events angehängt.");
             }
         }
 
@@ -784,7 +863,7 @@ namespace TaMi_Einzahlautomat
         private void UpdateConnectButtonVisual()
         {
             if (btnConnectToggle == null) return;
-            btnConnectToggle.Text = _eventsAttached ? "Events l�sen" : "Events anh�ngen";
+            btnConnectToggle.Text = _eventsAttached ? "Events lösen" : "Events anhängen";
             btnConnectToggle.BackColor = DeviceDisabled ? Color.Gray : (_eventsAttached ? Color.FromArgb(183, 28, 28) : Color.FromArgb(33, 150, 243));
         }
 
