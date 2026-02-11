@@ -149,6 +149,82 @@ namespace TaMi_Einzahlautomat
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
 
+        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
+        {
+            if (b == null) return;
+            try
+            {
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 0;
+                b.BackColor = Color.Transparent;
+                b.UseVisualStyleBackColor = false;
+                b.ForeColor = Color.White;
+                b.Paint -= ModernButton_Paint;
+                b.Paint += ModernButton_Paint;
+                b.Tag = new Tuple<Color, Color>(c1, c2);
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Resize -= ModernButton_Resize;
+                b.Resize += ModernButton_Resize;
+            }
+            catch { }
+        }
+
+        private void ModernButton_Resize(object sender, EventArgs e)
+        {
+            try
+            {
+                var b = sender as Button;
+                if (b == null) return;
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Invalidate();
+            }
+            catch { }
+        }
+
+        private void ModernButton_Paint(object sender, PaintEventArgs e)
+        {
+            var b = sender as Button;
+            if (b == null) return;
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = b.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+
+                var colors = b.Tag as Tuple<Color, Color>;
+                var c1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
+                var c2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
+
+                using (var br = new LinearGradientBrush(rect, c1, c2, 90f))
+                {
+                    e.Graphics.FillRectangle(br, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+
+                // Icon (z. B. Fernwartung) zuerst zeichnen
+                if (b.Image != null)
+                {
+                    int iw = b.Image.Width;
+                    int ih = b.Image.Height;
+                    int ix = (b.ClientSize.Width - iw) / 2;
+                    int iy = (b.ClientSize.Height - ih) / 2;
+                    e.Graphics.DrawImage(b.Image, new Rectangle(Math.Max(0, ix), Math.Max(0, iy), iw, ih));
+                }
+
+                // Text darüber (falls gesetzt)
+                if (!string.IsNullOrEmpty(b.Text))
+                {
+                    TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                }
+            }
+            catch { }
+        }
+
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
         private static readonly IntPtr HWND_BOTTOM = new IntPtr(1);
@@ -366,10 +442,12 @@ namespace TaMi_Einzahlautomat
             Controls.Add(_lblService);
 
             btnClose = new Button { Text = "?", Font = new Font("Segoe UI", 16F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 56, 6), TabStop = false, Visible = !Program.KioskModeEnabled };
-            btnClose.FlatAppearance.BorderSize = 0; btnClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 80, 80); btnClose.Click += (s, e) => Close(); headerPanel.Controls.Add(btnClose);
+            btnClose.FlatAppearance.BorderSize = 0; btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent; btnClose.Click += (s, e) => Close(); headerPanel.Controls.Add(btnClose);
+            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
 
             btnMinimize = new Button { Text = "–", Font = new Font("Segoe UI", 16F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 112, 6), TabStop = false, Visible = !Program.KioskModeEnabled };
-            btnMinimize.FlatAppearance.BorderSize = 0; btnMinimize.FlatAppearance.MouseOverBackColor = Color.FromArgb(33, 150, 243, 80); btnMinimize.Click += (s, e) => WindowState = FormWindowState.Minimized; headerPanel.Controls.Add(btnMinimize);
+            btnMinimize.FlatAppearance.BorderSize = 0; btnMinimize.FlatAppearance.MouseOverBackColor = Color.Transparent; btnMinimize.Click += (s, e) => WindowState = FormWindowState.Minimized; headerPanel.Controls.Add(btnMinimize);
+            try { ApplyModernButtonStyle(btnMinimize, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
 
             // Einstellung aus INI: Fernwartungsbutton ausblenden
             try
@@ -385,7 +463,7 @@ namespace TaMi_Einzahlautomat
                 Text = string.Empty,
                 Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold),
                 ForeColor = Color.White,
-                BackColor = Color.FromArgb(33, 150, 243),
+                BackColor = Color.Transparent,
                 FlatStyle = FlatStyle.Flat,
                 Size = new Size(40, 40),
                 TabStop = false,
@@ -395,6 +473,8 @@ namespace TaMi_Einzahlautomat
                 Padding = new Padding(0)
             };
             _btnRemote.FlatAppearance.BorderSize = 0;
+            _btnRemote.UseCompatibleTextRendering = false;
+            try { ApplyModernButtonStyle(_btnRemote, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
             // Symbol (optional) laden
             try
             {
@@ -414,6 +494,21 @@ namespace TaMi_Einzahlautomat
                 {
                     _btnRemote.Image = new Bitmap(SystemIcons.Shield.ToBitmap(), new Size(20, 20));
                 }
+            }
+            catch { }
+
+            // Falls Image aus irgendeinem Grund nicht gerendert wird: Fallback-Glyph
+            try
+            {
+                if (_btnRemote.Image == null)
+                {
+                    _btnRemote.Text = "R";
+                }
+                else
+                {
+                    _btnRemote.Text = string.Empty;
+                }
+                _btnRemote.Invalidate();
             }
             catch { }
             _btnRemote.Click += (s, e) =>
@@ -449,6 +544,7 @@ namespace TaMi_Einzahlautomat
             btnLogin.FlatStyle = FlatStyle.Flat;
             btnLogin.FlatAppearance.BorderSize = 0;
             btnLogin.FlatAppearance.MouseOverBackColor = Color.FromArgb(30, 136, 229);
+            try { ApplyModernButtonStyle(btnLogin, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
             // Position directly above the numpad, left-aligned to the numpad so the right edge matches the '3' key
             try
             {
@@ -475,6 +571,7 @@ namespace TaMi_Einzahlautomat
             btnCancelPwd.FlatAppearance.BorderSize = 0;
             btnCancelPwd.FlatAppearance.MouseOverBackColor = Color.FromArgb(211, 47, 47);
             try { btnCancelPwd.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnCancelPwd.Width, btnCancelPwd.Height, 8, 8)); } catch { }
+            try { ApplyModernButtonStyle(btnCancelPwd, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
             // Icon laden (Fallback arrow)
             try
             {
@@ -509,6 +606,7 @@ namespace TaMi_Einzahlautomat
             EnsureHiddenMaintButtonOnTop();
             _btnExitMaintenance = new Button { Text = "Wartungsmodus beenden", Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(380, 44), Location = new Point(60, ClientSize.Height - 60), Visible = false, Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom };
             _btnExitMaintenance.FlatAppearance.BorderSize = 0; _btnExitMaintenance.Click += (s, e) => ExitMaintenanceMode(); Controls.Add(_btnExitMaintenance);
+            try { ApplyModernButtonStyle(_btnExitMaintenance, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
             PositionExitMaintenanceButton();
             _serviceTimer = new Timer { Interval = 3000 }; _serviceTimer.Tick += (s, e) => UpdateServiceIndicator(); _serviceTimer.Start();
         }
@@ -707,21 +805,52 @@ namespace TaMi_Einzahlautomat
         private void ShowMaintenanceUnlockPanel()
         {
             CloseMaintenanceUnlockPanel(); _maintPwdBuffer = string.Empty;
-            var panel = new Panel { Size = new Size(420, 520), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle, Location = new Point((ClientSize.Width - 420) / 2, (ClientSize.Height - 520) / 2) };
+            var panel = new Panel { Size = new Size(420, 560), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle, Location = new Point((ClientSize.Width - 420) / 2, (ClientSize.Height - 560) / 2) };
             _maintUnlockPanel = panel; Controls.Add(panel); panel.BringToFront(); EnsureHiddenMaintButtonOnTop();
             var lbl = new Label { Text = "Wartungscode:", Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold), Dock = DockStyle.Top, Height = 50, TextAlign = ContentAlignment.MiddleCenter }; panel.Controls.Add(lbl);
             _maintPwdBox = new TextBox { Font = new Font("Segoe UI Variable", 24F, FontStyle.Bold), UseSystemPasswordChar = true, TextAlign = HorizontalAlignment.Center, MaxLength = 8, Width = 300, Location = new Point(60, 70) }; panel.Controls.Add(_maintPwdBox);
             // NEU: Fokus direkt setzen, damit sofort Tastatureingabe möglich ist
             try { _maintPwdBox.Focus(); } catch { }
-            var panelKeys = new Panel { Location = new Point(60, 140), Size = new Size(300, 300) }; panel.Controls.Add(panelKeys);
+            var panelKeys = new Panel { Location = new Point(60, 140), Size = new Size(300, 320) }; panel.Controls.Add(panelKeys);
             string[] keys = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "OK" }; int btnW = 90, btnH = 70, pad = 10;
-            for (int i = 0; i < keys.Length; i++) { int r = i / 3, c = i % 3; var b = new Button { Text = keys[i], Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold), Size = new Size(btnW, btnH), Location = new Point(c * (btnW + pad), r * (btnH + pad)), BackColor = Color.FromArgb(245, 247, 250), FlatStyle = FlatStyle.Flat, Tag = keys[i] }; b.FlatAppearance.BorderSize = 0; b.FlatAppearance.MouseOverBackColor = Color.FromArgb(232, 240, 254); b.Click += MaintKey_Click; panelKeys.Controls.Add(b); }
-            var btnAbort = new Button { Text = "Abbrechen", Font = new Font("Segoe UI", 12F, FontStyle.Bold), BackColor = Color.FromArgb(158, 158, 158), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(130, 44), Location = new Point(60, 450) }; btnAbort.FlatAppearance.BorderSize = 0; btnAbort.Click += (s, e) => CloseMaintenanceUnlockPanel(); panel.Controls.Add(btnAbort);
-            var btnOk = new Button { Text = "OK", Font = new Font("Segoe UI", 12F, FontStyle.Bold), BackColor = Color.FromArgb(46, 125, 50), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(130, 44), Location = new Point(230, 450) }; btnOk.FlatAppearance.BorderSize = 0; btnOk.Click += (s, e) => ValidateMaintenancePassword(); panel.Controls.Add(btnOk);
+            for (int i = 0; i < keys.Length; i++)
+            {
+                int r = i / 3, c = i % 3;
+                var b = new Button
+                {
+                    Text = keys[i],
+                    Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
+                    Size = new Size(btnW, btnH),
+                    Location = new Point(c * (btnW + pad), r * (btnH + pad)),
+                    BackColor = Color.Transparent,
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    Tag = keys[i],
+                    AccessibleName = keys[i]
+                };
+                b.FlatAppearance.BorderSize = 0;
+                b.FlatAppearance.MouseOverBackColor = Color.Transparent;
+                try
+                {
+                    if (keys[i] == "OK") ApplyModernButtonStyle(b, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32));
+                    else if (keys[i] == "C") ApplyModernButtonStyle(b, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79));
+                    else ApplyModernButtonStyle(b, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
+                }
+                catch { }
+                b.Click += MaintKey_Click;
+                panelKeys.Controls.Add(b);
+            }
+            int footerY = panelKeys.Bottom + 14;
+            var btnAbort = new Button { Text = "Abbrechen", Font = new Font("Segoe UI", 12F, FontStyle.Bold), BackColor = Color.FromArgb(158, 158, 158), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(130, 44), Location = new Point(60, footerY) }; btnAbort.FlatAppearance.BorderSize = 0; btnAbort.Click += (s, e) => CloseMaintenanceUnlockPanel(); panel.Controls.Add(btnAbort);
+            var btnOk = new Button { Text = "OK", Font = new Font("Segoe UI", 12F, FontStyle.Bold), BackColor = Color.FromArgb(46, 125, 50), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Size = new Size(130, 44), Location = new Point(230, footerY) }; btnOk.FlatAppearance.BorderSize = 0; btnOk.Click += (s, e) => ValidateMaintenancePassword(); panel.Controls.Add(btnOk);
+            try { ApplyModernButtonStyle(btnAbort, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
+            try { ApplyModernButtonStyle(btnOk, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32)); } catch { }
         }
         private void MaintKey_Click(object sender, EventArgs e)
         {
-            var key = (string)((Button)sender).Tag;
+            var btn = sender as Button;
+            var key = btn != null ? (btn.AccessibleName ?? btn.Tag as string) : null;
+            if (string.IsNullOrEmpty(key)) return;
             if (key == "C") { _maintPwdBuffer = string.Empty; if (_maintPwdBox != null) _maintPwdBox.Text = string.Empty; return; }
             if (key == "OK") { ValidateMaintenancePassword(); return; }
             if (_maintPwdBuffer.Length < 8) { _maintPwdBuffer += key; if (_maintPwdBox != null) _maintPwdBox.Text = new string('*', _maintPwdBuffer.Length); }
@@ -831,15 +960,14 @@ namespace TaMi_Einzahlautomat
                     Font = new Font("Segoe UI Variable Display", 20F, FontStyle.Bold),
                     Size = new Size(btnW, btnH),
                     Location = new Point(col * (btnW + pad), row * (btnH + pad)),
-                    BackColor = Color.FromArgb(247, 249, 252),
-                    ForeColor = Color.FromArgb(33, 37, 41),
+                    BackColor = Color.Transparent,
+                    ForeColor = Color.White,
                     FlatStyle = FlatStyle.Flat,
-                    Tag = keys[i]
+                    Tag = keys[i],
+                    AccessibleName = keys[i]
                 };
                 b.FlatAppearance.BorderSize = 0;
-                b.FlatAppearance.MouseOverBackColor = Color.FromArgb(232, 240, 254);
-                // leichte Rundung per Region
-                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 10, 10)); } catch { }
+                b.FlatAppearance.MouseOverBackColor = Color.Transparent;
 
                 // DEL: Mülleimer-Icon setzen
                 if (keys[i] == "DEL")
@@ -867,12 +995,13 @@ namespace TaMi_Einzahlautomat
                 }
 
                 // OK Button farblich hervorheben
-                if (keys[i] == "OK")
+                try
                 {
-                    b.BackColor = Color.FromArgb(33, 150, 243);
-                    b.ForeColor = Color.White;
-                    b.FlatAppearance.MouseOverBackColor = Color.FromArgb(30, 136, 229);
+                    if (keys[i] == "OK") ApplyModernButtonStyle(b, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32));
+                    else if (keys[i] == "DEL") ApplyModernButtonStyle(b, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79));
+                    else ApplyModernButtonStyle(b, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
                 }
+                catch { }
 
                 b.Click += NumPad_Click;
                 numPadPanel.Controls.Add(b);
@@ -880,7 +1009,9 @@ namespace TaMi_Einzahlautomat
         }
         private void NumPad_Click(object sender, EventArgs e)
         {
-            var key = ((Button)sender).Tag.ToString();
+            var btn = sender as Button;
+            var key = btn != null ? (btn.AccessibleName ?? btn.Tag?.ToString()) : null;
+            if (string.IsNullOrEmpty(key)) return;
             if (key == "OK")
             {
                 btnLogin.PerformClick();
@@ -1123,7 +1254,7 @@ namespace TaMi_Einzahlautomat
             try
             {
                 var st = (sc.CurrentStatus ?? string.Empty).ToLowerInvariant();
-                if (st.Contains("störung") || st.Contains("st�rung") || st.Contains("jammed") || st.Contains("error")) return true;
+                if (st.Contains("störung") || st.Contains("störung") || st.Contains("jammed") || st.Contains("error")) return true;
             }
             catch { }
             return false;
@@ -1177,10 +1308,10 @@ namespace TaMi_Einzahlautomat
         {
             try
             {
-                using (var b = new LinearGradientBrush(headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
-                {
-                    e.Graphics.FillRectangle(b, headerPanel.ClientRectangle);
-                }
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var r = headerPanel.ClientRectangle;
+                using (var b = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
+                    e.Graphics.FillRectangle(b, r);
             }
             catch { }
         }

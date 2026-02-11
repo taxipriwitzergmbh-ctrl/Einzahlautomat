@@ -161,6 +161,8 @@ namespace TaMi_Einzahlautomat
             _headerPanel.Controls.Add(_btnHeaderClose);
             try { ApplyModernButtonStyle(_btnHeaderClose, System.Drawing.Color.FromArgb(239, 83, 80), System.Drawing.Color.FromArgb(198, 40, 40)); } catch { }
 
+            try { _headerPanel.Controls.SetChildIndex(_btnHeaderClose, 0); } catch { }
+
             try { Region = System.Drawing.Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24)); } catch { }
 
             // Log-Textbox zuerst hinzufügen (damit Dock Fill nicht überlagert wird)
@@ -169,7 +171,8 @@ namespace TaMi_Einzahlautomat
                 Multiline = true,
                 ReadOnly = true,
                 ScrollBars = ScrollBars.Both,
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Bottom,
+                Height = 520,
                 Font = new System.Drawing.Font("Consolas", 10F),
                 WordWrap = false,
                 HideSelection = false,
@@ -188,14 +191,15 @@ namespace TaMi_Einzahlautomat
             try { ApplyModernButtonStyle(btnClose, System.Drawing.Color.FromArgb(96, 125, 139), System.Drawing.Color.FromArgb(55, 71, 79)); } catch { }
             Controls.Add(btnClose);
 
-            // Toolbar: TableLayoutPanel mit flexibler Suche-Spalte
+            // Toolbar: TableLayoutPanel im Header-Bereich (oberhalb der Log-Anzeige)
             var top = new TableLayoutPanel
             {
-                Dock = DockStyle.Top,
+                Dock = DockStyle.Bottom,
                 Height = 52,
                 Padding = new Padding(6),
                 ColumnCount = 7,
-                RowCount = 1
+                RowCount = 1,
+                BackColor = System.Drawing.Color.Transparent
             };
             top.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             top.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 260F)); // Datei-Auswahl
@@ -205,7 +209,8 @@ namespace TaMi_Einzahlautomat
             top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));       // Suchen
             top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));       // Weiter
             top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));       // Aa
-            Controls.Add(top);
+            _headerPanel.Height = 60 + top.Height;
+            _headerPanel.Controls.Add(top);
 
             _cmbFiles = new ComboBox
             {

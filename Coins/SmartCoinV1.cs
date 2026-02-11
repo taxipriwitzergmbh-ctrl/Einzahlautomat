@@ -353,7 +353,7 @@ namespace TaMi_Einzahlautomat.Coins
                     else
                     {
                         Log($"Open SSPComPort ({_cmd.ComPort}) failed");
-                        SetStatus("Port nicht verf�gbar");
+                        SetStatus("Port nicht verfügbar");
                         try { BusyAnimationManager.End("abort port"); } catch { }
                     }
 
