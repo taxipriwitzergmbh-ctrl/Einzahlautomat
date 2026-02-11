@@ -2728,18 +2728,48 @@ namespace TaMi_Einzahlautomat
                 {
                     FormBorderStyle = FormBorderStyle.None,
                     StartPosition = FormStartPosition.CenterParent,
-                    Width = 560,
-                    Height = 260,
+                    Width = 720,
+                    Height = 320,
                     BackColor = Color.White
                 };
 
                 try { dlg.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, dlg.Width, dlg.Height, 16, 16)); } catch { }
 
+                // Modern card look
+                try
+                {
+                    dlg.Padding = new Padding(1);
+                    dlg.Paint += (s, e) =>
+                    {
+                        try
+                        {
+                            var rect = dlg.ClientRectangle;
+                            using (var pen = new Pen(Color.FromArgb(200, 210, 225, 245)))
+                            {
+                                e.Graphics.DrawRectangle(pen, new Rectangle(0, 0, rect.Width - 1, rect.Height - 1));
+                            }
+                        }
+                        catch { }
+                    };
+                }
+                catch { }
+
                 var header = new Panel { Dock = DockStyle.Top, Height = 64 };
                 header.Paint += (s, e) =>
                 {
-                    using (var brush = new LinearGradientBrush(header.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
-                    { e.Graphics.FillRectangle(brush, header.ClientRectangle); }
+                    try
+                    {
+                        // Match app header style
+                        using (var brush = new LinearGradientBrush(header.ClientRectangle, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
+                        {
+                            e.Graphics.FillRectangle(brush, header.ClientRectangle);
+                        }
+                    }
+                    catch
+                    {
+                        using (var brush = new LinearGradientBrush(header.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                        { e.Graphics.FillRectangle(brush, header.ClientRectangle); }
+                    }
                 };
                 dlg.Controls.Add(header);
 
@@ -2759,43 +2789,88 @@ namespace TaMi_Einzahlautomat
                 var body = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
                 dlg.Controls.Add(body);
 
+                // Frosted/Glass inner surface like other screens
+                Panel surface = null;
+                try
+                {
+                    surface = new Panel
+                    {
+                        Dock = DockStyle.Fill,
+                        BackColor = Color.Transparent,
+                        Padding = new Padding(18)
+                    };
+                    surface.Paint += (s, e) =>
+                    {
+                        try
+                        {
+                            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                            var r = surface.ClientRectangle;
+                            if (r.Width <= 1 || r.Height <= 1) return;
+                            using (var br = new LinearGradientBrush(r, Color.FromArgb(210, 245, 250, 255), Color.FromArgb(185, 230, 240, 255), 90f))
+                            {
+                                e.Graphics.FillRectangle(br, r);
+                            }
+                            using (var pen = new Pen(Color.FromArgb(140, 180, 200, 230), 1f))
+                            {
+                                var rr = r; rr.Width -= 1; rr.Height -= 1;
+                                e.Graphics.DrawRectangle(pen, rr);
+                            }
+                        }
+                        catch { }
+                    };
+                    body.Controls.Add(surface);
+                }
+                catch { surface = null; }
+
+                var host = (Control)(surface ?? body);
+
                 var lbl = new Label
                 {
                     Text = "Möchten Sie eine Quittung, wenn ja wie?",
                     AutoSize = false,
                     TextAlign = ContentAlignment.MiddleCenter,
                     Dock = DockStyle.Top,
-                    Height = 64,
-                    Font = new Font("Segoe UI Variable", 16F)
+                    Height = 76,
+                    Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
+                    ForeColor = Color.FromArgb(15, 23, 42),
+                    BackColor = Color.Transparent
                 };
-                body.Controls.Add(lbl);
+                host.Controls.Add(lbl);
 
                 // push the label two line-heights down
                 try
                 {
                     int lineH = TextRenderer.MeasureText("A", lbl.Font).Height;
-                    body.Padding = new Padding(0, lineH * 2, 0, 0);
+                    host.Padding = new Padding(host.Padding.Left, host.Padding.Top + lineH, host.Padding.Right, host.Padding.Bottom);
                 }
                 catch { }
 
-                var panelButtons = new Panel { Dock = DockStyle.Bottom, Height = 92, BackColor = Color.White };
-                body.Controls.Add(panelButtons);
+                var panelButtons = new Panel { Dock = DockStyle.Bottom, Height = 120, BackColor = Color.Transparent };
+                host.Controls.Add(panelButtons);
 
                 Func<string, Button> makeBtn = (text) =>
                 {
                     var b = new Button
                     {
                         Text = text,
-                        Width = 120,
-                        Height = 48,
+                        Width = 150,
+                        Height = 56,
                         FlatStyle = FlatStyle.Flat,
                         BackColor = Color.FromArgb(33, 150, 243),
                         ForeColor = Color.White,
-                        Font = new Font("Segoe UI Variable", 14F, FontStyle.Bold),
+                        Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
                         TabStop = false
                     };
                     b.FlatAppearance.BorderSize = 0;
                     try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 12, 12)); } catch { }
+
+                    // Modern gradient style like the rest of the app
+                    try
+                    {
+                        ApplyModernButtonStyle(b, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
+                        b.FlatAppearance.MouseOverBackColor = Color.Transparent;
+                    }
+                    catch { }
                     return b;
                 };
 
@@ -2861,33 +2936,23 @@ namespace TaMi_Einzahlautomat
 
                 btnNo.BackColor = Color.FromArgb(229, 57, 53);
                 btnNo.FlatAppearance.MouseOverBackColor = Color.FromArgb(211, 47, 47);
+                try
+                {
+                    ApplyModernButtonStyle(btnNo, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40));
+                    btnNo.FlatAppearance.MouseOverBackColor = Color.Transparent;
+                }
+                catch { }
 
                 // Layout
                 int spacing = 16;
                 int totalWidth = btnMail.Width + btnPrint.Width + btnQr.Width + btnNo.Width + spacing * 3;
                 int startX = (dlg.ClientSize.Width - totalWidth) / 2;
-                int y = 20;
+                int y = (panelButtons.Height - btnMail.Height) / 2;
                 btnMail.Location = new Point(startX, y);
                 btnPrint.Location = new Point(btnMail.Right + spacing, y);
                 btnQr.Location = new Point(btnPrint.Right + spacing, y);
                 btnNo.Location = new Point(btnQr.Right + spacing, y);
                 panelButtons.Controls.AddRange(new Control[] { btnMail, btnPrint, btnQr, btnNo });
-
-
-                // Shadow (optional, no-op if not supported)
-                try
-                {
-                    dlg.Padding = new Padding(1);
-                    dlg.Paint += (s, e) =>
-                    {
-                        var rect = dlg.ClientRectangle;
-                        using (var pen = new Pen(Color.FromArgb(220, 220, 220)))
-                        {
-                            e.Graphics.DrawRectangle(pen, new Rectangle(0, 0, rect.Width - 1, rect.Height - 1));
-                        }
-                    };
-                }
-                catch { }
 
                 DialogResult result = DialogResult.None;
                 btnMail.Click += (s, e) => { result = DialogResult.Cancel; dlg.Close(); };
