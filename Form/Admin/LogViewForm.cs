@@ -154,7 +154,7 @@ namespace TaMi_Einzahlautomat
             _lblTitle = new Label { Text = "Log anzeigen", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new System.Drawing.Font("Segoe UI Variable", 18F, System.Drawing.FontStyle.Bold), ForeColor = System.Drawing.Color.White, Location = new System.Drawing.Point(24, 0), Size = new System.Drawing.Size(420, 60), BackColor = System.Drawing.Color.Transparent };
             _headerPanel.Controls.Add(_lblTitle);
 
-            _btnHeaderClose = new Button { Text = "\u2715", Font = new System.Drawing.Font("Segoe UI Symbol", 18F, System.Drawing.FontStyle.Bold), ForeColor = System.Drawing.Color.White, BackColor = System.Drawing.Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new System.Drawing.Size(48, 48), Location = new System.Drawing.Point(Width - 56, 6), Anchor = AnchorStyles.Top | AnchorStyles.Right, TabStop = false };
+            _btnHeaderClose = new Button { Text = "\u2715", Font = new System.Drawing.Font("Segoe UI Symbol", 18F, System.Drawing.FontStyle.Bold), ForeColor = System.Drawing.Color.White, BackColor = System.Drawing.Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new System.Drawing.Size(48, 48), Location = new System.Drawing.Point(Width - 72, 6), Anchor = AnchorStyles.Top | AnchorStyles.Right, TabStop = false };
             _btnHeaderClose.FlatAppearance.BorderSize = 0;
             _btnHeaderClose.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Transparent;
             _btnHeaderClose.Click += (s, e) => Close();

@@ -23,6 +23,68 @@ namespace TaMi_Einzahlautomat
         private CheckBox chkShowWorkTimesOnly, chkShowPauseTime, chkAutoPauseDeduction, chkShowArbeitszeit, chkMinimumPauseDeduction;
         [DllImport("gdi32.dll", SetLastError = true)] private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
 
+        private void ApplyModernHeaderButtonStyle(Button b, Color c1, Color c2)
+        {
+            if (b == null) return;
+            try
+            {
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 0;
+                b.BackColor = Color.Transparent;
+                b.UseVisualStyleBackColor = false;
+                b.ForeColor = Color.White;
+                b.Paint -= HeaderButton_Paint;
+                b.Paint += HeaderButton_Paint;
+                b.Tag = new Tuple<Color, Color>(c1, c2);
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Resize -= HeaderButton_Resize;
+                b.Resize += HeaderButton_Resize;
+            }
+            catch { }
+        }
+
+        private void HeaderButton_Resize(object sender, EventArgs e)
+        {
+            try
+            {
+                var b = sender as Button;
+                if (b == null) return;
+                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
+                b.Invalidate();
+            }
+            catch { }
+        }
+
+        private void HeaderButton_Paint(object sender, PaintEventArgs e)
+        {
+            var b = sender as Button;
+            if (b == null) return;
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = b.ClientRectangle;
+                rect.Width -= 1;
+                rect.Height -= 1;
+
+                var colors = b.Tag as Tuple<Color, Color>;
+                var cc1 = colors != null ? colors.Item1 : Color.FromArgb(239, 83, 80);
+                var cc2 = colors != null ? colors.Item2 : Color.FromArgb(198, 40, 40);
+
+                using (var br = new LinearGradientBrush(rect, cc1, cc2, 90f))
+                {
+                    e.Graphics.FillRectangle(br, rect);
+                }
+                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
+                {
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+
+                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+            catch { }
+        }
+
         public PrinterConfigForm()
         {
             FormBorderStyle = FormBorderStyle.None; StartPosition = FormStartPosition.CenterScreen; DoubleBuffered = true; BackColor = Color.White; Font = new Font("Segoe UI", 10F); ClientSize = new Size(860, 620);
@@ -80,10 +142,26 @@ namespace TaMi_Einzahlautomat
         {
             headerPanel = new Panel { Dock = DockStyle.Top, Height = 62 }; headerPanel.Paint += HeaderPanel_Paint; headerPanel.MouseDown += (s,e)=> { if (e.Button==MouseButtons.Left) _dragStart=e.Location; }; headerPanel.MouseMove += (s,e)=> { if (e.Button==MouseButtons.Left) { Left += e.X - _dragStart.X; Top += e.Y - _dragStart.Y; } }; Controls.Add(headerPanel);
             lblTitle = new Label { Text="Quittungsdrucker", AutoSize=false, Location=new Point(24,0), Size=new Size(400,62), TextAlign=ContentAlignment.MiddleLeft, Font=new Font("Segoe UI Variable",19F,FontStyle.Bold), ForeColor=Color.White, BackColor=Color.Transparent }; headerPanel.Controls.Add(lblTitle);
-            btnClose = new Button { Text="\u2715", Font=new Font("Segoe UI",15F,FontStyle.Bold), ForeColor=Color.White, BackColor=Color.Transparent, FlatStyle=FlatStyle.Flat, Size=new Size(50,50), Location=new Point(ClientSize.Width-56,6), TabStop=false }; btnClose.FlatAppearance.BorderSize=0; btnClose.FlatAppearance.MouseOverBackColor=Color.FromArgb(255,80,80); btnClose.Click += (s,e)=> Close(); headerPanel.Controls.Add(btnClose);
-            btnMin = new Button { Text="_", Font=new Font("Segoe UI",16F,FontStyle.Bold), ForeColor=Color.White, BackColor=Color.Transparent, FlatStyle=FlatStyle.Flat, Size=new Size(50,50), Location=new Point(ClientSize.Width-112,6), TabStop=false }; btnMin.FlatAppearance.BorderSize=0; btnMin.FlatAppearance.MouseOverBackColor=Color.FromArgb(33,150,243,80); btnMin.Click += (s,e)=> WindowState=FormWindowState.Minimized; headerPanel.Controls.Add(btnMin);
+            btnClose = new Button { Text="\u2715", Font=new Font("Segoe UI Symbol", 16F, FontStyle.Bold), ForeColor=Color.White, BackColor=Color.Transparent, FlatStyle=FlatStyle.Flat, Size=new Size(48,48), Location=new Point(ClientSize.Width-72,7), Anchor = AnchorStyles.Top | AnchorStyles.Right, TabStop=false }; btnClose.FlatAppearance.BorderSize=0; btnClose.FlatAppearance.MouseOverBackColor=Color.Transparent; btnClose.Click += (s,e)=> Close(); headerPanel.Controls.Add(btnClose);
+            btnMin = new Button { Text="_", Font=new Font("Segoe UI",16F,FontStyle.Bold), ForeColor=Color.White, BackColor=Color.Transparent, FlatStyle=FlatStyle.Flat, Size=new Size(48,48), Location=new Point(ClientSize.Width-128,7), Anchor = AnchorStyles.Top | AnchorStyles.Right, TabStop=false }; btnMin.FlatAppearance.BorderSize=0; btnMin.FlatAppearance.MouseOverBackColor=Color.Transparent; btnMin.Click += (s,e)=> WindowState=FormWindowState.Minimized; headerPanel.Controls.Add(btnMin);
+
+            try { ApplyModernHeaderButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
+            try { ApplyModernHeaderButtonStyle(btnMin, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
         }
-        private void HeaderPanel_Paint(object sender, PaintEventArgs e){ using (var lg = new LinearGradientBrush(headerPanel.ClientRectangle, Color.FromArgb(33,150,243), Color.FromArgb(33,203,243),0f)) e.Graphics.FillRectangle(lg, headerPanel.ClientRectangle); }
+        private void HeaderPanel_Paint(object sender, PaintEventArgs e)
+        {
+            try
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (var lg = new LinearGradientBrush(headerPanel.ClientRectangle, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
+                    e.Graphics.FillRectangle(lg, headerPanel.ClientRectangle);
+            }
+            catch
+            {
+                using (var lg = new LinearGradientBrush(headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
+                    e.Graphics.FillRectangle(lg, headerPanel.ClientRectangle);
+            }
+        }
 
         private void BuildTabs(){ _tabs = new TabControl { Dock = DockStyle.None, Appearance = TabAppearance.Normal, Font = new Font("Segoe UI", 10F, FontStyle.Bold) }; Controls.Add(_tabs); Controls.SetChildIndex(_tabs, 2); var tabWin = new TabPage("Windows / Standard") { BackColor = Color.White }; var tabLegacy = new TabPage("Legacy / Seriell") { BackColor = Color.White }; var tabDocs = new TabPage("Dokumentendrucker") { BackColor = Color.White }; _tabs.TabPages.Add(tabWin); _tabs.TabPages.Add(tabLegacy); _tabs.TabPages.Add(tabDocs); BuildWindowsTab(tabWin); BuildLegacyTab(tabLegacy); BuildDocumentsTab(tabDocs); }
 
