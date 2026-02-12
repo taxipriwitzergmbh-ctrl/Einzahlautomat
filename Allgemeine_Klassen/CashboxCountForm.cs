@@ -153,6 +153,7 @@ namespace TaMi_Einzahlautomat
 
             for (int i = 0; i < 7; i++)
             {
+                int idx = i;
                 int y = 40 + i * RowH;
                 int x = startX;
 
@@ -181,7 +182,7 @@ namespace TaMi_Einzahlautomat
                 };
                 bMinus.FlatAppearance.BorderSize = 0;
                 try { ApplyModernButtonStyle(bMinus, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
-                bMinus.Click += (s, e) => Change(i: (int)((Button)s).Tag, delta: -1);
+                bMinus.Click += (s, e) => Change(i: idx, delta: -1);
                 Controls.Add(bMinus);
                 _btnMinus[i] = bMinus;
                 x += btnWidth + colSpacing;
@@ -213,7 +214,7 @@ namespace TaMi_Einzahlautomat
                 };
                 bPlus.FlatAppearance.BorderSize = 0;
                 try { ApplyModernButtonStyle(bPlus, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
-                bPlus.Click += (s, e) => Change(i: (int)((Button)s).Tag, delta: +1);
+                bPlus.Click += (s, e) => Change(i: idx, delta: +1);
                 Controls.Add(bPlus);
                 _btnPlus[i] = bPlus;
             }

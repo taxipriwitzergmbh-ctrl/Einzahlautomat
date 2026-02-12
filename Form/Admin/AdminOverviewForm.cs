@@ -9,76 +9,13 @@ using System.IO.Ports; // NEU
 using TaMi_Einzahlautomat; // <--- Hinzugef�gt f�r LogViewForm
 using System.Reflection; // NEU f�r Versionsinfo
 using System.IO; // NEU f�r Timestamp
+using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
 {
     public class AdminOverviewForm : Form
     {
-        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
-        {
-            if (b == null) return;
-            try
-            {
-                b.FlatStyle = FlatStyle.Flat;
-                b.FlatAppearance.BorderSize = 0;
-                b.BackColor = Color.Transparent;
-                b.UseVisualStyleBackColor = false;
-                b.ForeColor = Color.White;
-                b.Paint -= ModernButton_Paint;
-                b.Paint += ModernButton_Paint;
-                b.Tag = new Tuple<Color, Color>(c1, c2);
-                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
-                b.Resize -= ModernButton_Resize;
-                b.Resize += ModernButton_Resize;
-            }
-            catch { }
-        }
-
-        private void ModernButton_Resize(object sender, EventArgs e)
-        {
-            try
-            {
-                var b = sender as Button;
-                if (b == null) return;
-                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
-                b.Invalidate();
-            }
-            catch { }
-        }
-
-        private void ModernButton_Paint(object sender, PaintEventArgs e)
-        {
-            var b = sender as Button;
-            if (b == null) return;
-            try
-            {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                var rect = b.ClientRectangle;
-                rect.Width -= 1;
-                rect.Height -= 1;
-
-                var colors = b.Tag as Tuple<Color, Color>;
-                var c1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
-                var c2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
-
-                using (var br = new LinearGradientBrush(rect, c1, c2, 90f))
-                {
-                    e.Graphics.FillRectangle(br, rect);
-                }
-                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
-                {
-                    e.Graphics.DrawRectangle(pen, rect);
-                }
-                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-            }
-            catch { }
-        }
-
-        private Panel headerPanel;
-        private Button btnClose;
-        private Label lblTitle;
-        private Point _mouseDownLocation;
+        private ModernHeaderPanel _header;
         // Tabs
         private TabControl _tabs;
         private TabPage _tabDevices;
@@ -207,29 +144,17 @@ namespace TaMi_Einzahlautomat
 
         private Button CreateMenuButton(Control parent, string text, int y, int height, Color backColor, Font font = null)
         {
-            var btn = new Button
+            var btn = new ModernGradientButton
             {
                 Text = text,
                 Size = new Size(400, height),
-                // Buttons leicht nach rechts r�cken (gleichm��iger Rand links/rechts)
                 Location = new Point(Math.Max(20, ((parent?.ClientSize.Width ?? ClientSize.Width) - 400) / 2), y),
                 Font = font ?? new Font("Segoe UI Variable", 16F, FontStyle.Bold),
-                BackColor = backColor,
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                GradientStart = backColor,
+                GradientEnd = ControlPaint.Dark(backColor),
+                TabStop = false
             };
-            btn.FlatAppearance.BorderSize = 0;
             (parent ?? (Control)this).Controls.Add(btn);
-
-            try
-            {
-                // Moderne Optik wie in AbrechnungForm (Gradient + Round)
-                var darker = ControlPaint.Dark(backColor);
-                ApplyModernButtonStyle(btn, backColor, darker);
-                btn.FlatAppearance.MouseOverBackColor = Color.Transparent;
-            }
-            catch { }
-
             return btn;
         }
 
@@ -242,69 +167,18 @@ namespace TaMi_Einzahlautomat
             BackColor = Color.White;
             DoubleBuffered = true;
 
-            // Farbverlauf-Header
-            headerPanel = new Panel
-            {
-                Location = new Point(0, 0),
-                Size = new Size(ClientSize.Width, 60),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-            };
-            headerPanel.Paint += HeaderPanel_Paint;
-            headerPanel.MouseDown += HeaderPanel_MouseDown;
-            headerPanel.MouseMove += HeaderPanel_MouseMove;
-            Controls.Add(headerPanel);
-
-            // Titel
-            lblTitle = new Label
-            {
-                Text = "Admin Übersicht",
-                AutoSize = false,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
-                ForeColor = Color.White,
-                Location = new Point(24, 0),
-                Size = new Size(400, 60),
-                BackColor = Color.Transparent
-            };
-            headerPanel.Controls.Add(lblTitle);
-
-            // Schließen-Button
-            btnClose = new Button
-            {
-                Text = "\u2715",
-                Font = new Font("Segoe UI Symbol", 18F, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.Transparent,
-                FlatStyle = FlatStyle.Flat,
-                Size = new Size(48, 48),
-                Location = new Point(ClientSize.Width - 56, 6),
-                TabStop = false
-            };
-            btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
-            btnClose.Click += (s, e) => Close();
-            headerPanel.Controls.Add(btnClose);
-
-            // Header-Buttons modern (Gradient + Round) wie in AbrechnungForm
-            try
-            {
-                ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40));
-            }
-            catch { }
-
-            // Korrekte Positionierung im Header sicherstellen (Buttons rechts, Titel kollidiert nicht)
-            headerPanel.Resize += (s, e) => UpdateHeaderLayout();
-            UpdateHeaderLayout();
-
-            // Abgerundete Ecken
-            try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 32, 32)); } catch { }
+            _header = new ModernHeaderPanel { Title = "Admin Übersicht" };
+            _header.CloseClicked += () => { try { Close(); } catch { } };
+            Controls.Add(_header);
+            _header.BringToFront();
+            try { _header.ApplyRoundedRegionToForm(this); } catch { }
 
             // Tabs anlegen (Geräte / Einstellungen)
             _tabs = new TabControl
             {
-                Location = new Point(0, headerPanel.Bottom),
+                Location = new Point(0, _header.Bottom),
                 // Höhe etwas reduziert, damit unten Platz für ExeInfo-Label bleibt
-                Size = new Size(ClientSize.Width, ClientSize.Height - headerPanel.Height - 30),
+                Size = new Size(ClientSize.Width, ClientSize.Height - _header.Height - 30),
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold),
                 ItemSize = new Size(200, 36),
@@ -621,67 +495,6 @@ namespace TaMi_Einzahlautomat
 
                 // Anwenden (API erwartet byte)
                 dev.ConfigureBezel((byte)r, (byte)g, (byte)b);
-            }
-            catch { }
-        }
-
-        private void HeaderPanel_Paint(object sender, PaintEventArgs e)
-        {
-            try
-            {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                var r = headerPanel.ClientRectangle;
-
-                using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
-                {
-                    e.Graphics.FillRectangle(brush, r);
-                }
-
-                // Gloss/Separator bewusst entfernt (kein heller Streifen im Header)
-            }
-            catch
-            {
-                using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
-                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
-            }
-        }
-
-        private void HeaderPanel_MouseDown(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left)
-                _mouseDownLocation = e.Location;
-        }
-
-        private void HeaderPanel_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left)
-            {
-                Left += e.X - _mouseDownLocation.X;
-                Top += e.Y - _mouseDownLocation.Y;
-            }
-        }
-
-        private void UpdateHeaderLayout()
-        {
-            try
-            {
-                if (headerPanel == null) return;
-                int marginRight = 12;  // Abstand zum rechten Rand
-                int spacing = 8;       // Abstand zwischen Buttons
-                int top = 6;
-
-                // Buttons rechtsb�ndig ausrichten
-                if (btnClose != null)
-                    btnClose.Location = new Point(Math.Max(0, headerPanel.ClientSize.Width - marginRight - btnClose.Width), top);
-
-                // Titelbreite so setzen, dass er nicht in die Buttons ragt
-                if (lblTitle != null && btnClose != null)
-                {
-                    int left = lblTitle.Left; // normalerweise 24
-                    int rightLimit = btnClose.Left - spacing; // bis vor die Buttons
-                    int newWidth = Math.Max(120, rightLimit - left);
-                    lblTitle.Size = new Size(newWidth, lblTitle.Height);
-                }
             }
             catch { }
         }

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO.Ports;
 using System.Runtime.InteropServices;
 using System.Linq; // sicherstellen
+using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
 {
@@ -16,9 +17,7 @@ namespace TaMi_Einzahlautomat
         private CoinFeederController _feeder;
 
         // UI
-        private Panel headerPanel;
-        private Label lblTitle;
-        private Button btnClose;
+        private ModernHeaderPanel _header;
         private ComboBox cmbPorts;
         private ComboBox cmbType; // Typ-Auswahl: CoinFeeder oder NFC V2
        
@@ -45,68 +44,6 @@ namespace TaMi_Einzahlautomat
         private readonly Dictionary<string, DateTime> _lastSendTimes = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         private readonly TimeSpan _sendDebounce = TimeSpan.FromSeconds(2);
         private Point _mouseDown;
-
-        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
-        {
-            if (b == null) return;
-            try
-            {
-                b.FlatStyle = FlatStyle.Flat;
-                b.FlatAppearance.BorderSize = 0;
-                b.BackColor = Color.Transparent;
-                b.UseVisualStyleBackColor = false;
-                b.ForeColor = Color.White;
-                b.Paint -= ModernButton_Paint;
-                b.Paint += ModernButton_Paint;
-                b.Tag = new Tuple<Color, Color>(c1, c2);
-                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
-                b.Resize -= ModernButton_Resize;
-                b.Resize += ModernButton_Resize;
-            }
-            catch { }
-        }
-
-        private void ModernButton_Resize(object sender, EventArgs e)
-        {
-            try
-            {
-                var b = sender as Button;
-                if (b == null) return;
-                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
-                b.Invalidate();
-            }
-            catch { }
-        }
-
-        private void ModernButton_Paint(object sender, PaintEventArgs e)
-        {
-            var b = sender as Button;
-            if (b == null) return;
-            try
-            {
-                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                var rect = b.ClientRectangle;
-                rect.Width -= 1;
-                rect.Height -= 1;
-
-                var colors = b.Tag as Tuple<Color, Color>;
-                var cc1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
-                var cc2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
-
-                using (var br = new System.Drawing.Drawing2D.LinearGradientBrush(rect, cc1, cc2, 90f))
-                {
-                    e.Graphics.FillRectangle(br, rect);
-                }
-                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
-                {
-                    e.Graphics.DrawRectangle(pen, rect);
-                }
-
-                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-            }
-            catch { }
-        }
 
         public AdminCoinFeederForm(string iniPath)
         {
@@ -162,9 +99,6 @@ namespace TaMi_Einzahlautomat
             }
         }
 
-        [DllImport("gdi32.dll", SetLastError = true)]
-        private static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int rx, int ry);
-
         private void BuildUi()
         {
             SuspendLayout();
@@ -175,75 +109,13 @@ namespace TaMi_Einzahlautomat
             DoubleBuffered = true;
             ClientSize = new Size(880, 620);
 
-            try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 22, 22)); } catch { }
+            // Rounded corners übernimmt `_header.ApplyRoundedRegionToForm(this)`
 
-            headerPanel = new Panel
-            {
-                Location = new Point(0, 0),
-                Size = new Size(ClientSize.Width, 64),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
-            headerPanel.Paint += (s, e) =>
-            {
-                try
-                {
-                    e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                    var r = headerPanel.ClientRectangle;
-                    using (var br = new System.Drawing.Drawing2D.LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
-                    {
-                        e.Graphics.FillRectangle(br, r);
-                    }
-                }
-                catch
-                {
-                    using (var br = new System.Drawing.Drawing2D.LinearGradientBrush(headerPanel.ClientRectangle,
-                               Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
-                    {
-                        e.Graphics.FillRectangle(br, headerPanel.ClientRectangle);
-                    }
-                }
-            };
-            headerPanel.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) _mouseDown = e.Location; };
-            headerPanel.MouseMove += (s, e) =>
-            {
-                if (e.Button == MouseButtons.Left)
-                {
-                    Left += e.X - _mouseDown.X;
-                    Top += e.Y - _mouseDown.Y;
-                }
-            };
-            Controls.Add(headerPanel);
-
-            lblTitle = new Label
-            {
-                Text = "CoinFeeder – Verwaltung",
-                AutoSize = false,
-                Location = new Point(24, 0),
-                Size = new Size(520, 64),
-                Font = new Font("Segoe UI Variable", 20f, FontStyle.Bold),
-                ForeColor = Color.White,
-                TextAlign = ContentAlignment.MiddleLeft,
-                BackColor = Color.Transparent
-            };
-            headerPanel.Controls.Add(lblTitle);
-
-            btnClose = new Button
-            {
-                Text = "✕",
-                Font = new Font("Segoe UI", 16f, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.Transparent,
-                FlatStyle = FlatStyle.Flat,
-                Size = new Size(56, 56),
-                Location = new Point(ClientSize.Width - 64, 4),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                TabStop = false
-            };
-            btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
-            btnClose.Click += (s, e) => Close();
-            headerPanel.Controls.Add(btnClose);
-            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
+            _header = new ModernHeaderPanel { Title = "CoinFeeder – Verwaltung" };
+            _header.CloseClicked += () => { try { Close(); } catch { } };
+            Controls.Add(_header);
+            _header.BringToFront();
+            try { _header.ApplyRoundedRegionToForm(this); } catch { }
 
             // Port-Auswahl
             var lblPort = new Label
@@ -288,23 +160,17 @@ namespace TaMi_Einzahlautomat
             cmbType.SelectedIndexChanged += (s, e) => { SaveTypeToIni(); UpdateUiState(); };
             Controls.Add(cmbType);
 
-            btnDetect = MakeSmallButton("Erkennung", new Point(250, 76), Color.FromArgb(33, 150, 243));
-            btnDetect.Size = new Size(120,36);
+            btnDetect = new ModernGradientButton { Text = "Erkennung", Location = new Point(250, 76), Size = new Size(120, 36), GradientStart = UiTheme.SecondaryStart, GradientEnd = UiTheme.SecondaryEnd };
             btnDetect.Click += (s,e)=> StartDetectPortMode();
             Controls.Add(btnDetect);
-            try { ApplyModernButtonStyle(btnDetect, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
 
-            btnApply = MakeSmallButton("Übernehmen", new Point(380, 76), Color.FromArgb(46, 125, 50));
-            btnApply.Size = new Size(140, 36);
+            btnApply = new ModernGradientButton { Text = "Übernehmen", Location = new Point(380, 76), Size = new Size(140, 36), GradientStart = UiTheme.SuccessStart, GradientEnd = UiTheme.SuccessEnd };
             btnApply.Click += (s, e) => ApplyPortChange();
             Controls.Add(btnApply);
-            try { ApplyModernButtonStyle(btnApply, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32)); } catch { }
 
-            btnReconnect = MakeSmallButton("Reopen", new Point(530, 76), Color.FromArgb(33, 150, 243));
-            btnReconnect.Size = new Size(110, 36);
+            btnReconnect = new ModernGradientButton { Text = "Reopen", Location = new Point(530, 76), Size = new Size(110, 36), GradientStart = UiTheme.PrimaryStart, GradientEnd = UiTheme.PrimaryEnd };
             btnReconnect.Click += (s, e) => ReopenCurrentPort();
             Controls.Add(btnReconnect);
-            try { ApplyModernButtonStyle(btnReconnect, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
 
             lblStatus = new Label
             {
@@ -353,68 +219,27 @@ namespace TaMi_Einzahlautomat
             int bh = 58;
             int pad = 16;
 
-            btnGreen = MakeActionButton("NV200/1 Grün (2005$)", new Point(bx, by), bw, bh, Color.FromArgb(46, 125, 50));
+            btnGreen = new ModernGradientButton { Text = "NV200/1 Grün (2005$)", Location = new Point(bx, by), Size = new Size(bw, bh), GradientStart = UiTheme.SuccessStart, GradientEnd = UiTheme.SuccessEnd };
             btnGreen.Click += (s, e) => SafeSend("2005$");
             Controls.Add(btnGreen);
-            try { ApplyModernButtonStyle(btnGreen, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32)); } catch { }
 
-            btnGreenA = MakeActionButton("NV200/2 Grün (2005a$)", new Point(bx, by + (bh + pad)), bw, bh, Color.FromArgb(56, 142, 60));
+            btnGreenA = new ModernGradientButton { Text = "NV200/2 Grün (2005a$)", Location = new Point(bx, by + (bh + pad)), Size = new Size(bw, bh), GradientStart = UiTheme.SuccessStart, GradientEnd = UiTheme.SuccessEnd };
             btnGreenA.Click += (s, e) => SafeSend("2005a$");
             Controls.Add(btnGreenA);
-            try { ApplyModernButtonStyle(btnGreenA, Color.FromArgb(56, 142, 60), Color.FromArgb(27, 94, 32)); } catch { }
 
-            btnRed = MakeActionButton("NV200/1 Rot (2004$)", new Point(bx, by + 2 * (bh + pad)), bw, bh, Color.FromArgb(211, 47, 47));
+            btnRed = new ModernGradientButton { Text = "NV200/1 Rot (2004$)", Location = new Point(bx, by + 2 * (bh + pad)), Size = new Size(bw, bh), GradientStart = UiTheme.DangerStart, GradientEnd = UiTheme.DangerEnd };
             btnRed.Click += (s, e) => SafeSend("2004$");
             Controls.Add(btnRed);
-            try { ApplyModernButtonStyle(btnRed, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
 
-            btnRedA = MakeActionButton("NV200/2 Rot (2004a$)", new Point(bx, by + 3 * (bh + pad)), bw, bh, Color.FromArgb(198, 40, 40));
+            btnRedA = new ModernGradientButton { Text = "NV200/2 Rot (2004a$)", Location = new Point(bx, by + 3 * (bh + pad)), Size = new Size(bw, bh), GradientStart = UiTheme.DangerStart, GradientEnd = UiTheme.DangerEnd };
             btnRedA.Click += (s, e) => SafeSend("2004a$");
             Controls.Add(btnRedA);
-            try { ApplyModernButtonStyle(btnRedA, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
 
             // Hinweislabel entfernt (LF (\n) Anzeige)
 
             FormClosed += OnFormClosed;
 
             ResumeLayout(false);
-        }
-
-        private Button MakeSmallButton(string text, Point loc, Color color)
-        {
-            var b = new Button
-            {
-                Text = text,
-                Location = loc,
-                Size = new Size(40, 36),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = color,
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI Variable", 13f, FontStyle.Bold),
-                TabStop = false
-            };
-            b.FlatAppearance.BorderSize = 0;
-            return b;
-        }
-
-        private Button MakeActionButton(string text, Point loc, int w, int h, Color c)
-        {
-            var b = new Button
-            {
-                Text = text,
-                Location = loc,
-                Size = new Size(w, h),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = c,
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI Variable", 14f, FontStyle.Bold),
-                TabStop = false
-            };
-            b.FlatAppearance.BorderSize = 0;
-            b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, w, h, 14, 14));
-            b.MouseEnter += (s, e) => b.BackColor = ControlPaint.Light(c);
-            b.MouseLeave += (s, e) => b.BackColor = c;
-            return b;
         }
 
         private void AppendLog(string line)

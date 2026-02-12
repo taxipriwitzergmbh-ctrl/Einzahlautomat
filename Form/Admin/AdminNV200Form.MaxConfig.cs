@@ -1,6 +1,7 @@
-using System;
+ï»¿using System;
 using System.Drawing;
 using System.Windows.Forms;
+using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
 {
@@ -44,7 +45,7 @@ namespace TaMi_Einzahlautomat
             // Header
             var lblHeader = new Label
             {
-                Text = "Payout-Zielbestände",
+                Text = "Payout-Zielbestï¿½nde",
                 Left = 10,
                 Top = 10,
                 AutoSize = true,
@@ -53,10 +54,10 @@ namespace TaMi_Einzahlautomat
             };
             _panelMaxConfig.Controls.Add(lblHeader);
 
-            // Close-Button (×)
+            // Close-Button (ï¿½)
             _btnMaxClose = new Button
             {
-                Text = "×",
+                Text = "ï¿½",
                 Font = new Font("Segoe UI", 12F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(66, 66, 66),
                 BackColor = Color.Transparent,
@@ -88,8 +89,8 @@ namespace TaMi_Einzahlautomat
             };
             _panelMaxConfig.Controls.Add(sep);
 
-            // Labels + NumericUpDowns in einer „Grid“-Anordnung
-            var labels = new[] { "5 €", "10 €", "20 €", "50 €", "100 €", "200 €", "500 €" };
+            // Labels + NumericUpDowns in einer ï¿½Gridï¿½-Anordnung
+            var labels = new[] { "5 ï¿½", "10 ï¿½", "20 ï¿½", "50 ï¿½", "100 ï¿½", "200 ï¿½", "500 ï¿½" };
             int baseLeft = 20;
             int baseTop = 56;
             int rowH = 30;
@@ -122,37 +123,31 @@ namespace TaMi_Einzahlautomat
             }
 
             // Buttons: Laden/Speichern
-            _btnMaxLoad = new Button
+            _btnMaxLoad = new ModernGradientButton
             {
                 Text = "Laden",
                 Left = baseLeft + 210,
                 Top = baseTop,
                 Width = 130,
                 Height = 30,
-                FlatStyle = FlatStyle.Flat,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
-            _btnMaxLoad.FlatAppearance.BorderSize = 0;
-            _btnMaxLoad.BackColor = Color.FromArgb(33, 150, 243);
-            _btnMaxLoad.ForeColor = Color.White;
-            _btnMaxLoad.FlatAppearance.MouseOverBackColor = Color.FromArgb(30, 136, 229);
+            ((ModernGradientButton)_btnMaxLoad).GradientStart = UiTheme.PrimaryStart;
+            ((ModernGradientButton)_btnMaxLoad).GradientEnd = UiTheme.PrimaryEnd;
             _btnMaxLoad.Click += (s, e) => LoadMaxFromIniToUi();
             _panelMaxConfig.Controls.Add(_btnMaxLoad);
 
-            _btnMaxSave = new Button
+            _btnMaxSave = new ModernGradientButton
             {
                 Text = "Speichern",
                 Left = baseLeft + 210,
                 Top = baseTop + 36,
                 Width = 130,
                 Height = 30,
-                FlatStyle = FlatStyle.Flat,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
-            _btnMaxSave.FlatAppearance.BorderSize = 0;
-            _btnMaxSave.BackColor = Color.FromArgb(46, 125, 50);
-            _btnMaxSave.ForeColor = Color.White;
-            _btnMaxSave.FlatAppearance.MouseOverBackColor = Color.FromArgb(27, 94, 32);
+            ((ModernGradientButton)_btnMaxSave).GradientStart = UiTheme.SuccessStart;
+            ((ModernGradientButton)_btnMaxSave).GradientEnd = UiTheme.SuccessEnd;
             _btnMaxSave.Click += (s, e) => SaveMaxFromUiToIniAndApply();
             _panelMaxConfig.Controls.Add(_btnMaxSave);
 
@@ -269,7 +264,7 @@ namespace TaMi_Einzahlautomat
 
                 // 3) Routen neu setzen (Mehrmengen gehen in Cashbox)
                 _ssp.Set_Routing();
-                _ssp.Ereignis_adden($"Max-Zielbestände aktualisiert ({section}) und Routen neu gesetzt.");
+                _ssp.Ereignis_adden($"Max-Zielbestï¿½nde aktualisiert ({section}) und Routen neu gesetzt.");
                 MessageBox.Show(this, "Einstellungen gespeichert und angewendet.", "OK", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)

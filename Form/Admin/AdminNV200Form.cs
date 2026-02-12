@@ -7,79 +7,14 @@ using System.Text;
 using System.Windows.Forms;
 using System.IO.Ports; // NEU f?r COM-Port Auflistung
 using System.Globalization; // NEU f?r Formatierung
+using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
 {
     public partial class AdminNV200Form : Form
     {
-        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
-        {
-            if (b == null) return;
-            try
-            {
-                b.FlatStyle = FlatStyle.Flat;
-                b.FlatAppearance.BorderSize = 0;
-                b.BackColor = Color.Transparent;
-                b.UseVisualStyleBackColor = false;
-                b.ForeColor = Color.White;
-                b.Paint -= ModernButton_Paint;
-                b.Paint += ModernButton_Paint;
-                b.Tag = new Tuple<Color, Color>(c1, c2);
-                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
-                b.Resize -= ModernButton_Resize;
-                b.Resize += ModernButton_Resize;
-            }
-            catch { }
-        }
-
-        private void ModernButton_Resize(object sender, EventArgs e)
-        {
-            try
-            {
-                var b = sender as Button;
-                if (b == null) return;
-                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
-                b.Invalidate();
-            }
-            catch { }
-        }
-
-        private void ModernButton_Paint(object sender, PaintEventArgs e)
-        {
-            var b = sender as Button;
-            if (b == null) return;
-            try
-            {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                var rect = b.ClientRectangle;
-                rect.Width -= 1;
-                rect.Height -= 1;
-
-                var colors = b.Tag as Tuple<Color, Color>;
-                var cc1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
-                var cc2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
-
-                using (var br = new LinearGradientBrush(rect, cc1, cc2, 90f))
-                {
-                    e.Graphics.FillRectangle(br, rect);
-                }
-                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
-                {
-                    e.Graphics.DrawRectangle(pen, rect);
-                }
-
-                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-            }
-            catch { }
-        }
-
         private NV200_SSP _ssp;
-        private Panel headerPanel;
-        private Button btnClose;
-        // Minimieren-Button wird entfernt
-        private Label lblTitle;
-        private Point _mouseDownLocation;
+        private ModernHeaderPanel _header;
 
         private Panel _panelBestand;
         private Label[] _lblBestandAnz = new Label[7];
@@ -163,53 +98,11 @@ namespace TaMi_Einzahlautomat
             BackColor = Color.White;
             DoubleBuffered = true;
 
-            // Farbverlauf-Header
-            headerPanel = new Panel
-            {
-                Location = new Point(0, 0),
-                Size = new Size(ClientSize.Width, 60),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-            };
-            headerPanel.Paint += HeaderPanel_Paint;
-            headerPanel.MouseDown += HeaderPanel_MouseDown;
-            headerPanel.MouseMove += HeaderPanel_MouseMove;
-            Controls.Add(headerPanel);
-
-            // Titel
-            lblTitle = new Label
-            {
-                Text = "Admin - NV200 Steuerung",
-                AutoSize = false,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
-                ForeColor = Color.White,
-                Location = new Point(24, 0),
-                Size = new Size(400, 60),
-                BackColor = Color.Transparent
-            };
-            headerPanel.Controls.Add(lblTitle);
-
-            // Schlie�en-Button
-            btnClose = new Button
-            {
-                Text = "\u2715",
-                Font = new Font("Segoe UI Symbol", 18F, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.Transparent,
-                FlatStyle = FlatStyle.Flat,
-                Size = new Size(48, 48),
-                Location = new Point(ClientSize.Width - 56, 6),
-                TabStop = false
-            };
-            btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
-            btnClose.Click += (s, e) => Close();
-            headerPanel.Controls.Add(btnClose);
-            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
-            // Minimieren-Button entfernt
-
-            // Abgerundete Ecken
-            try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 32, 32)); } catch { }
+            _header = new ModernHeaderPanel { Title = "Admin - NV200 Steuerung" };
+            _header.CloseClicked += () => { try { Close(); } catch { } };
+            Controls.Add(_header);
+            _header.BringToFront();
+            try { _header.ApplyRoundedRegionToForm(this); } catch { }
 
             // Restliches Layout
             BuildModernLayout();
@@ -235,42 +128,7 @@ namespace TaMi_Einzahlautomat
             ApplyDisabledState();
         }
 
-        private void HeaderPanel_Paint(object sender, PaintEventArgs e)
-        {
-            try
-            {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                var r = headerPanel.ClientRectangle;
-                using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
-                {
-                    e.Graphics.FillRectangle(brush, r);
-                }
-                // Gloss/Separator bewusst entfernt
-            }
-            catch
-            {
-                using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle,
-                    Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
-                {
-                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
-                }
-            }
-        }
-
-        private void HeaderPanel_MouseDown(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left)
-                _mouseDownLocation = e.Location;
-        }
-
-        private void HeaderPanel_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left)
-            {
-                Left += e.X - _mouseDownLocation.X;
-                Top += e.Y - _mouseDownLocation.Y;
-            }
-        }
+        // Header wird zentral über `ModernHeaderPanel` gezeichnet.
 
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
@@ -304,50 +162,49 @@ namespace TaMi_Einzahlautomat
             txtComPort.DropDown += (s,e)=> LoadComPorts(true); // passiver Refresh
             Controls.Add(txtComPort);
 
-            _btnDetectPort = new Button
+            _btnDetectPort = new ModernGradientButton
             {
                 Text = "Erkennung",
                 Location = new Point(225, yStart - 4),
                 Size = new Size(90, 24),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(245,247,250)
+                GradientStart = UiTheme.SecondaryStart,
+                GradientEnd = UiTheme.SecondaryEnd
             };
-            _btnDetectPort.FlatAppearance.BorderSize = 0;
             _btnDetectPort.Click += (s,e)=> StartDetectPortMode();
             Controls.Add(_btnDetectPort);
-            try { ApplyModernButtonStyle(_btnDetectPort, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
 
-            btnVerbinden = new Button
+            btnVerbinden = new ModernGradientButton
             {
                 Location = new Point(320, yStart - 4),
                 Size = new Size(140, 24),
-                Text = "Events anhängen"
+                Text = "Events anhängen",
+                GradientStart = UiTheme.PrimaryStart,
+                GradientEnd = UiTheme.PrimaryEnd
             };
             btnVerbinden.Click += btnVerbinden_Click;
             Controls.Add(btnVerbinden);
-            try { ApplyModernButtonStyle(btnVerbinden, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
 
-            btnComPortSpeichern = new Button
+            btnComPortSpeichern = new ModernGradientButton
             {
                 Location = new Point(465, yStart - 4),
                 Size = new Size(100, 24),
-                Text = "Speichern"
+                Text = "Speichern",
+                GradientStart = UiTheme.SecondaryStart,
+                GradientEnd = UiTheme.SecondaryEnd
             };
             btnComPortSpeichern.Click += BtnComPortSpeichern_Click;
             Controls.Add(btnComPortSpeichern);
-            try { ApplyModernButtonStyle(btnComPortSpeichern, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
 
             // NEU: Freigeben/Sperren (analog AdminCoinForm)
-            btnEnableToggle = new Button
+            btnEnableToggle = new ModernGradientButton
             {
                 Location = new Point(570, yStart - 4),
                 Size = new Size(120, 24),
-                FlatStyle = FlatStyle.Flat
+                GradientStart = UiTheme.SuccessStart,
+                GradientEnd = UiTheme.SuccessEnd
             };
-            btnEnableToggle.FlatAppearance.BorderSize = 0;
             btnEnableToggle.Click += BtnEnableToggle_Click;
             Controls.Add(btnEnableToggle);
-            try { ApplyModernButtonStyle(btnEnableToggle, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32)); } catch { }
 
             // NEU: Deaktiviert-Checkbox (verhindert Verbindung)
             _chkDisabled = new CheckBox
@@ -556,16 +413,17 @@ namespace TaMi_Einzahlautomat
             _panelBestand.Controls.Add(_lblGesamtSum);
 
             // Aktualisieren-Button eine Zeile tiefer und mittig
-            _btnBestandRefresh = new Button
+            _btnBestandRefresh = new ModernGradientButton
             {
                 Text = "Aktualisieren",
                 Size = new Size(140, 32),
                 Location = new Point((_panelBestand.Width - 140) / 2, baseSumY + 60),
-                Anchor = AnchorStyles.Top
+                Anchor = AnchorStyles.Top,
+                GradientStart = UiTheme.PrimaryStart,
+                GradientEnd = UiTheme.PrimaryEnd
             };
             _panelBestand.Controls.Add(_btnBestandRefresh);
             _btnBestandRefresh.Click += (s, e) => RefreshBestand();
-            try { ApplyModernButtonStyle(_btnBestandRefresh, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
 
             _tmrBestand = new Timer { Interval = 3000 };
             _tmrBestand.Tick += (s, e) => RefreshBestand();
@@ -575,16 +433,17 @@ namespace TaMi_Einzahlautomat
             LoadComPorts();
             EnsureSelectedPort(_ssp?.ComPort ?? iniCom, initial: true);
             // NEU: Button "Payout Stückelung" als Feld anlegen und Click-Handler zuweisen
-            btnPayoutStueckelung = new Button
+            btnPayoutStueckelung = new ModernGradientButton
             {
                 Text = "Payout Stückelung",
                 Location = new Point(850, yStart + 610),
                 Size = new Size(220, 32),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                GradientStart = UiTheme.SecondaryStart,
+                GradientEnd = UiTheme.SecondaryEnd
             };
             btnPayoutStueckelung.Click += (s, e) => ToggleMaxConfigPanel();
             Controls.Add(btnPayoutStueckelung);
-            try { ApplyModernButtonStyle(btnPayoutStueckelung, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
 
             // NEU: Checkbox f�r manuelles Routing � deaktiviert
             _chkRouteAllPayout = new CheckBox
@@ -848,7 +707,29 @@ namespace TaMi_Einzahlautomat
         }
         private void UpdateEnableButtonVisual()
         {
-            if (btnEnableToggle == null) return; btnEnableToggle.Text = _enabledRequested ? "Sperren" : "Freigeben"; btnEnableToggle.BackColor = _enabledRequested ? Color.FromArgb(183,28,28) : Color.FromArgb(46,125,50); btnEnableToggle.ForeColor = Color.White;
+            if (btnEnableToggle == null) return;
+            btnEnableToggle.Text = _enabledRequested ? "Sperren" : "Freigeben";
+
+            var mgb = btnEnableToggle as ModernGradientButton;
+            if (mgb != null)
+            {
+                if (_enabledRequested)
+                {
+                    mgb.GradientStart = UiTheme.DangerStart;
+                    mgb.GradientEnd = UiTheme.DangerEnd;
+                }
+                else
+                {
+                    mgb.GradientStart = UiTheme.SuccessStart;
+                    mgb.GradientEnd = UiTheme.SuccessEnd;
+                }
+                try { mgb.Invalidate(); } catch { }
+            }
+            else
+            {
+                btnEnableToggle.BackColor = _enabledRequested ? Color.FromArgb(183, 28, 28) : Color.FromArgb(46, 125, 50);
+                btnEnableToggle.ForeColor = Color.White;
+            }
         }
         private void ApplyDisabledState()
         {
@@ -904,8 +785,41 @@ namespace TaMi_Einzahlautomat
         private void chkAutoSenden_CheckedChanged(object sender, EventArgs e){ if (tmrAutoSend!=null && chkAutoSenden!=null){ tmrAutoSend.Enabled = chkAutoSenden.Checked; AppendLog("AutoSenden: "+(chkAutoSenden.Checked?"aktiv":"inaktiv")); }}
         private void tmrAutoSend_Tick(object sender, EventArgs e){ btnSenden_Click(sender,e); }
         private void StartBestandTimer(bool start){ if (_tmrBestand==null) return; _tmrBestand.Enabled = start; if (start) RefreshBestand(); }
-        private void AttachSspEvents(){ if (_ssp==null||_eventsAttached) return; _ssp.Ereignis += SspOnEreignis; _eventsAttached = true; if (btnVerbinden!=null) btnVerbinden.Text="Events lösen"; }
-        private void DetachSspEvents(){ if (_ssp==null||!_eventsAttached) return; try{ _ssp.Ereignis -= SspOnEreignis; }catch{} _eventsAttached=false; if (btnVerbinden!=null) btnVerbinden.Text="Events anhängen"; }
+        private void AttachSspEvents()
+        {
+            if (_ssp == null || _eventsAttached) return;
+            _ssp.Ereignis += SspOnEreignis;
+            _eventsAttached = true;
+            if (btnVerbinden != null)
+            {
+                btnVerbinden.Text = "Events lösen";
+                var b = btnVerbinden as ModernGradientButton;
+                if (b != null)
+                {
+                    b.GradientStart = UiTheme.DangerStart;
+                    b.GradientEnd = UiTheme.DangerEnd;
+                    try { b.Invalidate(); } catch { }
+                }
+            }
+        }
+
+        private void DetachSspEvents()
+        {
+            if (_ssp == null || !_eventsAttached) return;
+            try { _ssp.Ereignis -= SspOnEreignis; } catch { }
+            _eventsAttached = false;
+            if (btnVerbinden != null)
+            {
+                btnVerbinden.Text = "Events anhängen";
+                var b = btnVerbinden as ModernGradientButton;
+                if (b != null)
+                {
+                    b.GradientStart = UiTheme.PrimaryStart;
+                    b.GradientEnd = UiTheme.PrimaryEnd;
+                    try { b.Invalidate(); } catch { }
+                }
+            }
+        }
         private void SspOnEreignis(string x){ _lastEvtUtc = DateTime.UtcNow; AppendLog(x); }
         private void AppendLog(string text)
         {

@@ -234,6 +234,13 @@
     <Compile Include="Form\Admin\PrinterConfigForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Form\Layout\ModernGradientButton.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Form\Layout\ModernHeaderPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Form\Layout\UiTheme.cs" />
     <Compile Include="Form\ProcessingAnimation.cs" />
     <Compile Include="Form\QrCodeForm.cs">
       <SubType>Form</SubType>
