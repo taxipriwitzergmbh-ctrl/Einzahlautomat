@@ -420,9 +420,12 @@ namespace TaMi_Einzahlautomat
 
         private void LoadIni()
         {
-            var typeStr = IniHelper.ReadValue("SmartCoin", "Typ", _iniPath) ?? "None";
-            var com = IniHelper.ReadValue("SmartCoin", "ComPort", _iniPath) ?? string.Empty;
-            var addr = IniHelper.ReadValue("SmartCoin", "SSPAddress", _iniPath);
+            // SmartCoin/1 muss separat konfiguriert werden (SmartCoin/2 nutzt ebenfalls eigene Sektion).
+            // Sonst überschreibt die Admin-UI den generischen [SmartCoin]-Block und beim nächsten Start
+            // kann ComPort wieder auf Defaults/anderen Port springen.
+            var typeStr = IniHelper.ReadValue("SmartCoin/1", "Typ", _iniPath) ?? "None";
+            var com = IniHelper.ReadValue("SmartCoin/1", "ComPort", _iniPath) ?? string.Empty;
+            var addr = IniHelper.ReadValue("SmartCoin/1", "SSPAddress", _iniPath);
 
             cmbType.SelectedItem =
                 typeStr.Equals("V1", StringComparison.OrdinalIgnoreCase) ? "SmartCoinV1" :
@@ -441,7 +444,11 @@ namespace TaMi_Einzahlautomat
             if (sel == "SmartCoinV1") t = CoinValidatorType.SmartCoinV1;
             else if (sel == "RM5") t = CoinValidatorType.Rm5Cctalk;
 
-            CoinValidatorFactory.SaveToIni(_iniPath, t, txtCom.Text?.Trim(), IsRm5(sel) ? (int?)null : (int)nudAddr.Value);
+            // Für SmartCoin/1 explizit in [SmartCoin/1] schreiben (nicht in den generischen [SmartCoin]-Abschnitt).
+            IniHelper.WriteValue("SmartCoin/1", "Typ", t == CoinValidatorType.SmartCoinV1 ? "V1" : (t == CoinValidatorType.Rm5Cctalk ? "RM5" : "None"), _iniPath);
+            IniHelper.WriteValue("SmartCoin/1", "ComPort", txtCom.Text?.Trim() ?? string.Empty, _iniPath);
+            if (!IsRm5(sel))
+                IniHelper.WriteValue("SmartCoin/1", "SSPAddress", ((int)nudAddr.Value).ToString(), _iniPath);
             if (_coin != null)
             {
                 _coin.ComPort = txtCom.Text?.Trim();

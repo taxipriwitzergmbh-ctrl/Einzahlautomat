@@ -4,10 +4,10 @@ using System.Threading;
 
 namespace TaMi_Einzahlautomat.Coins
 {
-    // Port der SmartCoinSystem.vb Kernlogik (SSP/ITLlib). Ben�tigt ITLlib-Referenz im Projekt.
+    // Port der SmartCoinSystem.vb Kernlogik (SSP/ITLlib). Benötigt ITLlib-Referenz im Projekt.
     public class SmartCoinV1 : ICoinValidator
     {
-        // Instanzbasierter Throttle f�r Level-Requests je Ger�t (verhindert, dass Coin/2 durch Coin/1 blockiert wird)
+        // Instanzbasierter Throttle für Level-Requests je Gerät (verhindert, dass Coin/2 durch Coin/1 blockiert wird)
         private readonly object _instanceLevelsLock = new object();
         private DateTime _lastInstanceLevelsRequestUtc = DateTime.MinValue;
         private static bool _kassensturzMode = false;
@@ -21,17 +21,17 @@ namespace TaMi_Einzahlautomat.Coins
         public event Action<int> CoinAccepted;
         public event Action<string> EventLog;
 
-        // Event bei aktualisierten M�nzst�nden
+        // Event bei aktualisierten Münzständen
         public event Action<int[]> CoinLevelsUpdated;
 
-        // Events f�r M�nzauszahlungen
+        // Events für Münzauszahlungen
         public event Action CoinDispenseComplete;
         public event Action<string> CoinPayoutError;
 
-        // NEU: Fortschritts-Event je tats�chlich ausgegebener M�nze (Wert in Cent)
+        // NEU: Fortschritts-Event je tatsächlich ausgegebener Münze (Wert in Cent)
         public event Action<int> CoinDispensedDeltaCent;
 
-        // NEU: Status�nderung (Idle, Neustart, Busy, Disabled, Jammed, ...)
+        // NEU: Statusänderung (Idle, Neustart, Busy, Disabled, Jammed, ...)
         public event Action<string> StatusChanged;
         public string CurrentStatus { get { return _status; } }
         private string _status = "Unbekannt";
@@ -59,7 +59,7 @@ namespace TaMi_Einzahlautomat.Coins
         private readonly int[] _coinLevels = new int[8] { -1, -1, -1, -1, -1, -1, -1, -1 };
         private readonly object _levelsLock = new object();
 
-        // Flag: falls verschl�sselt nicht akzeptiert -> unverschl�sselt probieren
+        // Flag: falls verschlüsselt nicht akzeptiert -> unverschlüsselt probieren
         private volatile bool _retryGetDenomUnenc = false;
         private DateTime _lastCoinCreditUtc = DateTime.MinValue; // Timestamp letzter M�nze f�r Level-Abfrage Verz�gerung
 
@@ -78,7 +78,7 @@ namespace TaMi_Einzahlautomat.Coins
             catch { return ""; }
         }
 
-        // NEU: Zeitstempel der letzten verarbeiteten POLL-Antwort f�r faire Interleaving-Strategie
+        // NEU: Zeitstempel der letzten verarbeiteten POLL-Antwort für faire Interleaving-Strategie
         private DateTime _lastPollUtc = DateTime.MinValue;
         // Minimalintervall zwischen zwei Polls auch bei fuller Queue (ms)
         private const int MaxPollGapMs = 150; // enger takten, damit einzelne M�nzen erfasst werden
@@ -91,16 +91,16 @@ namespace TaMi_Einzahlautomat.Coins
         private int _smartEmptyInitialLevelSum = -1;
         private const int SmartEmptyWatchdogMs = 7000; // 7s ohne Aktivit�t => Retry
         private const int SmartEmptyMaxRetries = 2;
-        private volatile bool _suspendLevelRequests = false; // w�hrend SmartEmpty keine Level-Kommandos einreihen
+        private volatile bool _suspendLevelRequests = false; // während SmartEmpty keine Level-Kommandos einreihen
 
         // NEU: Einzahlungs-Animation Tracking
         private volatile bool _coinDepositAnimActive = false;
         private DateTime _lastDepositAnimCoinUtc = DateTime.MinValue;
 
-        // Feld: letztes Payout-Cmd f�r Retry nach Re-Sync
+        // Feld: letztes Payout-Cmd für Retry nach Re-Sync
         private List<byte> _pendingPayoutCmd;
 
-        // NEU: Deduplizierung/Status f�r DEVICE_FULL (Code 207)
+        // NEU: Deduplizierung/Status für DEVICE_FULL (Code 207)
         private DateTime _lastDeviceFullLogUtc = DateTime.MinValue;
         private int _deviceFullRepeatCount = 0;
 
@@ -286,7 +286,7 @@ namespace TaMi_Einzahlautomat.Coins
                                 ClearQueue();
                                 _encryptionOk = false;
                                 SafeClose();
-                                SetStatus("Verbindung unterbrochen  � Neuaufbau");
+                                SetStatus("Verbindung unterbrochen – Neuaufbau");
                                 try { BusyAnimationManager.End("abort comm"); } catch { }
                                 break; // re-open
                             }
@@ -317,7 +317,7 @@ namespace TaMi_Einzahlautomat.Coins
                                             if (sentCmd == (byte)CCommands.SSP_CMD_GET_DENOMINATION_LEVEL && !_retryGetDenomUnenc)
                                             {
                                                 _retryGetDenomUnenc = true;
-                                                Log("Retry GET_DENOMINATION_LEVEL unverschl�sselt...");
+                                                Log("Retry GET_DENOMINATION_LEVEL unverschlüsselt...");
                                                 AlignPayoutLevels(false);
                                             }
                                         }
@@ -589,7 +589,7 @@ namespace TaMi_Einzahlautomat.Coins
 
                         case CCommands.SSP_POLL_COIN_CREDIT:
                             {
-                                // W�hrend Einwurf als Status melden (f�r Admin-UI)
+                                // Während Einwurf als Status melden (für Admin-UI)
                                 SetStatus("Einwurf");
                                 if (_debugRawPoll) Log("COIN_BLOCK(SHORT) RAW=" + HexSlice(i, 8));
                                 if (i + 1 < _cmd.ResponseDataLength)
@@ -611,7 +611,7 @@ namespace TaMi_Einzahlautomat.Coins
                             }
                         case 191:
                             {
-                                // KassensystemPRO-kompatibel: 0xBF tr�gt die Extended-Coin-Infos.
+                                // KassensystemPRO-kompatibel: 0xBF trägt die Extended-Coin-Infos.
                                 // Verwende Low-Byte f�r Einzelm�nzen; falls unplausibel, nimm v32 (aggregierter Cent-Wert).
                                 if (_debugRawPoll) Log("FRAG_191 RAW=" + HexSlice(i, 9));
 
@@ -634,7 +634,7 @@ namespace TaMi_Einzahlautomat.Coins
                                     }
                                     else if (v32 > 0)
                                     {
-                                        // Aggregierte Summe (z. B. 150, 250, 300 ct) � als ein Credit verbuchen
+                                        // Aggregierte Summe (z. B. 150, 250, 300 ct) – als ein Credit verbuchen
                                         RaiseCoin(v32);
                                         _lastCoinCreditUtc = DateTime.UtcNow;
                                     }
@@ -789,11 +789,11 @@ namespace TaMi_Einzahlautomat.Coins
                                 }
                                 // Animationsabbruch � es k�nnen keine weiteren M�nzen angenommen werden
                                 try { BusyAnimationManager.End("coins full"); } catch { }
-                                // WICHTIG: Einige Ger�te gehen bei FULL in einen deaktivierten Zustand �ber und
+                                // WICHTIG: Einige Geräte gehen bei FULL in einen deaktivierten Zustand über und
                                 // verarbeiten danach keine Auszahlungsbefehle mehr, bis ENABLE erneut gesendet wurde.
                                 // Damit Wechselgeld-Auszahlungen weiterhin funktionieren, explizit wieder aktivieren.
                                 try { Enable(true); } catch { }
-                                // Levels aktualisieren, damit UI den tats�chlichen F�llstand sieht
+                                // Levels aktualisieren, damit UI den tatsächlichen Füllstand sieht
                                 try { ScheduleLevelsRequest(); } catch { }
                                 break;
                             }
@@ -943,7 +943,7 @@ namespace TaMi_Einzahlautomat.Coins
 
         public void ScheduleLevelsRequest()
         {
-            if (_suspendLevelRequests) return; // w�hrend SmartEmpty unterdr�cken
+            if (_suspendLevelRequests) return; // während SmartEmpty unterdrücken
             _requestLevelsOnNextPoll = true;
         }
 
@@ -973,7 +973,7 @@ namespace TaMi_Einzahlautomat.Coins
             Consume(ref diff, ref _toPay_10, 10);
             Consume(ref diff, ref _toPay_5, 5);
             Consume(ref diff, ref _toPay_2, 2);
-            // In der Praxis kann vom Ger�t gelegentlich eine ungerade Differenz (1ct) gemeldet werden
+            // In der Praxis kann vom Gerät gelegentlich eine ungerade Differenz (1ct) gemeldet werden
             // � obwohl 1ct regul�r nicht ausgezahlt wird. Um Kassen-/Guthaben-Anzeigen konsistent zu halten,
             // verbuchen wir auch diese 1ct als Delta-Event.
             Consume(ref diff, ref _toPay_1, 1);
@@ -1315,11 +1315,11 @@ namespace TaMi_Einzahlautomat.Coins
         {
             if (lv == null || lv.Length < 8) return "(keine Daten)";
             string safe(int i) => lv[i] < 0 ? "?" : lv[i].ToString();
-            return $"1c={safe(0)}, 2c={safe(1)}, 5c={safe(2)}, 10c={safe(3)}, 20c={safe(4)}, 50c={safe(5)}, 1�={safe(6)}, 2�={safe(7)}";
+            return $"1c={safe(0)}, 2c={safe(1)}, 5c={safe(2)}, 10c={safe(3)}, 20c={safe(4)}, 50c={safe(5)}, 1€={safe(6)}, 2€={safe(7)}";
         }
 
         /// <summary>
-        /// F�hrt einen Smart-Empty-Befehl aus (alle M�nzen werden ausgezahlt, wie Kassensturz in KassensystemPRO)
+        /// Führt einen Smart-Empty-Befehl aus (alle Münzen werden ausgezahlt, wie Kassensturz in KassensystemPRO)
         /// </summary>
         public void SmartEmpty()
         {
