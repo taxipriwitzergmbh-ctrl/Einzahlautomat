@@ -4,11 +4,13 @@ using System.Windows.Forms;
 using System.Linq; // hinzugef�gt f�r Enumerable
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
+using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
 {
     public class KassensturzNV200 : Form
     {
+        private ModernHeaderPanel _header;
         private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
         {
             if (b == null) return;
@@ -92,11 +94,8 @@ namespace TaMi_Einzahlautomat
         private int[] livePayout;
         private decimal livePayoutSum;
 
-        private Panel headerPanel;
-        private Label lblTitle;
         private Label _lblHeaderStatus; // Statusanzeige im Header
         private Button btnClose;
-        private Point _mouseDownLocation;
         private Timer _tmrPayout;
 
         // Event-Handler als Felder, damit sie entfernt werden k?nnen
@@ -202,48 +201,20 @@ namespace TaMi_Einzahlautomat
         private void InitializeLayout()
         {
             FormBorderStyle = FormBorderStyle.None; StartPosition = FormStartPosition.CenterScreen; ClientSize = new Size(800, 600); BackColor = Color.White; DoubleBuffered = true;
-            headerPanel = new Panel { Location = new Point(0, 0), Size = new Size(ClientSize.Width, 60), Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, BackColor = Color.FromArgb(33, 150, 243) };
-            headerPanel.Paint += HeaderPanel_Paint;
-            headerPanel.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) _mouseDownLocation = e.Location; };
-            headerPanel.MouseMove += (s, e) => { if (e.Button == MouseButtons.Left) { Left += e.X - _mouseDownLocation.X; Top += e.Y - _mouseDownLocation.Y; } };
-            Controls.Add(headerPanel);
-            headerPanel.BringToFront();
-            lblTitle = new Label { Text = "Kassensturz NV200", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(24, 0), Size = new Size(360, 60), BackColor = Color.Transparent }; headerPanel.Controls.Add(lblTitle);
-            _lblHeaderStatus = new Label { Text = "Status: -", AutoSize = false, TextAlign = ContentAlignment.MiddleRight, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, Location = new Point(ClientSize.Width - 320, 0), Size = new Size(220, 60), Anchor = AnchorStyles.Top | AnchorStyles.Right }; headerPanel.Controls.Add(_lblHeaderStatus);
-            btnClose = new Button { Text = "\u2715", Font = new Font("Segoe UI Symbol", 18F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 56, 6), TabStop = false, Anchor = AnchorStyles.Top | AnchorStyles.Right };
-            btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
-            btnClose.Click += (s, e) => Close();
-            headerPanel.Controls.Add(btnClose);
-            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
+            _header = new ModernHeaderPanel { Title = "Kassensturz NV200" };
+            _header.CloseClicked += () => { try { Close(); } catch { } };
+            Controls.Add(_header);
+            _header.BringToFront();
+            try { _header.ApplyRoundedRegionToForm(this); } catch { }
+
+            // Statuslabel im Header rechts
+            _lblHeaderStatus = new Label { Text = "Status: -", AutoSize = false, TextAlign = ContentAlignment.MiddleRight, Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, Location = new Point(ClientSize.Width - 320, 0), Size = new Size(260, 60), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            try { _header.Controls.Add(_lblHeaderStatus); } catch { }
             _lblSnapshotInfo = new Label { Text = string.Empty, Location = new Point(20, 60), Size = new Size(ClientSize.Width - 40, 20), ForeColor = Color.DarkOrange, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, Visible = _snapshotLoaded }; Controls.Add(_lblSnapshotInfo);
             tabControl = new TabControl { Location = new Point(0, 80), Size = new Size(ClientSize.Width, ClientSize.Height - 80), Font = new Font("Segoe UI", 12F, FontStyle.Bold), Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right }; Controls.Add(tabControl);
             tabCashbox = new TabPage("Cashbox"); cashboxForm = new CashboxCountForm(_ssp) { Dock = DockStyle.Fill }; tabCashbox.Controls.Add(cashboxForm); tabControl.TabPages.Add(tabCashbox);
             tabPayout = new TabPage("Payout"); payoutPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.White }; tabPayout.Controls.Add(payoutPanel); tabControl.TabPages.Add(tabPayout); BuildPayoutPanel(); tabControl.SelectedIndexChanged += (s, e) => { if (tabControl.SelectedTab == tabPayout) RefreshPayout(); };
             if (_snapshotLoaded) ShowSnapshotInfo();
-        }
-
-        private void HeaderPanel_Paint(object sender, PaintEventArgs e)
-        {
-            try
-            {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                var r = headerPanel.ClientRectangle;
-
-                using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
-                {
-                    e.Graphics.FillRectangle(brush, r);
-                }
-
-                // Gloss/Separator bewusst entfernt (kein heller Streifen im Header)
-            }
-            catch
-            {
-                using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
-                {
-                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
-                }
-            }
         }
 
         private void ShowSnapshotInfo() { if (_lblSnapshotInfo == null) return; _lblSnapshotInfo.Text = "Aktiver Kassensturz-Snapshot � 'Payout leeren' speichert keinen neuen Bestand (Fortf�hren) oder mit 'Neuer Start' �berschreiben."; _lblSnapshotInfo.Visible = true; }

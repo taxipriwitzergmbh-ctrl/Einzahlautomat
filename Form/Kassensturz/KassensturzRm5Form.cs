@@ -6,11 +6,13 @@ using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using TaMi_Einzahlautomat.Coins;
 using System.Drawing.Drawing2D;
+using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
 {
     public class KassensturzRm5Form : Form
     {
+        private ModernHeaderPanel _header;
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
 
@@ -77,10 +79,7 @@ namespace TaMi_Einzahlautomat
 
         private readonly Rm5CctalkValidator _rm5;
         private int[] _preDialogLevels; // Original Levels beim Öffnen
-        private Panel headerPanel;
-        private Label lblTitle;
         private Button btnClose;
-        private Point _mouseDownLocation;
         private Label[] lblStartBestand;
         private Label lblStartSumme;
         private Label[] lblAktBestand;
@@ -444,37 +443,11 @@ namespace TaMi_Einzahlautomat
             BackColor = Color.White;
             DoubleBuffered = true;
 
-            headerPanel = new Panel { Location = new Point(0,0), Size = new Size(ClientSize.Width,60), Anchor = AnchorStyles.Top|AnchorStyles.Left|AnchorStyles.Right };
-            headerPanel.Paint += HeaderPanel_Paint;
-            headerPanel.MouseDown += (s,e)=> { if (e.Button==MouseButtons.Left) _mouseDownLocation = e.Location; };
-            headerPanel.MouseMove += (s,e)=> { if (e.Button==MouseButtons.Left) { Left += e.X - _mouseDownLocation.X; Top += e.Y - _mouseDownLocation.Y; } };
-            Controls.Add(headerPanel);
-
-            lblTitle = new Label { Text = "Kassensturz RM5", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable",18F,FontStyle.Bold), ForeColor = Color.White, Location = new Point(24,0), Size = new Size(400,60), BackColor = Color.Transparent };
-            headerPanel.Controls.Add(lblTitle);
-
-            btnClose = new Button { Text = "\u2715", Font = new Font("Segoe UI Symbol",18F,FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48,48), Location = new Point(ClientSize.Width - 56, 6), TabStop = false, Anchor = AnchorStyles.Top | AnchorStyles.Right };
-            btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
-            btnClose.Click += (s,e)=> Close();
-            headerPanel.Controls.Add(btnClose);
-            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
-
-            try
-            {
-                headerPanel.Resize += (s, e) =>
-                {
-                    try
-                    {
-                        if (btnClose != null)
-                            btnClose.Location = new Point(headerPanel.ClientSize.Width - btnClose.Width - 12, (headerPanel.Height - btnClose.Height) / 2);
-                        if (lblTitle != null)
-                            lblTitle.Width = Math.Max(120, (btnClose != null ? btnClose.Left : headerPanel.ClientSize.Width) - lblTitle.Left - 8);
-                    }
-                    catch { }
-                };
-            }
-            catch { }
+            _header = new ModernHeaderPanel { Title = "Kassensturz RM5" };
+            _header.CloseClicked += () => { try { Close(); } catch { } };
+            Controls.Add(_header);
+            _header.BringToFront();
+            try { _header.ApplyRoundedRegionToForm(this); } catch { }
 
             _lblSnapshotInfo = new Label { Text = string.Empty, Location = new Point(40,60), Size = new Size(720,20), ForeColor = Color.DarkOrange, Font = new Font("Segoe UI",9.5f,FontStyle.Bold), Visible = false }; Controls.Add(_lblSnapshotInfo);
 
@@ -535,29 +508,6 @@ namespace TaMi_Einzahlautomat
 
             this.Paint += (s,e)=>{ using(var pen=new Pen(Color.FromArgb(120,120,120),2)){ e.Graphics.DrawRectangle(pen,1,1,ClientSize.Width-3,ClientSize.Height-3);} };
             if (_snapshotLoaded) ShowSnapshotInfo();
-        }
-
-        private void HeaderPanel_Paint(object sender, PaintEventArgs e)
-        {
-            try
-            {
-                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                var r = headerPanel.ClientRectangle;
-
-                using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
-                {
-                    e.Graphics.FillRectangle(brush, r);
-                }
-
-                // Gloss/Separator bewusst entfernt (kein heller Streifen im Header)
-            }
-            catch
-            {
-                using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
-                {
-                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
-                }
-            }
         }
 
         private void ShowSnapshotInfo(){ if (_lblSnapshotInfo!=null){ _lblSnapshotInfo.Text = "Aktiver RM5 Snapshot – 'Münzen entleeren' setzt keinen neuen Startbestand. Für Neustart 'Alle Münzen eingezahlt' wählen."; _lblSnapshotInfo.Visible = true; } }

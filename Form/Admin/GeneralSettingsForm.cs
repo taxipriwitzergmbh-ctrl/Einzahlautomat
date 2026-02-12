@@ -1,19 +1,15 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
-using System.Runtime.InteropServices;
-using System.Drawing.Drawing2D;
 using System.Security.Cryptography; // DPAPI & AES
 using System.Text; // DPAPI & AES
+using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
 {
     public class GeneralSettingsForm : Form
     {
-        private Panel _headerPanel;
-        private Label _lblTitle;
-        private Button _btnHeaderClose;
-        private Point _mouseDownLocation;
+        private ModernHeaderPanel _header;
 
         private CheckBox _chkOnlyNfc;
         private CheckBox _chkHideRemote;
@@ -123,71 +119,6 @@ namespace TaMi_Einzahlautomat
             catch { return string.Empty; }
         }
 
-        [DllImport("gdi32.dll", SetLastError = true)]
-        private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
-
-        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
-        {
-            if (b == null) return;
-            try
-            {
-                b.FlatStyle = FlatStyle.Flat;
-                b.FlatAppearance.BorderSize = 0;
-                b.BackColor = Color.Transparent;
-                b.UseVisualStyleBackColor = false;
-                b.ForeColor = Color.White;
-                b.Paint -= ModernButton_Paint;
-                b.Paint += ModernButton_Paint;
-                b.Tag = new Tuple<Color, Color>(c1, c2);
-                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
-                b.Resize -= ModernButton_Resize;
-                b.Resize += ModernButton_Resize;
-            }
-            catch { }
-        }
-
-        private void ModernButton_Resize(object sender, EventArgs e)
-        {
-            try
-            {
-                var b = sender as Button;
-                if (b == null) return;
-                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
-                b.Invalidate();
-            }
-            catch { }
-        }
-
-        private void ModernButton_Paint(object sender, PaintEventArgs e)
-        {
-            var b = sender as Button;
-            if (b == null) return;
-            try
-            {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                var rect = b.ClientRectangle;
-                rect.Width -= 1;
-                rect.Height -= 1;
-
-                var colors = b.Tag as Tuple<Color, Color>;
-                var cc1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
-                var cc2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
-
-                using (var br = new LinearGradientBrush(rect, cc1, cc2, 90f))
-                {
-                    e.Graphics.FillRectangle(br, rect);
-                }
-                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
-                {
-                    e.Graphics.DrawRectangle(pen, rect);
-                }
-
-                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-            }
-            catch { }
-        }
-
         private void BuildUi()
         {
             FormBorderStyle = FormBorderStyle.None;
@@ -196,19 +127,13 @@ namespace TaMi_Einzahlautomat
             DoubleBuffered = true;
             Size = new Size(700, 760);
 
-            _headerPanel = new Panel { Location = new Point(0, 0), Size = new Size(ClientSize.Width, 60), Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
-            _headerPanel.Paint += HeaderPanel_Paint; _headerPanel.MouseDown += HeaderPanel_MouseDown; _headerPanel.MouseMove += HeaderPanel_MouseMove; Controls.Add(_headerPanel);
+            _header = new ModernHeaderPanel { Title = "Allgemeine Einstellungen" };
+            _header.CloseClicked += () => { try { Close(); } catch { } };
+            Controls.Add(_header);
+            _header.BringToFront();
+            try { _header.ApplyRoundedRegionToForm(this); } catch { }
 
-            _lblTitle = new Label { Text = "Allgemeine Einstellungen", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(24, 0), Size = new Size(420, 60), BackColor = Color.Transparent };
-            _headerPanel.Controls.Add(_lblTitle);
-
-            _btnHeaderClose = new Button { Text = "\u2715", Font = new Font("Segoe UI Symbol", 16F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 56, 6), Anchor = AnchorStyles.Top | AnchorStyles.Right, TabStop = false };
-            _btnHeaderClose.FlatAppearance.BorderSize = 0; _btnHeaderClose.FlatAppearance.MouseOverBackColor = Color.Transparent; _btnHeaderClose.Click += (s, e) => Close(); _headerPanel.Controls.Add(_btnHeaderClose);
-            try { ApplyModernButtonStyle(_btnHeaderClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
-
-            try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24)); } catch { }
-
-            var content = new Panel { Location = new Point(0, _headerPanel.Bottom), Size = new Size(ClientSize.Width, ClientSize.Height - _headerPanel.Height - 80), Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom, AutoScroll = true, BackColor = Color.White };
+            var content = new Panel { Location = new Point(0, _header.Bottom), Size = new Size(ClientSize.Width, ClientSize.Height - _header.Height - 80), Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom, AutoScroll = true, BackColor = Color.White };
             Controls.Add(content);
 
             int left = 28; int y = 20; int rowGap = 28;
@@ -242,9 +167,8 @@ namespace TaMi_Einzahlautomat
 
             _lblDocStore = new Label { Text = "Dokumente-Pfad (DocStore)", AutoSize = true, Location = new Point(left + 26, y), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold), Visible = false };
             _txtDocStore = new TextBox { Location = new Point(left + 26, y + 24), Width = 420, Font = new Font("Segoe UI", 11F), Visible = false };
-            _btnDocStoreBrowse = new Button { Text = "Pfad wählen...", Location = new Point(_txtDocStore.Right + 12, y + 22), Size = new Size(140, 32), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 10.5F, FontStyle.Bold), Visible = false };
-            _btnDocStoreBrowse.FlatAppearance.BorderSize = 0; _btnDocStoreBrowse.Click += (s, e) => BrowseDocStore();
-            try { ApplyModernButtonStyle(_btnDocStoreBrowse, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
+            _btnDocStoreBrowse = new ModernGradientButton { Text = "Pfad wählen...", Location = new Point(_txtDocStore.Right + 12, y + 22), Size = new Size(140, 32), Font = new Font("Segoe UI Variable", 10.5F, FontStyle.Bold), Visible = false, GradientStart = UiTheme.PrimaryStart, GradientEnd = UiTheme.PrimaryEnd };
+            _btnDocStoreBrowse.Click += (s, e) => BrowseDocStore();
             content.Controls.Add(_lblDocStore); content.Controls.Add(_txtDocStore); content.Controls.Add(_btnDocStoreBrowse);
             y += 24 + 24 + 12;
 
@@ -295,37 +219,13 @@ namespace TaMi_Einzahlautomat
 
             var footer = new Panel { Dock = DockStyle.Bottom, Height = 80, BackColor = Color.White };
             Controls.Add(footer);
-            _btnSave = new Button { Text = "Speichern", Size = new Size(180, 48), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold) };
-            _btnSave.FlatAppearance.BorderSize = 0; _btnSave.Click += (s, e) => SaveValues();
-            _btnClose = new Button { Text = "Schließen", Size = new Size(180, 48), BackColor = Color.FromArgb(158, 158, 158), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold) };
-            _btnClose.FlatAppearance.BorderSize = 0; _btnClose.Click += (s, e) => Close();
-            try { ApplyModernButtonStyle(_btnSave, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
-            try { ApplyModernButtonStyle(_btnClose, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
+            _btnSave = new ModernGradientButton { Text = "Speichern", Size = new Size(180, 48), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), GradientStart = UiTheme.PrimaryStart, GradientEnd = UiTheme.PrimaryEnd };
+            _btnSave.Click += (s, e) => SaveValues();
+            _btnClose = new ModernGradientButton { Text = "Schließen", Size = new Size(180, 48), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), GradientStart = UiTheme.SecondaryStart, GradientEnd = UiTheme.SecondaryEnd };
+            _btnClose.Click += (s, e) => Close();
             footer.Resize += (s, e) => { int spacing = 16; int total = _btnSave.Width + _btnClose.Width + spacing; int startX = (footer.ClientSize.Width - total) / 2; int yb = (footer.ClientSize.Height - _btnSave.Height) / 2; _btnSave.Location = new Point(Math.Max(10, startX), yb); _btnClose.Location = new Point(_btnSave.Right + spacing, yb); };
             footer.Controls.Add(_btnSave); footer.Controls.Add(_btnClose);
         }
-
-        private void HeaderPanel_Paint(object sender, PaintEventArgs e)
-        {
-            try
-            {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                var r = _headerPanel.ClientRectangle;
-                using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
-                {
-                    e.Graphics.FillRectangle(brush, r);
-                }
-            }
-            catch
-            {
-                using (var brush = new LinearGradientBrush(_headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
-                {
-                    e.Graphics.FillRectangle(brush, _headerPanel.ClientRectangle);
-                }
-            }
-        }
-        private void HeaderPanel_MouseDown(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) _mouseDownLocation = e.Location; }
-        private void HeaderPanel_MouseMove(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) { Left += e.X - _mouseDownLocation.X; Top += e.Y - _mouseDownLocation.Y; } }
 
         private void ToggleDocStoreUi(bool show) { try { _lblDocStore.Visible = show; _txtDocStore.Visible = show; _btnDocStoreBrowse.Visible = show; } catch { } }
         private void BrowseDocStore() { try { using (var dlg = new FolderBrowserDialog()) { dlg.Description = "Wählen Sie den Stammordner (DocStore) für Dokumente"; dlg.ShowNewFolderButton = true; if (!string.IsNullOrWhiteSpace(_txtDocStore.Text) && System.IO.Directory.Exists(_txtDocStore.Text)) dlg.SelectedPath = _txtDocStore.Text; if (dlg.ShowDialog(this) == DialogResult.OK) { _txtDocStore.Text = dlg.SelectedPath; } } } catch { } }

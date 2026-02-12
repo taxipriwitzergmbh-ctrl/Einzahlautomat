@@ -6,83 +6,20 @@ using System.Runtime.InteropServices;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Collections.Generic;
+using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
 {
     public partial class PersonalVerwaltungForm : Form
     {
-        private Panel headerPanel;
-        private Button btnClose;
-        // Minimieren-Button entfernt
-        private Label lblTitle;
-        private Point _mouseDownLocation;
+        private ModernHeaderPanel _header;
         private TextBox txtPid; private Label lblName; private Label lblVorname; private TextBox txtNfc; private TextBox txtFahrercode; private Button btnSave; private Panel numPadPanel; private Button btnClearNfc; private Button btnShowHideCode; private Button btnClearCode; private Button btnNfcUebernehmen; private int _currentPid = 0; private TextBox _lastFocusedTextBox; private Label lblStatus; private Label lblEintritt; private Label lblAustritt; private PersonalInfo _loadedPersonal;
         private static readonly DateTime PlaceholderExitDate = new DateTime(1899, 12, 30); // Platzhalter
 
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
 
-        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
-        {
-            if (b == null) return;
-            try
-            {
-                b.FlatStyle = FlatStyle.Flat;
-                b.FlatAppearance.BorderSize = 0;
-                b.BackColor = Color.Transparent;
-                b.UseVisualStyleBackColor = false;
-                b.ForeColor = Color.White;
-                b.Paint -= ModernButton_Paint;
-                b.Paint += ModernButton_Paint;
-                b.Tag = new Tuple<Color, Color>(c1, c2);
-                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
-                b.Resize -= ModernButton_Resize;
-                b.Resize += ModernButton_Resize;
-            }
-            catch { }
-        }
-
-        private void ModernButton_Resize(object sender, EventArgs e)
-        {
-            try
-            {
-                var b = sender as Button;
-                if (b == null) return;
-                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
-                b.Invalidate();
-            }
-            catch { }
-        }
-
-        private void ModernButton_Paint(object sender, PaintEventArgs e)
-        {
-            var b = sender as Button;
-            if (b == null) return;
-            try
-            {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                var rect = b.ClientRectangle;
-                rect.Width -= 1;
-                rect.Height -= 1;
-
-                var colors = b.Tag as Tuple<Color, Color>;
-                var cc1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
-                var cc2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
-
-                using (var br = new LinearGradientBrush(rect, cc1, cc2, 90f))
-                {
-                    e.Graphics.FillRectangle(br, rect);
-                }
-                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
-                {
-                    e.Graphics.DrawRectangle(pen, rect);
-                }
-
-                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-            }
-            catch { }
-        }
+        // Header & Buttons werden zentral über `ModernHeaderPanel` / `ModernGradientButton` gestaltet.
 
         public PersonalVerwaltungForm() { InitUi(); }
 
@@ -98,53 +35,11 @@ namespace TaMi_Einzahlautomat
             this.KeyDown += PersonalForm_KeyDown;
             this.KeyPress += PersonalForm_KeyPress;
 
-            // Header mit Farbverlauf
-            headerPanel = new Panel
-            {
-                Location = new Point(0, 0),
-                Size = new Size(ClientSize.Width, 60),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-            };
-            headerPanel.Paint += HeaderPanel_Paint;
-            headerPanel.MouseDown += HeaderPanel_MouseDown;
-            headerPanel.MouseMove += HeaderPanel_MouseMove;
-            Controls.Add(headerPanel);
-
-            lblTitle = new Label
-            {
-                Text = "Personal",
-                AutoSize = false,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
-                ForeColor = Color.White,
-                Location = new Point(24, 0),
-                Size = new Size(400, 60),
-                BackColor = Color.Transparent
-            };
-            headerPanel.Controls.Add(lblTitle);
-
-            btnClose = new Button
-            {
-                Text = "\u2715",
-                Font = new Font("Segoe UI Symbol", 18F, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.Transparent,
-                FlatStyle = FlatStyle.Flat,
-                Size = new Size(48, 48),
-                Location = new Point(ClientSize.Width - 56, 6),
-                TabStop = false
-            };
-            btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
-            btnClose.Click += (s, e) => Close();
-            headerPanel.Controls.Add(btnClose);
-
-            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
-
-            // Minimieren-Button entfernt
-
-            // Abgerundete Ecken
-            try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24)); } catch { }
+            _header = new ModernHeaderPanel { Title = "Personal" };
+            _header.CloseClicked += () => { try { Close(); } catch { } };
+            Controls.Add(_header);
+            _header.BringToFront();
+            try { _header.ApplyRoundedRegionToForm(this); } catch { }
 
             int y = 80;
             var lblPid = new Label { Text = "Personalnummer:", Location = new Point(24, y), AutoSize = true, Font = new Font("Segoe UI Variable", 12F) };
@@ -152,11 +47,9 @@ namespace TaMi_Einzahlautomat
             txtPid = new TextBox { Location = new Point(24, y + 30), Width = 220, Font = new Font("Segoe UI Variable", 18F), TextAlign = HorizontalAlignment.Center, MaxLength = 8 };
             txtPid.GotFocus += TrackTextFocus; // Fokus-Tracking
             Controls.Add(txtPid);
-            var btnLoad = new Button { Text = "Laden", Location = new Point(260, y + 30), Size = new Size(120, 44), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold) };
-            btnLoad.FlatAppearance.BorderSize = 0;
+            var btnLoad = new ModernGradientButton { Text = "Laden", Location = new Point(260, y + 30), Size = new Size(120, 44), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), GradientStart = UiTheme.PrimaryStart, GradientEnd = UiTheme.PrimaryEnd };
             btnLoad.Click += async (s, e) => await LoadPersonalAsync();
             Controls.Add(btnLoad);
-            try { ApplyModernButtonStyle(btnLoad, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
 
             y += 90;
             lblName = new Label { Text = "Name:", Location = new Point(24, y), Size = new Size(560, 30), Font = new Font("Segoe UI Variable", 12F) };
@@ -180,12 +73,17 @@ namespace TaMi_Einzahlautomat
             btnClearNfc.FlatAppearance.BorderSize = 0;
             btnClearNfc.Click += (s, e) => txtNfc.Text = string.Empty;
             Controls.Add(btnClearNfc);
-            try { ApplyModernButtonStyle(btnClearNfc, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
-            btnNfcUebernehmen = new Button { Text = "NFC übernehmen", Location = new Point(444, y + 28), Size = new Size(140, 36), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 10F, FontStyle.Bold) };
-            btnNfcUebernehmen.FlatAppearance.BorderSize = 0;
+
+            var mgbClearNfc = new ModernGradientButton { Text = "X", Location = btnClearNfc.Location, Size = btnClearNfc.Size, Font = btnClearNfc.Font, GradientStart = UiTheme.DangerStart, GradientEnd = UiTheme.DangerEnd };
+            mgbClearNfc.Click += (s, e) => txtNfc.Text = string.Empty;
+            Controls.Remove(btnClearNfc);
+            try { btnClearNfc.Dispose(); } catch { }
+            btnClearNfc = mgbClearNfc;
+            Controls.Add(btnClearNfc);
+
+            btnNfcUebernehmen = new ModernGradientButton { Text = "NFC übernehmen", Location = new Point(444, y + 28), Size = new Size(140, 36), Font = new Font("Segoe UI Variable", 10F, FontStyle.Bold), GradientStart = UiTheme.PrimaryStart, GradientEnd = UiTheme.PrimaryEnd };
             btnNfcUebernehmen.Click += (s, e) => TryTakeLastNfc();
             Controls.Add(btnNfcUebernehmen);
-            try { ApplyModernButtonStyle(btnNfcUebernehmen, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
 
             y += 80;
             var lblFcode = new Label { Text = "Fahrercode:", Location = new Point(24, y), AutoSize = true, Font = new Font("Segoe UI Variable", 12F) };
@@ -201,14 +99,21 @@ namespace TaMi_Einzahlautomat
             btnClearCode.FlatAppearance.BorderSize = 0;
             btnClearCode.Click += (s, e) => txtFahrercode.Text = string.Empty;
             Controls.Add(btnClearCode);
-            try { ApplyModernButtonStyle(btnClearCode, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
+            try
+            {
+                var mg = new ModernGradientButton { Text = btnClearCode.Text, Location = btnClearCode.Location, Size = btnClearCode.Size, Font = btnClearCode.Font, GradientStart = UiTheme.DangerStart, GradientEnd = UiTheme.DangerEnd };
+                mg.Click += (s, e) => txtFahrercode.Text = string.Empty;
+                Controls.Remove(btnClearCode);
+                try { btnClearCode.Dispose(); } catch { }
+                btnClearCode = mg;
+                Controls.Add(btnClearCode);
+            }
+            catch { }
 
             y += 90;
-            btnSave = new Button { Text = "Speichern", Location = new Point(24, y), Size = new Size(180, 48), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 14F, FontStyle.Bold) };
-            btnSave.FlatAppearance.BorderSize = 0;
+            btnSave = new ModernGradientButton { Text = "Speichern", Location = new Point(24, y), Size = new Size(180, 48), Font = new Font("Segoe UI Variable", 14F, FontStyle.Bold), GradientStart = UiTheme.PrimaryStart, GradientEnd = UiTheme.PrimaryEnd };
             btnSave.Click += async (s, e) => await SaveAsync();
             Controls.Add(btnSave);
-            try { ApplyModernButtonStyle(btnSave, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161)); } catch { }
 
             int keypadBtnH = 50; int keypadPad = 8; int keypadRows = 4; int keypadHeight = keypadRows * (keypadBtnH + keypadPad) - keypadPad;
             numPadPanel = new Panel { Location = new Point(24, y + 70), Size = new Size(560, keypadHeight + 4), AutoScroll = false, Anchor = AnchorStyles.Left | AnchorStyles.Bottom | AnchorStyles.Right };
@@ -229,39 +134,7 @@ namespace TaMi_Einzahlautomat
             catch { }
         }
 
-        private void HeaderPanel_Paint(object sender, PaintEventArgs e)
-        {
-            try
-            {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                var r = headerPanel.ClientRectangle;
-                using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
-                {
-                    e.Graphics.FillRectangle(brush, r);
-                }
-            }
-            catch
-            {
-                using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle,
-                    Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
-                {
-                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
-                }
-            }
-        }
-        private void HeaderPanel_MouseDown(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left)
-                _mouseDownLocation = e.Location;
-        }
-        private void HeaderPanel_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left)
-            {
-                Left += e.X - _mouseDownLocation.X;
-                Top += e.Y - _mouseDownLocation.Y;
-            }
-        }
+        // Header wird zentral über `ModernHeaderPanel` gezeichnet.
 
         private void BuildNumPad()
         {
@@ -279,17 +152,20 @@ namespace TaMi_Einzahlautomat
             for (int i = 0; i < keys.Length; i++)
             {
                 int row = i / 3, col = i % 3;
-                var b = new Button { Text = keys[i], Size = new Size(btnW, btnH), Location = new Point(col * (btnW + pad), row * (btnH + pad)), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 14F, FontStyle.Bold), BackColor = Color.FromArgb(245, 247, 250), TabStop = false, Tag = keys[i] };
-                b.FlatAppearance.BorderSize = 0;
+                var b = new ModernGradientButton { Text = keys[i], Size = new Size(btnW, btnH), Location = new Point(col * (btnW + pad), row * (btnH + pad)), Font = new Font("Segoe UI Variable", 14F, FontStyle.Bold), TabStop = false, Tag = keys[i] };
                 b.Click += (s, e) => OnNumPad((string)((Button)s).Tag);
                 numPadPanel.Controls.Add(b);
 
                 try
                 {
                     var key = keys[i];
-                    if (key == "OK") ApplyModernButtonStyle(b, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32));
-                    else if (key == "<") ApplyModernButtonStyle(b, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79));
-                    else ApplyModernButtonStyle(b, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
+                    var mgb = b as ModernGradientButton;
+                    if (mgb != null)
+                    {
+                        if (key == "OK") { mgb.GradientStart = UiTheme.SuccessStart; mgb.GradientEnd = UiTheme.SuccessEnd; }
+                        else if (key == "<") { mgb.GradientStart = UiTheme.SecondaryStart; mgb.GradientEnd = UiTheme.SecondaryEnd; }
+                        else { mgb.GradientStart = UiTheme.PrimaryStart; mgb.GradientEnd = UiTheme.PrimaryEnd; }
+                    }
                 }
                 catch { }
             }

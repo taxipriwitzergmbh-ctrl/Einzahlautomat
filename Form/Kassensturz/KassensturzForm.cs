@@ -3,77 +3,12 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.Threading.Tasks;
 using TaMi_Einzahlautomat.Coins;
-using System.Drawing.Drawing2D;
-using System.Runtime.InteropServices;
+using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
 {
     public class KassensturzForm : Form
     {
-        private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
-        {
-            if (b == null) return;
-            try
-            {
-                b.FlatStyle = FlatStyle.Flat;
-                b.FlatAppearance.BorderSize = 0;
-                b.BackColor = Color.Transparent;
-                b.UseVisualStyleBackColor = false;
-                b.ForeColor = Color.White;
-                b.Paint -= ModernButton_Paint;
-                b.Paint += ModernButton_Paint;
-                b.Tag = new Tuple<Color, Color>(c1, c2);
-                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
-                b.Resize -= ModernButton_Resize;
-                b.Resize += ModernButton_Resize;
-            }
-            catch { }
-        }
-
-        private void ModernButton_Resize(object sender, EventArgs e)
-        {
-            try
-            {
-                var b = sender as Button;
-                if (b == null) return;
-                try { b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 14, 14)); } catch { }
-                b.Invalidate();
-            }
-            catch { }
-        }
-
-        private void ModernButton_Paint(object sender, PaintEventArgs e)
-        {
-            var b = sender as Button;
-            if (b == null) return;
-            try
-            {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                var rect = b.ClientRectangle;
-                rect.Width -= 1;
-                rect.Height -= 1;
-
-                var colors = b.Tag as Tuple<Color, Color>;
-                var c1 = colors != null ? colors.Item1 : Color.FromArgb(33, 150, 243);
-                var c2 = colors != null ? colors.Item2 : Color.FromArgb(13, 71, 161);
-
-                using (var br = new LinearGradientBrush(rect, c1, c2, 90f))
-                {
-                    e.Graphics.FillRectangle(br, rect);
-                }
-                using (var pen = new Pen(Color.FromArgb(110, 255, 255, 255), 1f))
-                {
-                    e.Graphics.DrawRectangle(pen, rect);
-                }
-                TextRenderer.DrawText(e.Graphics, b.Text, b.Font, b.ClientRectangle, b.ForeColor,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-            }
-            catch { }
-        }
-
-        [DllImport("gdi32.dll", SetLastError = true)]
-        private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
-
         private Timer _tmrTotals;
         private bool _totalsBusy;
 
@@ -84,10 +19,7 @@ namespace TaMi_Einzahlautomat
         private Button btnSmartcoin1;
         private Button btnSmartcoin2;
         private Button btnRm5; // NEU: RM5 Button
-        private Panel headerPanel;
-        private Label lblTitle;
-        private Button btnClose;
-        private Point _mouseDownLocation;
+        private ModernHeaderPanel _header;
 
         public KassensturzForm()
         {
@@ -146,6 +78,12 @@ namespace TaMi_Einzahlautomat
             BackColor = Color.White;
             DoubleBuffered = true;
 
+            _header = new ModernHeaderPanel { Title = "Kassensturz" };
+            _header.CloseClicked += () => { try { Close(); } catch { } };
+            Controls.Add(_header);
+            _header.BringToFront();
+            try { _header.ApplyRoundedRegionToForm(this); } catch { }
+
             // Pr�fen, ob NV200/2 global deaktiviert ist (Flag oder INI)
             bool nv2Disabled = false;
             try
@@ -159,50 +97,6 @@ namespace TaMi_Einzahlautomat
                 }
             }
             catch { }
-
-            // Header (wie in den anderen Fenstern ganz oben und zuerst hinzugef�gt)
-            headerPanel = new Panel
-            {
-                Location = new Point(0, 0),
-                Size = new Size(ClientSize.Width, 60),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-            };
-            headerPanel.Paint += HeaderPanel_Paint;
-            headerPanel.MouseDown += HeaderPanel_MouseDown;
-            headerPanel.MouseMove += HeaderPanel_MouseMove;
-            Controls.Add(headerPanel);
-            headerPanel.BringToFront();
-
-            lblTitle = new Label
-            {
-                Text = "Kassensturz",
-                AutoSize = false,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
-                ForeColor = Color.White,
-                Location = new Point(24, 0),
-                Size = new Size(300, 60),
-                BackColor = Color.Transparent
-            };
-            headerPanel.Controls.Add(lblTitle);
-
-            btnClose = new Button
-            {
-                Text = "\u2715",
-                Font = new Font("Segoe UI Symbol", 18F, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.Transparent,
-                FlatStyle = FlatStyle.Flat,
-                Size = new Size(48, 48),
-                Location = new Point(ClientSize.Width - 56, 6),
-                TabStop = false
-            };
-            btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
-            btnClose.Click += (s, e) => Close();
-            headerPanel.Controls.Add(btnClose);
-
-            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
 
             // Kassendifferenz und Hinweisfeld unterhalb des Headers
             lblKassendifferenz = new Label
@@ -235,64 +129,52 @@ namespace TaMi_Einzahlautomat
             int startY = 250;
             int spacing = 20;
 
-            btnNV200_1 = new Button
+            btnNV200_1 = new ModernGradientButton
             {
                 Text = "NV200/1",
                 Size = new Size(btnWidth, btnHeight),
                 Location = new Point(startX, startY),
                 Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
-                BackColor = Color.FromArgb(33, 150, 243),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                GradientStart = UiTheme.PrimaryStart,
+                GradientEnd = UiTheme.PrimaryEnd
             };
-            btnNV200_1.FlatAppearance.BorderSize = 0;
-            ApplyModernButtonStyle(btnNV200_1, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
             btnNV200_1.Click += BtnNV200_1_Click;
             Controls.Add(btnNV200_1);
 
-            btnNV200_2 = new Button
+            btnNV200_2 = new ModernGradientButton
             {
                 Text = "NV200/2",
                 Size = new Size(btnWidth, btnHeight),
                 Location = new Point(startX, startY + (btnHeight + spacing)),
                 Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
-                BackColor = Color.FromArgb(33, 150, 243),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                GradientStart = UiTheme.PrimaryStart,
+                GradientEnd = UiTheme.PrimaryEnd
             };
-            btnNV200_2.FlatAppearance.BorderSize = 0;
-            ApplyModernButtonStyle(btnNV200_2, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
             btnNV200_2.Click += BtnNV200_2_Click;
             Controls.Add(btnNV200_2);
 
             // SmartCoin Buttons standardm��ig anlegen
-            btnSmartcoin1 = new Button
+            btnSmartcoin1 = new ModernGradientButton
             {
                 Text = "Smartcoin 1",
                 Size = new Size(btnWidth, btnHeight),
                 Location = new Point(startX, startY + 2 * (btnHeight + spacing)),
                 Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
-                BackColor = Color.FromArgb(33, 150, 243),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                GradientStart = UiTheme.PrimaryStart,
+                GradientEnd = UiTheme.PrimaryEnd
             };
-            btnSmartcoin1.FlatAppearance.BorderSize = 0;
-            ApplyModernButtonStyle(btnSmartcoin1, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
             btnSmartcoin1.Click += BtnSmartcoin1_Click;
             Controls.Add(btnSmartcoin1);
 
-            btnSmartcoin2 = new Button
+            btnSmartcoin2 = new ModernGradientButton
             {
                 Text = "Smartcoin 2",
                 Size = new Size(btnWidth, btnHeight),
                 Location = new Point(startX, startY + 3 * (btnHeight + spacing)),
                 Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
-                BackColor = Color.FromArgb(33, 150, 243),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                GradientStart = UiTheme.PrimaryStart,
+                GradientEnd = UiTheme.PrimaryEnd
             };
-            btnSmartcoin2.FlatAppearance.BorderSize = 0;
-            ApplyModernButtonStyle(btnSmartcoin2, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
             btnSmartcoin2.Click += BtnSmartcoin2_Click;
             Controls.Add(btnSmartcoin2);
 
@@ -306,18 +188,15 @@ namespace TaMi_Einzahlautomat
                     btnSmartcoin1.Visible = false;
                     btnSmartcoin2.Visible = false;
 
-                    btnRm5 = new Button
+                    btnRm5 = new ModernGradientButton
                     {
                         Text = "Münzen RM5",
                         Size = new Size(btnWidth, btnHeight),
                         Location = new Point(startX, startY + 2 * (btnHeight + spacing)), // Position von Smartcoin 1
                         Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
-                        BackColor = Color.FromArgb(33, 150, 243),
-                        ForeColor = Color.White,
-                        FlatStyle = FlatStyle.Flat
+                        GradientStart = UiTheme.PrimaryStart,
+                        GradientEnd = UiTheme.PrimaryEnd
                     };
-                    btnRm5.FlatAppearance.BorderSize = 0;
-                    ApplyModernButtonStyle(btnRm5, Color.FromArgb(33, 150, 243), Color.FromArgb(13, 71, 161));
                     btnRm5.Click += BtnRm5_Click;
                     Controls.Add(btnRm5);
                 }
@@ -348,30 +227,6 @@ namespace TaMi_Einzahlautomat
                     e.Graphics.DrawRectangle(pen, 1, 1, this.ClientSize.Width - 3, this.ClientSize.Height - 3);
                 }
             };
-        }
-
-        private void HeaderPanel_Paint(object sender, PaintEventArgs e)
-        {
-            try
-            {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                var r = headerPanel.ClientRectangle;
-
-                using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
-                {
-                    e.Graphics.FillRectangle(brush, r);
-                }
-
-                // Gloss/Separator bewusst entfernt (kein heller Streifen im Header)
-            }
-            catch
-            {
-                using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle,
-                    Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
-                {
-                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
-                }
-            }
         }
 
         private bool IsRm5Active()
@@ -559,21 +414,6 @@ namespace TaMi_Einzahlautomat
             decimal diffFinal = sumAutomat - sumKassen;
             try { KassenSummary.Update(sumAutomat, sumKassen); } catch { }
             return diffFinal;
-        }
-
-        private void HeaderPanel_MouseDown(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left)
-                _mouseDownLocation = e.Location;
-        }
-
-        private void HeaderPanel_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left)
-            {
-                Left += e.X - _mouseDownLocation.X;
-                Top += e.Y - _mouseDownLocation.Y;
-            }
         }
 
         private void BtnSmartcoin1_Click(object sender, EventArgs e)

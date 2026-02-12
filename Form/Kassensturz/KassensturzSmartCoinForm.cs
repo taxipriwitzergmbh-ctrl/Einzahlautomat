@@ -6,11 +6,13 @@ using TaMi_Einzahlautomat.Coins;
 using System.Linq;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
+using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
 {
     public class KassensturzSmartCoinForm : Form
     {
+        private ModernHeaderPanel _header;
         private void ApplyModernButtonStyle(Button b, Color c1, Color c2)
         {
             if (b == null) return;
@@ -89,10 +91,7 @@ namespace TaMi_Einzahlautomat
         private decimal aktuellSumme;
         private int[] initialBestand;
         private decimal initialSumme;
-        private Panel headerPanel;
-        private Label lblTitle;
         private Button btnClose;
-        private Point _mouseDownLocation;
         private bool entleert = false;
         private Timer _tmrBestand;
         private bool _refreshing = false;
@@ -239,48 +238,11 @@ namespace TaMi_Einzahlautomat
             BackColor = Color.White;
             DoubleBuffered = true;
 
-            // Header
-            headerPanel = new Panel
-            {
-                Location = new Point(0, 0),
-                Size = new Size(ClientSize.Width, 60),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                BackColor = Color.FromArgb(33, 150, 243)
-            };
-            headerPanel.Paint += HeaderPanel_Paint;
-            headerPanel.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) _mouseDownLocation = e.Location; };
-            headerPanel.MouseMove += (s, e) => { if (e.Button == MouseButtons.Left) { Left += e.X - _mouseDownLocation.X; Top += e.Y - _mouseDownLocation.Y; } };
-            Controls.Add(headerPanel);
-
-            lblTitle = new Label
-            {
-                Text = "Kassensturz SmartCoin",
-                AutoSize = false,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
-                ForeColor = Color.White,
-                Location = new Point(24, 0),
-                Size = new Size(400, 60),
-                BackColor = Color.Transparent
-            };
-            headerPanel.Controls.Add(lblTitle);
-
-            btnClose = new Button
-            {
-                Text = "\u2715",
-                Font = new Font("Segoe UI Symbol", 18F, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.Transparent,
-                FlatStyle = FlatStyle.Flat,
-                Size = new Size(48, 48),
-                Location = new Point(ClientSize.Width - 56, 6),
-                TabStop = false
-            };
-            btnClose.FlatAppearance.BorderSize = 0;
-            btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent;
-            btnClose.Click += (s, e) => Close();
-            headerPanel.Controls.Add(btnClose);
-            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
+            _header = new ModernHeaderPanel { Title = "Kassensturz SmartCoin" };
+            _header.CloseClicked += () => { try { Close(); } catch { } };
+            Controls.Add(_header);
+            _header.BringToFront();
+            try { _header.ApplyRoundedRegionToForm(this); } catch { }
 
             // Linke Seite: Startbestand
             var lblLinksTitel = new Label
@@ -422,32 +384,6 @@ namespace TaMi_Einzahlautomat
         private void HideSnapshotInfo()
         {
             if (_lblSnapshotInfo == null) return; _lblSnapshotInfo.Visible = false; _lblSnapshotInfo.Text = string.Empty;
-        }
-
-        private void HeaderPanel_Paint(object sender, PaintEventArgs e)
-        {
-            try
-            {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                var r = headerPanel.ClientRectangle;
-
-                using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
-                {
-                    e.Graphics.FillRectangle(brush, r);
-                }
-
-                // Gloss/Separator bewusst entfernt (kein heller Streifen im Header)
-
-                // bewusst keine horizontale Trennlinie im Header zeichnen
-            }
-            catch
-            {
-                using (var brush = new LinearGradientBrush(headerPanel.ClientRectangle,
-                    Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
-                {
-                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
-                }
-            }
         }
 
         private void LoadStartBestand()

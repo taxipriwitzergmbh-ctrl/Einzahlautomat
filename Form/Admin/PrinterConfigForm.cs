@@ -7,12 +7,17 @@ using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using TaMi_Einzahlautomat.Printing;
 using System.IO.Ports;
+using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
 {
     public class PrinterConfigForm : Form
     {
-        private Panel headerPanel; private Label lblTitle; private Button btnClose; private Button btnMin; private Point _dragStart;
+        private ModernHeaderPanel _header;
+        private Label lblTitle;
+        private Button btnClose;
+        private Button btnMin;
+        private Point _dragStart;
         private TabControl _tabs;
         private Panel _customTabHeader; private Button _btnTabWin; private Button _btnTabLegacy; private Button _btnTabDocs;
         private CheckBox chkEnabled, chkAsk, chkVat, chkCut, chkAutoIfNoPrompt; private CheckBox chkUseSecondary; private ComboBox cboPrinters; private ComboBox cboPrinters2; private NumericUpDown nudChars; private Button btnSave, btnCancel, btnTest;
@@ -105,7 +110,7 @@ namespace TaMi_Einzahlautomat
                 if (_customTabHeader != null) { try { Controls.Remove(_customTabHeader); _customTabHeader.Dispose(); } catch { } _customTabHeader=null; }
                 _customTabHeader = new Panel { Dock = DockStyle.Top, Height = 44, BackColor = Color.FromArgb(245,247,250) };
                 Controls.Add(_customTabHeader);
-                Controls.SetChildIndex(headerPanel, 0);
+                if (_header != null) Controls.SetChildIndex(_header, 0);
                 Controls.SetChildIndex(_customTabHeader, 1);
                 Controls.SetChildIndex(_tabs, 2);
                 _btnTabWin = MakeTabButton("Windows / Standard", new Point(10,6), ()=> { _tabs.SelectedIndex = 0; UpdateCustomTabButtons(); });
@@ -122,7 +127,7 @@ namespace TaMi_Einzahlautomat
         {
             try
             {
-                int top = (headerPanel?.Height ?? 0) + (_customTabHeader?.Height ?? 0);
+                int top = (_header?.Height ?? 0) + (_customTabHeader?.Height ?? 0);
                 if (_tabs != null)
                 {
                     _tabs.Location = new Point(0, top);
@@ -140,27 +145,38 @@ namespace TaMi_Einzahlautomat
 
         private void BuildChrome()
         {
-            headerPanel = new Panel { Dock = DockStyle.Top, Height = 62 }; headerPanel.Paint += HeaderPanel_Paint; headerPanel.MouseDown += (s,e)=> { if (e.Button==MouseButtons.Left) _dragStart=e.Location; }; headerPanel.MouseMove += (s,e)=> { if (e.Button==MouseButtons.Left) { Left += e.X - _dragStart.X; Top += e.Y - _dragStart.Y; } }; Controls.Add(headerPanel);
-            lblTitle = new Label { Text="Quittungsdrucker", AutoSize=false, Location=new Point(24,0), Size=new Size(400,62), TextAlign=ContentAlignment.MiddleLeft, Font=new Font("Segoe UI Variable",19F,FontStyle.Bold), ForeColor=Color.White, BackColor=Color.Transparent }; headerPanel.Controls.Add(lblTitle);
-            btnClose = new Button { Text="\u2715", Font=new Font("Segoe UI Symbol", 16F, FontStyle.Bold), ForeColor=Color.White, BackColor=Color.Transparent, FlatStyle=FlatStyle.Flat, Size=new Size(48,48), Location=new Point(ClientSize.Width-72,7), Anchor = AnchorStyles.Top | AnchorStyles.Right, TabStop=false }; btnClose.FlatAppearance.BorderSize=0; btnClose.FlatAppearance.MouseOverBackColor=Color.Transparent; btnClose.Click += (s,e)=> Close(); headerPanel.Controls.Add(btnClose);
-            btnMin = new Button { Text="_", Font=new Font("Segoe UI",16F,FontStyle.Bold), ForeColor=Color.White, BackColor=Color.Transparent, FlatStyle=FlatStyle.Flat, Size=new Size(48,48), Location=new Point(ClientSize.Width-128,7), Anchor = AnchorStyles.Top | AnchorStyles.Right, TabStop=false }; btnMin.FlatAppearance.BorderSize=0; btnMin.FlatAppearance.MouseOverBackColor=Color.Transparent; btnMin.Click += (s,e)=> WindowState=FormWindowState.Minimized; headerPanel.Controls.Add(btnMin);
+            _header = new ModernHeaderPanel { Title = "Quittungsdrucker" };
+            _header.CloseClicked += () => { try { Close(); } catch { } };
+            Controls.Add(_header);
+            _header.BringToFront();
+            try { _header.ApplyRoundedRegionToForm(this); } catch { }
 
-            try { ApplyModernHeaderButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
-            try { ApplyModernHeaderButtonStyle(btnMin, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
-        }
-        private void HeaderPanel_Paint(object sender, PaintEventArgs e)
-        {
-            try
+            // Titel-Label zusätzlich (für bestehende Logik, die lblTitle.Text erweitert)
+            lblTitle = new Label
             {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                using (var lg = new LinearGradientBrush(headerPanel.ClientRectangle, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
-                    e.Graphics.FillRectangle(lg, headerPanel.ClientRectangle);
-            }
-            catch
+                Text = "Quittungsdrucker",
+                AutoSize = true,
+                Visible = false
+            };
+
+            // Minimieren-Button als Owned-Control ergänzen
+            btnMin = new ModernGradientButton
             {
-                using (var lg = new LinearGradientBrush(headerPanel.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
-                    e.Graphics.FillRectangle(lg, headerPanel.ClientRectangle);
-            }
+                Text = "_",
+                Font = new Font("Segoe UI", 16F, FontStyle.Bold),
+                Size = new Size(48, 48),
+                Location = new Point(Math.Max(0, ClientSize.Width - 128), 7),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                TabStop = false,
+                GradientStart = UiTheme.SecondaryStart,
+                GradientEnd = UiTheme.SecondaryEnd
+            };
+            btnMin.Click += (s, e) => { try { WindowState = FormWindowState.Minimized; } catch { } };
+            Controls.Add(btnMin);
+            btnMin.BringToFront();
+
+            // Close-Button für Kompatibilität als Feld behalten (Header hat bereits Close)
+            btnClose = null;
         }
 
         private void BuildTabs(){ _tabs = new TabControl { Dock = DockStyle.None, Appearance = TabAppearance.Normal, Font = new Font("Segoe UI", 10F, FontStyle.Bold) }; Controls.Add(_tabs); Controls.SetChildIndex(_tabs, 2); var tabWin = new TabPage("Windows / Standard") { BackColor = Color.White }; var tabLegacy = new TabPage("Legacy / Seriell") { BackColor = Color.White }; var tabDocs = new TabPage("Dokumentendrucker") { BackColor = Color.White }; _tabs.TabPages.Add(tabWin); _tabs.TabPages.Add(tabLegacy); _tabs.TabPages.Add(tabDocs); BuildWindowsTab(tabWin); BuildLegacyTab(tabLegacy); BuildDocumentsTab(tabDocs); }
