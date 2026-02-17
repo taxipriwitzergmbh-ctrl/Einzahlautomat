@@ -14,6 +14,7 @@ namespace TaMi_Einzahlautomat
     public class KassenbestandForm : Form
     {
         private ModernHeaderPanel _header;
+        private ModernGradientButton _btnRefresh;
         private Label lblDiff; // NEU: Kassendifferenz
         private ListView lvKassenbestand;
 
@@ -86,6 +87,54 @@ namespace TaMi_Einzahlautomat
             _header.BringToFront();
             try { _header.ApplyRoundedRegionToForm(this); } catch { }
 
+            // Aktualisieren-Button links neben dem Schließen-Button
+            _btnRefresh = new ModernGradientButton
+            {
+                Text = "",
+                Width = 44,
+                Height = 44,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                TabStop = false
+            };
+            try
+            {
+                // orange wie früher
+                _btnRefresh.GradientStart = Color.FromArgb(255, 179, 0);
+                _btnRefresh.GradientEnd = Color.FromArgb(245, 124, 0);
+                _btnRefresh.Font = new Font("Segoe UI Symbol", 18F, FontStyle.Bold);
+            }
+            catch { }
+
+            // Symbol zeichnen (↻)
+            // `ModernGradientButton` zeichnet den Text selbst in `OnPaint`, ein externer `Paint`-Handler wird nicht aufgerufen.
+            // Daher nutzen wir das `Text`-Property statt `Paint`.
+            try { _btnRefresh.Text = "\u21BB"; } catch { }
+            _btnRefresh.Click += async (s, e) =>
+            {
+                try { await LoadDataAsync(); } catch { }
+            };
+            try { _header.Controls.Add(_btnRefresh); } catch { Controls.Add(_btnRefresh); }
+
+            void layoutHeaderExtras()
+            {
+                try
+                {
+                    int headerH = _header != null ? _header.Height : 60;
+                    int closeW = 48;
+                    int marginRight = 12;
+                    int gap = 12;
+                    int y = (headerH - _btnRefresh.Height) / 2;
+
+                    // refresh button sits directly left of close button
+                    int x = (_header.ClientSize.Width - marginRight - closeW) - gap - _btnRefresh.Width;
+                    if (x < 200) x = 200;
+                    _btnRefresh.Location = new Point(x, y);
+                }
+                catch { }
+            }
+            try { _header.Resize += (s, e) => layoutHeaderExtras(); } catch { }
+            try { layoutHeaderExtras(); } catch { }
+
             // NEU: Kassendifferenz rechts anzeigen
             lblDiff = new Label
             {
@@ -102,23 +151,76 @@ namespace TaMi_Einzahlautomat
             try
             {
                 _header.Controls.Add(lblDiff);
-                _header.Resize += (s, e) =>
+
+                void layoutDiffLabel()
                 {
                     try
                     {
-                        // Fixe Breite + echte Verschiebung des Controls nach links (nicht nur Text)
-                        int rightMargin = 48 + 12; // Close-Button + Margin
-                        int gapToClose = 16;
-                        int w = 340;
-                        int x = _header.ClientSize.Width - rightMargin - gapToClose - w;
-                        if (x < 200) x = 200;
+                        // `lblDiff` soll die ganze verfügbare Breite zwischen Titel links und Buttons rechts nutzen,
+                        // ohne den Titel zu überdecken.
+                        int leftPad = 120;
+                        try
+                        {
+                            var titleText = _header != null ? (_header.Title ?? string.Empty) : string.Empty;
+                            if (!string.IsNullOrWhiteSpace(titleText))
+                            {
+                                // Wenn möglich an das echte Title-Label im `ModernHeaderPanel` anlehnen,
+                                // damit wir garantiert nicht in den Titelbereich hineinzeichnen.
+                                int titleX = 20;
+                                try
+                                {
+                                    foreach (Control c in _header.Controls)
+                                    {
+                                        var lbl = c as Label;
+                                        if (lbl == null) continue;
+                                        if (string.Equals(lbl.Text, titleText, StringComparison.Ordinal))
+                                        {
+                                            titleX = Math.Max(0, lbl.Left);
+                                            break;
+                                        }
+                                    }
+                                }
+                                catch { titleX = 20; }
+
+                                // `ModernHeaderPanel` nutzt typischerweise eine eigene (fette) Titelschrift.
+                                // Daher messen wir konservativ mit Bold, damit wirklich nichts abgeschnitten wird.
+                                Font titleFont = null;
+                                try { titleFont = new Font(_header.Font.FontFamily, Math.Max(12f, _header.Font.Size), FontStyle.Bold); } catch { titleFont = _header.Font; }
+                                int titleW = 0;
+                                try { titleW = TextRenderer.MeasureText(titleText, titleFont).Width; } catch { titleW = TextRenderer.MeasureText(titleText, _header.Font).Width; }
+                                try { if (titleFont != null && !ReferenceEquals(titleFont, _header.Font)) titleFont.Dispose(); } catch { }
+
+                                // zusätzlicher Abstand zum Titel
+                                leftPad = Math.Max(leftPad, titleX + titleW + 24);
+                            }
+                        }
+                        catch { }
+                        int closeW = 48;
+                        int marginRight = 12;
+                        int gapToClose = 12;
+                        int gapBetweenButtons = 12;
+                        int refreshW = _btnRefresh != null ? _btnRefresh.Width : 0;
+                        int rightReserved = closeW + marginRight + (refreshW > 0 ? (gapBetweenButtons + refreshW) : 0) + gapToClose;
+
+                        int x = leftPad;
+                        // Titel soll immer vollständig bleiben -> `lblDiff` bei Bedarf schmaler machen.
+                        int minDiffW = 220;
+                        int wAvail = _header.ClientSize.Width - x - rightReserved;
+                        int w = Math.Max(minDiffW, wAvail);
+                        // Wenn nicht genug Platz da ist, lieber kleiner werden statt in den Titel zu laufen.
+                        if (wAvail < minDiffW) w = Math.Max(120, wAvail);
                         lblDiff.Location = new Point(x, 0);
                         lblDiff.Size = new Size(w, _header.Height);
+                        lblDiff.BringToFront();
                     }
                     catch { }
-                };
-                // initiales Layout
-                try { _header.PerformLayout(); } catch { }
+                }
+
+                _header.Resize += (s, e) => { try { layoutDiffLabel(); } catch { } };
+                _header.Layout += (s, e) => { try { layoutDiffLabel(); } catch { } };
+
+                // initiales Layout direkt anwenden (Resize/Layout kommt teils erst später)
+                try { layoutDiffLabel(); } catch { }
             }
             catch
             {

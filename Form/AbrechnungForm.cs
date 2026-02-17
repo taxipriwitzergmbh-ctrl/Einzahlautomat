@@ -14,6 +14,7 @@ using System.Reflection; // für DoubleBuffered-Reflektion
 using TaMi_Einzahlautomat.Printing;
 using TaMi_Einzahlautomat.Devices; // for CoinFeederProtocolMode
 using System.Drawing.Imaging; // NEU für ColorMatrix (transparenter Hintergrund)
+using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
 {
@@ -266,6 +267,9 @@ namespace TaMi_Einzahlautomat
         private Label lblTitle;
         private Point _mouseDownLocation;
 
+        // zentraler UI-Style (einmalig) für diese Form
+        private bool _uiStyleApplied = false;
+
         private TabControl tabControl;
         private TabPage tabAbrechnen;
         private TabPage tabWechseln;
@@ -342,6 +346,108 @@ namespace TaMi_Einzahlautomat
                 catch { }
                 base.OnPaintBackground(e);
             }
+        }
+
+        private void ApplyCentralDesign()
+        {
+            if (_uiStyleApplied) return;
+            _uiStyleApplied = true;
+
+            // Header nach zentralem Theme (Gradient via `ModernHeaderPanel`/`UiTheme`)
+            try
+            {
+                if (headerPanel != null && !(headerPanel is ModernHeaderPanel))
+                {
+                    var old = headerPanel;
+                    var modern = new ModernHeaderPanel
+                    {
+                        Location = old.Location,
+                        Size = old.Size,
+                        Anchor = old.Anchor
+                    };
+
+                    // Titel IN den Header übernehmen (falls vorhanden)
+                    try { modern.Title = lblTitle != null ? (lblTitle.Text ?? string.Empty) : string.Empty; } catch { }
+
+                    // Close/Minimize an Form binden
+                    try
+                    {
+                        modern.CloseClicked += () => { try { Close(); } catch { } };
+                        modern.MinimizeClicked += () => { try { WindowState = FormWindowState.Minimized; } catch { } };
+                    }
+                    catch { }
+
+                    // Vorhandene Header-Controls übernehmen (Buttons etc.)
+                    try
+                    {
+                        var toMove = new Control[old.Controls.Count];
+                        old.Controls.CopyTo(toMove, 0);
+                        old.Controls.Clear();
+                        modern.Controls.AddRange(toMove);
+                    }
+                    catch { }
+
+                    // alte Title-Label entfernen, da `ModernHeaderPanel` eigenes Title-Label hat
+                    try
+                    {
+                        if (lblTitle != null)
+                        {
+                            try { modern.Controls.Remove(lblTitle); } catch { }
+                            try { lblTitle.Dispose(); } catch { }
+                            lblTitle = null;
+                        }
+                    }
+                    catch { }
+
+                    int idx = Controls.GetChildIndex(old);
+                    Controls.Remove(old);
+                    try { old.Dispose(); } catch { }
+                    Controls.Add(modern);
+                    Controls.SetChildIndex(modern, idx);
+                    headerPanel = modern;
+
+                    // In diesem Screen kein "X" im Header: Abmelden-Button übernimmt die Funktion.
+                    try
+                    {
+                        for (int i = modern.Controls.Count - 1; i >= 0; i--)
+                        {
+                            var b = modern.Controls[i] as ModernGradientButton;
+                            if (b == null) continue;
+                            if (string.Equals(b.Text, "\u2715", StringComparison.Ordinal) || string.Equals(b.Text, "✕", StringComparison.Ordinal))
+                            {
+                                modern.Controls.RemoveAt(i);
+                                try { b.Dispose(); } catch { }
+                                break;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+
+            // Buttons nach Theme einfärben
+            try
+            {
+                if (btnAbmelden != null)
+                {
+                    ApplyModernButtonStyle(btnAbmelden, UiTheme.DangerStart, UiTheme.DangerEnd);
+                    btnAbmelden.FlatAppearance.MouseOverBackColor = Color.Transparent;
+                }
+
+                if (btnAdmin != null)
+                {
+                    ApplyModernButtonStyle(btnAdmin, UiTheme.PrimaryStart, UiTheme.PrimaryEnd);
+                    btnAdmin.FlatAppearance.MouseOverBackColor = Color.Transparent;
+                }
+
+                if (btnDocuments != null)
+                {
+                    ApplyModernButtonStyle(btnDocuments, UiTheme.SuccessStart, UiTheme.SuccessEnd);
+                    btnDocuments.FlatAppearance.MouseOverBackColor = Color.Transparent;
+                }
+            }
+            catch { }
         }
 
         private Label lblTitel, lblGuthaben, lblB19, lblB7, lblB0, lblSumme, lblEingezahlt, lblNoch;
@@ -886,6 +992,9 @@ namespace TaMi_Einzahlautomat
             };
             headerPanel.Controls.Add(btnHours);
 
+            // Zentralen Style anwenden (Header + Button-Theme)
+            try { ApplyCentralDesign(); } catch { }
+
             // Header modernisieren (Gradient + moderne Buttons wie in Vorlage)
             try
             {
@@ -955,10 +1064,11 @@ namespace TaMi_Einzahlautomat
                         int gap = 10;
                         int yAbmelden = 8;
                         int yIcon = 8;
+                        int headerH = 60;
                         try
                         {
                             // Align all header buttons vertically centered
-                            int headerH = headerPanel != null ? headerPanel.Height : 60;
+                            headerH = headerPanel != null ? headerPanel.Height : 60;
                             yAbmelden = (headerH - (btnAbmelden != null ? btnAbmelden.Height : 44)) / 2;
                             yIcon = (headerH - 44) / 2;
                         }
@@ -982,6 +1092,14 @@ namespace TaMi_Einzahlautomat
                         {
                             btnHours.Location = new Point(right - btnHours.Width, yIcon);
                             right = btnHours.Left - gap;
+                        }
+
+                        // Schicht-Auswahl links neben den Icon-Buttons (bzw. vor Abmelden)
+                        if (btnSchichtAuswahl != null && btnSchichtAuswahl.Visible)
+                        {
+                            int y = (headerH - btnSchichtAuswahl.Height) / 2;
+                            btnSchichtAuswahl.Location = new Point(Math.Max(20, right - btnSchichtAuswahl.Width), y);
+                            right = btnSchichtAuswahl.Left - gap;
                         }
                     }
                     catch { }
@@ -1103,13 +1221,22 @@ namespace TaMi_Einzahlautomat
                 BackColor = Color.FromArgb(33, 150, 243),
                 FlatStyle = FlatStyle.Flat,
                 Size = new Size(220, 40),
-                Location = new Point(650, 10),
+                Location = new Point(20, 10),
                 TabStop = false,
                 Visible = false
             };
             btnSchichtAuswahl.FlatAppearance.BorderSize = 0;
+            try
+            {
+                ApplyModernButtonStyle(btnSchichtAuswahl, UiTheme.PrimaryStart, UiTheme.PrimaryEnd);
+                btnSchichtAuswahl.FlatAppearance.MouseOverBackColor = Color.Transparent;
+            }
+            catch { }
             btnSchichtAuswahl.Click += BtnSchichtAuswahl_Click;
             headerPanel.Controls.Add(btnSchichtAuswahl);
+
+            // initial einordnen
+            try { headerPanel.PerformLayout(); } catch { }
 
             tabControl.SelectedIndexChanged += (s, e) =>
             {
@@ -2971,16 +3098,14 @@ namespace TaMi_Einzahlautomat
         {
             try
             {
+                // Wenn `headerPanel` ein `ModernHeaderPanel` ist, übernimmt dieses selbst das Painting.
+                if (headerPanel is ModernHeaderPanel) return;
+
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 var r = headerPanel.ClientRectangle;
 
-                // Base gradient like the template: darker left -> lighter right
                 using (var brush = new LinearGradientBrush(r, Color.FromArgb(13, 71, 161), Color.FromArgb(120, 200, 255), 0f))
-                {
                     e.Graphics.FillRectangle(brush, r);
-                }
-
-                // Gloss/Separator bewusst entfernt (kein heller Streifen im Header)
             }
             catch
             {
