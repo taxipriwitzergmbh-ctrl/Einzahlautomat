@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.Drawing.Printing;
 using System.Drawing.Imaging;
+using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
 {
@@ -16,8 +17,7 @@ namespace TaMi_Einzahlautomat
         private readonly PersonalInfo _personal;
 
         // Header
-        private Panel _header;
-        private Label _title;
+        private ModernHeaderPanel _header;
         private Label _lblInfo;
 
         // Navigation UI
@@ -42,8 +42,6 @@ namespace TaMi_Einzahlautomat
         [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hWnd);
         [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
         private const int SW_RESTORE = 9;
-        [DllImport("gdi32.dll", SetLastError = true)]
-        private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
 
         public DocumentsForm(PersonalInfo personal)
         {
@@ -70,21 +68,20 @@ namespace TaMi_Einzahlautomat
             BackColor = Color.White;
             DoubleBuffered = true;
 
-            // Header modern
-            _header = new Panel { Location = new Point(0, 0), Size = new Size(ClientSize.Width, 64), Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
-            _header.Paint += (s, e) =>
+            _header = new ModernHeaderPanel
             {
-                using (var brush = new LinearGradientBrush(_header.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
-                { e.Graphics.FillRectangle(brush, _header.ClientRectangle); }
+                Title = "Dokumente",
+                ShowMinimize = false
             };
+            _header.CloseClicked += () => { try { Close(); } catch { } };
             Controls.Add(_header);
-            _title = new Label { Text = "Dokumente", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(20, 0), Size = new Size(700, 64), BackColor = Color.Transparent };
-            _header.Controls.Add(_title);
-            var btnHeaderClose = new Button { Text = "\u2715", Font = new Font("Segue UI Symbol", 18F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 56, 8), Anchor = AnchorStyles.Top | AnchorStyles.Right };
-            btnHeaderClose.FlatAppearance.BorderSize = 0; btnHeaderClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 80, 80); btnHeaderClose.Click += (s, e) => Close();
-            _header.Controls.Add(btnHeaderClose);
 
-            try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 20, 20)); } catch { }
+            try
+            {
+                _header.ApplyRoundedRegionToForm(this);
+                SizeChanged += (s, e) => { try { _header.ApplyRoundedRegionToForm(this); } catch { } };
+            }
+            catch { }
 
             _lblInfo = new Label { Text = $"Mitarbeiter: {_personal.Vorname} {_personal.Name}", AutoSize = true, Font = new Font("Segoe UI", 12F, FontStyle.Bold) };
             Controls.Add(_lblInfo);
@@ -117,8 +114,7 @@ namespace TaMi_Einzahlautomat
                 { e.Graphics.FillRectangle(brush, _previewHeader.ClientRectangle); }
             };
             _previewOverlay.Controls.Add(_previewHeader);
-            _btnClosePreview = new Button { Text = "Schlie�en", Dock = DockStyle.Right, Width = 120, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(229,57,53), ForeColor = Color.White };
-            _btnClosePreview.FlatAppearance.BorderSize = 0;
+            _btnClosePreview = new ModernGradientButton { Text = "Schließen", Dock = DockStyle.Right, Width = 140, GradientStart = UiTheme.DangerStart, GradientEnd = UiTheme.DangerEnd, TabStop = false };
             _btnClosePreview.Click += (s, e) => HidePreview();
             _previewHeader.Controls.Add(_btnClosePreview);
 
@@ -345,39 +341,34 @@ namespace TaMi_Einzahlautomat
 
         private Button MakeNavButton(string text, string targetPath)
         {
-            var b = new Button
+            var b = new ModernGradientButton
             {
                 Text = text,
                 AutoSize = true,
                 Height = 40,
-                BackColor = Color.FromArgb(33, 150, 243),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
                 Tag = targetPath,
                 Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold)
             };
-            b.FlatAppearance.BorderSize = 0;
             b.Click += (s, e) => NavigateTo((string)((Button)s).Tag);
             return b;
         }
 
         private Button MakeFolderButton(string text, string targetPath, bool big)
         {
-            var b = new Button
+            var b = new ModernGradientButton
             {
                 Text = text,
                 Width = big ? 260 : 200,
                 Height = big ? 64 : 56,
                 Margin = new Padding(8),
-                BackColor = Color.White,
-                ForeColor = Color.FromArgb(33, 33, 33),
-                FlatStyle = FlatStyle.Flat,
                 Tag = targetPath,
                 Font = new Font("Segoe UI Variable", big ? 16F : 14F, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleCenter
             };
-            b.FlatAppearance.BorderColor = Color.FromArgb(200, 200, 200);
-            b.FlatAppearance.BorderSize = 1;
+            // neutral (unselected)
+            b.GradientStart = Color.White;
+            b.GradientEnd = Color.White;
+            b.ForeColor = Color.FromArgb(33, 33, 33);
             b.Click += (s, e) => NavigateTo((string)((Button)s).Tag);
             return b;
         }
@@ -386,18 +377,27 @@ namespace TaMi_Einzahlautomat
         {
             try
             {
-                if (selected)
+                var mg = b as ModernGradientButton;
+                if (mg != null)
                 {
-                    b.BackColor = Color.FromArgb(33, 150, 243);
-                    b.ForeColor = Color.White;
-                    b.FlatAppearance.BorderColor = Color.FromArgb(33, 150, 243);
+                    if (selected)
+                    {
+                        mg.GradientStart = UiTheme.PrimaryStart;
+                        mg.GradientEnd = UiTheme.PrimaryEnd;
+                        mg.ForeColor = Color.White;
+                    }
+                    else
+                    {
+                        mg.GradientStart = Color.White;
+                        mg.GradientEnd = Color.White;
+                        mg.ForeColor = Color.FromArgb(33, 33, 33);
+                    }
+                    mg.Invalidate();
+                    return;
                 }
-                else
-                {
-                    b.BackColor = Color.White;
-                    b.ForeColor = Color.FromArgb(33, 33, 33);
-                    b.FlatAppearance.BorderColor = Color.FromArgb(200, 200, 200);
-                }
+
+                if (selected) { b.BackColor = UiTheme.PrimaryStart; b.ForeColor = Color.White; }
+                else { b.BackColor = Color.White; b.ForeColor = Color.FromArgb(33, 33, 33); }
             }
             catch { }
         }
@@ -423,16 +423,16 @@ namespace TaMi_Einzahlautomat
             var lblDate = new Label { Text = dt.ToString("dd.MM.yyyy HH:mm"), AutoSize = false, Location = new Point(12, 80), Size = new Size(216, 22), Font = new Font("Segoe UI", 10F), ForeColor = Color.Gray };
             pnl.Controls.Add(lblDate);
 
-            var btnOpen = new Button { Text = "�ffnen", Location = new Point(12, 110), Size = new Size(104, 36), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Tag = filePath, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
-            btnOpen.FlatAppearance.BorderSize = 0; btnOpen.Click += (s, e) => OpenPath((string)((Button)s).Tag);
+            var btnOpen = new ModernGradientButton { Text = "Öffnen", Location = new Point(12, 110), Size = new Size(104, 36), GradientStart = UiTheme.PrimaryStart, GradientEnd = UiTheme.PrimaryEnd, Tag = filePath, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold), TabStop = false };
+            btnOpen.Click += (s, e) => OpenPath((string)((Button)s).Tag);
             pnl.Controls.Add(btnOpen);
-            var btnPrint = new Button { Text = "Drucken", Location = new Point(124, 110), Size = new Size(104, 36), BackColor = Color.FromArgb(76, 175, 80), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Tag = filePath, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
-            btnPrint.FlatAppearance.BorderSize = 0; btnPrint.Click += (s, e) => PrintPath((string)((Button)s).Tag);
+            var btnPrint = new ModernGradientButton { Text = "Drucken", Location = new Point(124, 110), Size = new Size(104, 36), GradientStart = UiTheme.SuccessStart, GradientEnd = UiTheme.SuccessEnd, Tag = filePath, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold), TabStop = false };
+            btnPrint.Click += (s, e) => PrintPath((string)((Button)s).Tag);
             try { var disableDocs = IniHelper.ReadValue("UI", "DisableDocumentsPrint", AppSettings.IniPath); if (!string.IsNullOrWhiteSpace(disableDocs) && (disableDocs.Equals("1") || disableDocs.Equals("true", StringComparison.OrdinalIgnoreCase))) btnPrint.Visible = false; } catch { }
             pnl.Controls.Add(btnPrint);
 
-            var btnMail = new Button { Text = "per Mail", Location = new Point(12, 152), Size = new Size(216, 36), BackColor = Color.FromArgb(255, 167, 38), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Tag = filePath, Font = new Font("Segue UI Variable", 11F, FontStyle.Bold) };
-            btnMail.FlatAppearance.BorderSize = 0; btnMail.Click += (s, e) => SendDocumentByEmail((string)((Button)s).Tag);
+            var btnMail = new ModernGradientButton { Text = "per Mail", Location = new Point(12, 152), Size = new Size(216, 36), GradientStart = Color.FromArgb(255, 167, 38), GradientEnd = Color.FromArgb(245, 124, 0), Tag = filePath, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold), TabStop = false };
+            btnMail.Click += (s, e) => SendDocumentByEmail((string)((Button)s).Tag);
             pnl.Controls.Add(btnMail);
 
             pnl.Cursor = Cursors.Hand;
@@ -504,7 +504,22 @@ namespace TaMi_Einzahlautomat
                     Height = 380,
                     BackColor = Color.White
                 };
-                try { dlg.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, dlg.Width, dlg.Height, 16, 16)); } catch { }
+                try
+                {
+                    using (var gp = new GraphicsPath())
+                    {
+                        int radius = 16;
+                        var rect = new Rectangle(0, 0, dlg.Width, dlg.Height);
+                        int d = radius * 2;
+                        gp.AddArc(rect.X, rect.Y, d, d, 180, 90);
+                        gp.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+                        gp.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+                        gp.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+                        gp.CloseFigure();
+                        dlg.Region = new Region(gp);
+                    }
+                }
+                catch { }
 
                 // Subtle border around the dialog
                 try
@@ -597,7 +612,22 @@ namespace TaMi_Einzahlautomat
                     TabStop = false
                 };
                 btnOk.FlatAppearance.BorderSize = 0;
-                try { btnOk.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnOk.Width, btnOk.Height, 12, 12)); } catch { }
+                try
+                {
+                    using (var gp = new GraphicsPath())
+                    {
+                        int radius = 12;
+                        var rect = new Rectangle(0, 0, btnOk.Width, btnOk.Height);
+                        int d = radius * 2;
+                        gp.AddArc(rect.X, rect.Y, d, d, 180, 90);
+                        gp.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+                        gp.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+                        gp.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+                        gp.CloseFigure();
+                        btnOk.Region = new Region(gp);
+                    }
+                }
+                catch { }
 
                 var btnCancel = new Button
                 {
@@ -611,7 +641,22 @@ namespace TaMi_Einzahlautomat
                     TabStop = false
                 };
                 btnCancel.FlatAppearance.BorderSize = 0;
-                try { btnCancel.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnCancel.Width, btnCancel.Height, 12, 12)); } catch { }
+                try
+                {
+                    using (var gp = new GraphicsPath())
+                    {
+                        int radius = 12;
+                        var rect = new Rectangle(0, 0, btnCancel.Width, btnCancel.Height);
+                        int d = radius * 2;
+                        gp.AddArc(rect.X, rect.Y, d, d, 180, 90);
+                        gp.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+                        gp.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+                        gp.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+                        gp.CloseFigure();
+                        btnCancel.Region = new Region(gp);
+                    }
+                }
+                catch { }
 
                 btnOk.Click += (s, e) => { dlg.Tag = true; dlg.Close(); };
                 btnCancel.Click += (s, e) => { dlg.Tag = false; dlg.Close(); };
@@ -969,7 +1014,22 @@ namespace TaMi_Einzahlautomat
                     Height = 220,
                     BackColor = Color.White
                 };
-                try { dlg.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, dlg.Width, dlg.Height, 14, 14)); } catch { }
+                try
+                {
+                    using (var gp = new GraphicsPath())
+                    {
+                        int radius = 14;
+                        var rect = new Rectangle(0, 0, dlg.Width, dlg.Height);
+                        int d = radius * 2;
+                        gp.AddArc(rect.X, rect.Y, d, d, 180, 90);
+                        gp.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+                        gp.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+                        gp.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+                        gp.CloseFigure();
+                        dlg.Region = new Region(gp);
+                    }
+                }
+                catch { }
 
                 var header = new Panel { Dock = DockStyle.Top, Height = 56 };
                 header.Paint += (s, e) =>
@@ -1018,7 +1078,22 @@ namespace TaMi_Einzahlautomat
                     TabStop = false
                 };
                 btnDownload.FlatAppearance.BorderSize = 0;
-                try { btnDownload.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnDownload.Width, btnDownload.Height, 12, 12)); } catch { }
+                try
+                {
+                    using (var gp = new GraphicsPath())
+                    {
+                        int radius = 12;
+                        var rect = new Rectangle(0, 0, btnDownload.Width, btnDownload.Height);
+                        int d = radius * 2;
+                        gp.AddArc(rect.X, rect.Y, d, d, 180, 90);
+                        gp.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+                        gp.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+                        gp.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+                        gp.CloseFigure();
+                        btnDownload.Region = new Region(gp);
+                    }
+                }
+                catch { }
                 btnDownload.Click += (s, e) =>
                 {
                     try
@@ -1046,7 +1121,22 @@ namespace TaMi_Einzahlautomat
                     TabStop = false
                 };
                 btnClose.FlatAppearance.BorderSize = 0;
-                try { btnClose.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnClose.Width, btnClose.Height, 12, 12)); } catch { }
+                try
+                {
+                    using (var gp = new GraphicsPath())
+                    {
+                        int radius = 12;
+                        var rect = new Rectangle(0, 0, btnClose.Width, btnClose.Height);
+                        int d = radius * 2;
+                        gp.AddArc(rect.X, rect.Y, d, d, 180, 90);
+                        gp.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+                        gp.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+                        gp.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+                        gp.CloseFigure();
+                        btnClose.Region = new Region(gp);
+                    }
+                }
+                catch { }
                 btnClose.Click += (s, e) => { try { dlg.Close(); } catch { } };
 
                 int spacing = 16;

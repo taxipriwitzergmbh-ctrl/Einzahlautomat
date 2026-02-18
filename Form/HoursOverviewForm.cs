@@ -13,6 +13,7 @@ using PdfSharp.Drawing;
 using PdfSharp.Fonts;
 using Microsoft.Win32;
 using System.Collections.Generic;
+using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
 {
@@ -103,8 +104,6 @@ namespace TaMi_Einzahlautomat
     public class HoursOverviewForm : Form
     {
         private readonly PersonalInfo _personal;
-        [DllImport("gdi32.dll", SetLastError = true)]
-        private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
 
         // Pfad für Abhängigkeits-Assemblies (konfigurierbar über INI, sonst Standardpfad)
         private static readonly string AssemblyBasePath = InitAssemblyBasePath();
@@ -164,23 +163,21 @@ namespace TaMi_Einzahlautomat
             return null;
         }
 
-        private Panel _header;
-        private Label _title;
-        private Button _btnClose;
+        private ModernHeaderPanel _header;
         private ComboBox _cbMonth;
         private ComboBox _cbYear;
-        private Button _btnPrev;
-        private Button _btnNext;
-        private Button _btnHelp;
+        private ModernGradientButton _btnPrev;
+        private ModernGradientButton _btnNext;
+        private ModernGradientButton _btnHelp;
         private DataGridView _grid;
         private Label _lblInfo;
         private Label lblPeriod;
         private Panel _summaryPanel;
         private Label lblSumArbeit, lblSumShortPause, lblSumPause, lblNetto, lblSumUrlaub, lblSumKrank;
         private Label lblIstStunden;
-        private Button _btnStamp;
+        private ModernGradientButton _btnStamp;
         private int? _openWorkEntryId;
-        private Button _btnPause;
+        private ModernGradientButton _btnPause;
         private int? _openPauseEntryId;
 
         public HoursOverviewForm(PersonalInfo personal)
@@ -199,26 +196,22 @@ namespace TaMi_Einzahlautomat
             DoubleBuffered = true;
             ClientSize = new Size(1280, 1024);
 
-            _header = new Panel { Dock = DockStyle.Top, Height = 72 };
-            // enable double buffering on the panel to avoid rendering artifacts
-            try { typeof(Panel).GetProperty("DoubleBuffered", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_header, true, null); } catch { }
-            // provide a base BackColor so the gradient has a fallback (prevents small white artifacts)
-            _header.BackColor = Color.FromArgb(33, 150, 243);
-            _header.Paint += (s, e) =>
+            _header = new ModernHeaderPanel
             {
-                using (var br = new System.Drawing.Drawing2D.LinearGradientBrush(_header.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
-                {
-                    e.Graphics.FillRectangle(br, _header.ClientRectangle);
-                }
+                Title = "Zeiterfassung",
+                ShowMinimize = false
             };
+            _header.CloseClicked += () => { try { Close(); } catch { } };
+            _header.MinimizeClicked += () => { try { WindowState = FormWindowState.Minimized; } catch { } };
             Controls.Add(_header);
 
-            _title = new Label { Text = "Zeiterfassung", AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold), ForeColor = Color.White, Location = new Point(16, 0), Size = new Size(350, 72) };
-            _title.BackColor = Color.Transparent;
-            _header.Controls.Add(_title);
-
-            _btnClose = new Button { Text = "Schließen", AutoSize = false, Size = new Size(160, 48), BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Location = new Point(ClientSize.Width - 176, 12), Anchor = AnchorStyles.Top | AnchorStyles.Right };
-            _btnClose.FlatAppearance.BorderSize = 0; _btnClose.Click += (s, e) => Close(); _header.Controls.Add(_btnClose);
+            // Apply rounded corners to the borderless form
+            try
+            {
+                _header.ApplyRoundedRegionToForm(this);
+                SizeChanged += (s, e) => { try { _header.ApplyRoundedRegionToForm(this); } catch { } };
+            }
+            catch { }
 
             _cbMonth = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 16F), Location = new Point(420, 14), Size = new Size(230, 40) };
             _cbMonth.Items.AddRange(new object[] { "Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember" });
@@ -230,24 +223,26 @@ namespace TaMi_Einzahlautomat
             _cbYear.SelectedIndexChanged += (s, e) => Reload();
             _header.Controls.Add(_cbYear);
 
-            _btnPrev = new Button { Text = "◀", Font = new Font("Segoe UI", 18F, FontStyle.Bold), Size = new Size(48, 40), Location = new Point(368, 14), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            _btnPrev.FlatAppearance.BorderSize = 0; _btnPrev.Click += (s, e) => ShiftMonth(-1);
+            _btnPrev = new ModernGradientButton { Text = "◀", Font = new Font("Segoe UI", 16F, FontStyle.Bold), Size = new Size(48, 40), Location = new Point(368, 14), TabStop = false };
+            _btnPrev.Click += (s, e) => ShiftMonth(-1);
             _header.Controls.Add(_btnPrev);
 
-            _btnNext = new Button { Text = "▶", Font = new Font("Segoe UI", 18F, FontStyle.Bold), Size = new Size(48, 40), Location = new Point(788, 14), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            _btnNext.FlatAppearance.BorderSize = 0; _btnNext.Click += (s, e) => ShiftMonth(+1);
+            _btnNext = new ModernGradientButton { Text = "▶", Font = new Font("Segoe UI", 16F, FontStyle.Bold), Size = new Size(48, 40), Location = new Point(788, 14), TabStop = false };
+            _btnNext.Click += (s, e) => ShiftMonth(+1);
             _header.Controls.Add(_btnNext);
 
-            _btnHelp = new Button { Text = "?", Font = new Font("Segoe UI", 18F, FontStyle.Bold), Size = new Size(48, 40), Location = new Point(844, 14), BackColor = Color.FromArgb(0, 133, 188), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            _btnHelp.FlatAppearance.BorderSize = 0; _btnHelp.Click += (s, e) => ShowHelp();
+            _btnHelp = new ModernGradientButton { Text = "?", Font = new Font("Segoe UI", 16F, FontStyle.Bold), Size = new Size(48, 40), Location = new Point(844, 14), TabStop = false, GradientStart = UiTheme.SecondaryStart, GradientEnd = UiTheme.SecondaryEnd };
+            _btnHelp.Click += (s, e) => ShowHelp();
             _header.Controls.Add(_btnHelp);
 
             // Print and Email buttons for exporting the current view (use document printer and mail settings)
-            var btnPrintMonth = new Button { Text = "Drucken", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Size = new Size(96, 40), Location = new Point(900, 14), BackColor = Color.FromArgb(76, 175, 80), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            btnPrintMonth.FlatAppearance.BorderSize = 0; btnPrintMonth.Click += (s, e) => PrintMonthReport(); _header.Controls.Add(btnPrintMonth);
+            var btnPrintMonth = new ModernGradientButton { Text = "Drucken", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Size = new Size(96, 40), Location = new Point(900, 14), GradientStart = UiTheme.SuccessStart, GradientEnd = UiTheme.SuccessEnd, TabStop = false };
+            btnPrintMonth.Click += (s, e) => PrintMonthReport();
+            _header.Controls.Add(btnPrintMonth);
             try { var disable = IniHelper.ReadValue("UI", "DisableHoursPrint", AppSettings.IniPath); if (!string.IsNullOrWhiteSpace(disable) && (disable.Equals("1") || disable.Equals("true", StringComparison.OrdinalIgnoreCase))) btnPrintMonth.Visible = false; } catch { }
-            var btnEmailMonth = new Button { Text = "per Mail", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Size = new Size(96, 40), Location = new Point(1004, 14), BackColor = Color.FromArgb(255, 167, 38), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            btnEmailMonth.FlatAppearance.BorderSize = 0; btnEmailMonth.Click += (s, e) => EmailMonthReport(); _header.Controls.Add(btnEmailMonth);
+            var btnEmailMonth = new ModernGradientButton { Text = "per Mail", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Size = new Size(96, 40), Location = new Point(1004, 14), GradientStart = Color.FromArgb(255, 167, 38), GradientEnd = Color.FromArgb(245, 124, 0), TabStop = false };
+            btnEmailMonth.Click += (s, e) => EmailMonthReport();
+            _header.Controls.Add(btnEmailMonth);
 
             _lblInfo = new Label { Text = $"Mitarbeiter: {_personal?.Vorname} {_personal?.Name}", AutoSize = false, Location = new Point(16, _header.Bottom + 10), Size = new Size(520, 32), Font = new Font("Segoe UI", 14F, FontStyle.Bold) };
             _lblInfo.BackColor = Color.Transparent;
@@ -279,14 +274,12 @@ namespace TaMi_Einzahlautomat
             _summaryPanel.Controls.Add(lblIstStunden);
 
             // Stamp button: shown at top-right, next to Netto label
-            _btnStamp = new Button { Text = "Anstempeln", AutoSize = false, Size = new Size(160, 36), BackColor = Color.FromArgb(76, 175, 80), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Anchor = AnchorStyles.Top | AnchorStyles.Right };
-            _btnStamp.FlatAppearance.BorderSize = 0;
+            _btnStamp = new ModernGradientButton { Text = "Anstempeln", AutoSize = false, Size = new Size(160, 36), Anchor = AnchorStyles.Top | AnchorStyles.Right, GradientStart = UiTheme.SuccessStart, GradientEnd = UiTheme.SuccessEnd, TabStop = false };
             _btnStamp.Click += async (s, e) => await OnStampClickAsync();
             _summaryPanel.Controls.Add(_btnStamp);
 
             // Pause button: visible only when work is running (Abstempeln shown)
-            _btnPause = new Button { Text = "Pause starten", AutoSize = false, Size = new Size(160, 36), BackColor = Color.FromArgb(255, 167, 38), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Anchor = AnchorStyles.Top | AnchorStyles.Right, Visible = false };
-            _btnPause.FlatAppearance.BorderSize = 0;
+            _btnPause = new ModernGradientButton { Text = "Pause starten", AutoSize = false, Size = new Size(160, 36), Anchor = AnchorStyles.Top | AnchorStyles.Right, Visible = false, GradientStart = Color.FromArgb(255, 167, 38), GradientEnd = Color.FromArgb(245, 124, 0), TabStop = false };
             _btnPause.Click += async (s, e) => await OnPauseClickAsync();
             _summaryPanel.Controls.Add(_btnPause);
 
@@ -315,7 +308,7 @@ namespace TaMi_Einzahlautomat
             _grid.DefaultCellStyle.SelectionForeColor = Color.Black;
             Controls.Add(_grid);
 
-            try { _header.BringToFront(); _title.BringToFront(); _btnClose.BringToFront(); _cbMonth.BringToFront(); _cbYear.BringToFront(); _btnPrev.BringToFront(); _btnNext.BringToFront(); _btnHelp.BringToFront(); } catch { }
+            try { _header.BringToFront(); _cbMonth.BringToFront(); _cbYear.BringToFront(); _btnPrev.BringToFront(); _btnNext.BringToFront(); _btnHelp.BringToFront(); } catch { }
         }
 
         private void PositionStampButton()
@@ -358,7 +351,8 @@ namespace TaMi_Einzahlautomat
                     _openWorkEntryId = id;
                     bool isOpen = id.HasValue;
                     _btnStamp.Text = isOpen ? "Abstempeln" : "Anstempeln";
-                    _btnStamp.BackColor = isOpen ? Color.FromArgb(229, 57, 53) : Color.FromArgb(76, 175, 80);
+                    _btnStamp.GradientStart = isOpen ? UiTheme.DangerStart : UiTheme.SuccessStart;
+                    _btnStamp.GradientEnd = isOpen ? UiTheme.DangerEnd : UiTheme.SuccessEnd;
                     // pause button visible only when work is open
                     _btnPause.Visible = isOpen;
                     PositionStampButton(); PositionPauseButton();
@@ -380,7 +374,8 @@ namespace TaMi_Einzahlautomat
                     _openPauseEntryId = id;
                     bool pauseOpen = id.HasValue;
                     _btnPause.Text = pauseOpen ? "Pause beenden" : "Pause starten";
-                    _btnPause.BackColor = pauseOpen ? Color.FromArgb(229, 57, 53) : Color.FromArgb(255,167,38);
+                    _btnPause.GradientStart = pauseOpen ? UiTheme.DangerStart : Color.FromArgb(255, 167, 38);
+                    _btnPause.GradientEnd = pauseOpen ? UiTheme.DangerEnd : Color.FromArgb(245, 124, 0);
                     PositionPauseButton();
                 }
             }
@@ -1089,7 +1084,22 @@ namespace TaMi_Einzahlautomat
             try
             {
                 var dlg = new Form { FormBorderStyle = FormBorderStyle.None, StartPosition = FormStartPosition.CenterParent, Width = 720, Height = 380, BackColor = Color.White };
-                try { dlg.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, dlg.Width, dlg.Height, 16, 16)); } catch { }
+                try
+                {
+                    using (var gp = new System.Drawing.Drawing2D.GraphicsPath())
+                    {
+                        int radius = 16;
+                        var rect = new Rectangle(0, 0, dlg.Width, dlg.Height);
+                        int d = radius * 2;
+                        gp.AddArc(rect.X, rect.Y, d, d, 180, 90);
+                        gp.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+                        gp.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+                        gp.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+                        gp.CloseFigure();
+                        dlg.Region = new Region(gp);
+                    }
+                }
+                catch { }
                 var header = new Panel { Dock = DockStyle.Top, Height = 60 };
                 header.Paint += (s, e) => { using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(header.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f)) { e.Graphics.FillRectangle(brush, header.ClientRectangle); } };
                 dlg.Controls.Add(header);
