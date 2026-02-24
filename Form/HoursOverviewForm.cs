@@ -104,6 +104,7 @@ namespace TaMi_Einzahlautomat
     public class HoursOverviewForm : Form
     {
         private readonly PersonalInfo _personal;
+        private readonly bool _allowStamping;
 
         // Pfad für Abhängigkeits-Assemblies (konfigurierbar über INI, sonst Standardpfad)
         private static readonly string AssemblyBasePath = InitAssemblyBasePath();
@@ -183,6 +184,12 @@ namespace TaMi_Einzahlautomat
         public HoursOverviewForm(PersonalInfo personal)
         {
             _personal = personal ?? throw new ArgumentNullException(nameof(personal));
+            try
+            {
+                var flags = (SuE.TaMi.PersonalFlags)_personal.AppRights2;
+                _allowStamping = (((int)flags & (int)SuE.TaMi.PersonalFlags.PERSONAL_FLAG_ZEITERFASSUNG_EINZAHLAUTOMAT) == (int)SuE.TaMi.PersonalFlags.PERSONAL_FLAG_ZEITERFASSUNG_EINZAHLAUTOMAT);
+            }
+            catch { _allowStamping = false; }
             BuildUi();
             try { AppLogger.Log($"Zeiterfassung geöffnet: PID={_personal.PID}, Name={_personal.Vorname} {_personal.Name}"); } catch { }
             LoadCurrentMonth();
@@ -282,6 +289,17 @@ namespace TaMi_Einzahlautomat
             _btnPause = new ModernGradientButton { Text = "Pause starten", AutoSize = false, Size = new Size(160, 36), Anchor = AnchorStyles.Top | AnchorStyles.Right, Visible = false, GradientStart = Color.FromArgb(255, 167, 38), GradientEnd = Color.FromArgb(245, 124, 0), TabStop = false };
             _btnPause.Click += async (s, e) => await OnPauseClickAsync();
             _summaryPanel.Controls.Add(_btnPause);
+
+            // Personal-Flag: Stempeln/Pause nur wenn erlaubt
+            try
+            {
+                if (!_allowStamping)
+                {
+                    _btnStamp.Visible = false;
+                    _btnPause.Visible = false;
+                }
+            }
+            catch { }
 
             _summaryPanel.Resize += (s, e) => { PositionStampButton(); PositionPauseButton(); };
             PositionStampButton(); PositionPauseButton();
@@ -385,6 +403,7 @@ namespace TaMi_Einzahlautomat
         private async System.Threading.Tasks.Task OnStampClickAsync()
         {
             if (_btnStamp == null) return;
+            if (!_allowStamping) return;
             Cursor prev = Cursor.Current;
             try
             {
@@ -418,6 +437,7 @@ namespace TaMi_Einzahlautomat
         private async System.Threading.Tasks.Task OnPauseClickAsync()
         {
             if (_btnPause == null) return;
+            if (!_allowStamping) return;
             Cursor prev = Cursor.Current;
             try
             {

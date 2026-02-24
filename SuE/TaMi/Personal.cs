@@ -9,7 +9,10 @@ namespace SuE.TaMi
     {
         LOCKED                              = 0x1,
 
-        IGNORELOGONSAMEMANDANT              = 0x100 //Diese Personalnummer kann sich aber doch auf allen Fahrzeugen aller Mandanten anmelden
+        IGNORELOGONSAMEMANDANT              = 0x100, //Diese Personalnummer kann sich aber doch auf allen Fahrzeugen aller Mandanten anmelden
+
+        PERSONAL_FLAG_KEINE_ZEITERFASSUNGS_ANSICHT  = 0x100000, //Im Einzahlautomat soll für diesen Mitarbeiter keine Arbeitszeiten angezeigt werden, Button Zeiterfassung ausblenden
+        PERSONAL_FLAG_ZEITERFASSUNG_EINZAHLAUTOMAT  = 0x200000  //Die Arbeitszeit kann im Einzahlautomat gestartet und beendet werden. Nur wenn dieses Flag vorhanden ist, soll der Button Anstempel/Abstempel bzw. Pause angezeigt werden.
     }
 
     public enum PersonalBeschäftigungsarten

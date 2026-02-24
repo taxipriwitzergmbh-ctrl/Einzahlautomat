@@ -921,6 +921,18 @@ namespace TaMi_Einzahlautomat
             }
             catch { }
 
+            // Personal-Flag: Zeiterfassungsansicht komplett ausblenden
+            try
+            {
+                if (_personal != null)
+                {
+                    var flags = (SuE.TaMi.PersonalFlags)_personal.AppRights2;
+                    if (((int)flags & (int)SuE.TaMi.PersonalFlags.PERSONAL_FLAG_KEINE_ZEITERFASSUNGS_ANSICHT) == (int)SuE.TaMi.PersonalFlags.PERSONAL_FLAG_KEINE_ZEITERFASSUNGS_ANSICHT)
+                        hoursEnabled = false;
+                }
+            }
+            catch { }
+
             var btnHours = new Button
             {
                 Text = string.Empty,
