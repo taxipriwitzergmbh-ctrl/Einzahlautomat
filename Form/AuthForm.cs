@@ -3,6 +3,7 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
+using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
 {
@@ -13,12 +14,11 @@ namespace TaMi_Einzahlautomat
         private readonly NV200_SSP _ssp;
         private readonly Action<PersonalInfo> _onSuccessOpenTarget;
 
-        private Panel _header;
-        private Label _title;
+        private ModernHeaderPanel _header;
         private Label _lblInfo;
         private TextBox _txtCode;
-        private Button _btnOk;
-        private Button _btnCancel;
+        private ModernGradientButton _btnOk;
+        private ModernGradientButton _btnCancel;
         private Panel _numPadPanel;
         private PictureBox _picNfc;
         private bool _requireNfc;
@@ -61,15 +61,18 @@ namespace TaMi_Einzahlautomat
             DoubleBuffered = true;
             KeyPreview = true;
             try { AcceptButton = null; CancelButton = null; } catch { }
-            try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 18, 18)); } catch { }
-
-            _header = new Panel { Dock = DockStyle.Top, Height = 72 };
-            _header.Paint += (s, e) => { using (var brush = new LinearGradientBrush(_header.ClientRectangle, Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f)) e.Graphics.FillRectangle(brush, _header.ClientRectangle); };
-            Controls.Add(_header);
 
             string titleText = _requireNfc ? "Bitte erneut authentifizieren" : (_allowCode ? "Passwort eingeben / NFC vorhalten" : "Verifizierung");
-            _title = new Label { Text = titleText, AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold), ForeColor = Color.White, Dock = DockStyle.Fill, Padding = new Padding(16, 0, 0, 0), BackColor = Color.Transparent };
-            _header.Controls.Add(_title);
+            _header = new ModernHeaderPanel { Title = titleText, ShowMinimize = false };
+            _header.CloseClicked += () => { try { Close(); } catch { } };
+            Controls.Add(_header);
+
+            try
+            {
+                _header.ApplyRoundedRegionToForm(this);
+                SizeChanged += (s, e) => { try { _header.ApplyRoundedRegionToForm(this); } catch { } };
+            }
+            catch { }
 
             int contentTop = _header.Bottom + 12;
             _lblInfo = new Label { Text = $"Mitarbeiter: {_personal?.Vorname} {_personal?.Name}", AutoSize = false, Location = new Point(24, contentTop), Size = new Size(ClientSize.Width - 48, 30), Font = new Font("Segoe UI", 12F, FontStyle.Bold) };
@@ -79,7 +82,11 @@ namespace TaMi_Einzahlautomat
             Controls.Add(_txtCode);
 
             int padTop = _txtCode.Bottom + 12;
-            _numPadPanel = new Panel { Location = new Point(24, padTop), Size = new Size(ClientSize.Width - 48, 252), Visible = _allowCode };
+            // Panel-Höhe so wählen, dass die letzte Tastenreihe nicht abgeschnitten wird
+            int numPadBtnW = 110, numPadBtnH = 60, numPadGap = 12;
+            int numPadRows = 4;
+            int numPadHeight = numPadRows * numPadBtnH + (numPadRows - 1) * numPadGap;
+            _numPadPanel = new Panel { Location = new Point(24, padTop), Size = new Size(ClientSize.Width - 48, numPadHeight), Visible = _allowCode };
             Controls.Add(_numPadPanel);
             if (_allowCode) BuildNumPad();
 
@@ -127,11 +134,27 @@ namespace TaMi_Einzahlautomat
             int totalW = btnW * 2 + 20;
             int startX = (ClientSize.Width - totalW) / 2;
 
-            _btnOk = new Button { Text = "Weiter", Location = new Point(startX, buttonsTop), Size = new Size(btnW, btnH), BackColor = Color.FromArgb(76, 175, 80), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            _btnOk.FlatAppearance.BorderSize = 0; _btnOk.TabStop = false; _btnOk.Click += async (s, e) => await TryCompleteAsyncByCode(); _btnOk.Visible = _allowCode; Controls.Add(_btnOk);
+            _btnOk = new ModernGradientButton { Text = "Weiter", Location = new Point(startX, buttonsTop), Size = new Size(btnW, btnH), GradientStart = UiTheme.SuccessStart, GradientEnd = UiTheme.SuccessEnd, TabStop = false };
+            _btnOk.Click += async (s, e) => await TryCompleteAsyncByCode();
+            _btnOk.Visible = _allowCode;
+            Controls.Add(_btnOk);
 
-            _btnCancel = new Button { Text = "Abbrechen", Location = new Point(startX + btnW + 20, buttonsTop), Size = new Size(btnW, btnH), BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            _btnCancel.FlatAppearance.BorderSize = 0; _btnCancel.TabStop = false; _btnCancel.DialogResult = DialogResult.None; _btnCancel.Click += (s, e) => Close(); Controls.Add(_btnCancel);
+            _btnCancel = new ModernGradientButton { Text = "Abbrechen", Location = new Point(startX + btnW + 20, buttonsTop), Size = new Size(btnW, btnH), GradientStart = UiTheme.DangerStart, GradientEnd = UiTheme.DangerEnd, TabStop = false };
+            _btnCancel.Click += (s, e) => { try { Close(); } catch { } };
+            Controls.Add(_btnCancel);
+
+            // Falls durch Header/Fonts weniger Platz ist, Buttons nach oben schieben, damit nichts abgeschnitten wird
+            try
+            {
+                int bottomMargin = 18;
+                int overflow = (_btnCancel.Bottom + bottomMargin) - ClientSize.Height;
+                if (overflow > 0)
+                {
+                    _btnOk.Top = Math.Max(_header.Bottom + 10, _btnOk.Top - overflow);
+                    _btnCancel.Top = _btnOk.Top;
+                }
+            }
+            catch { }
 
             KeyDown += AuthForm_KeyDown;
             KeyPress += AuthForm_KeyPress;
@@ -177,8 +200,29 @@ namespace TaMi_Einzahlautomat
             for (int i = 0; i < keys.Length; i++)
             {
                 int r = i / cols, c = i % cols;
-                var b = new Button { Text = keys[i], Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold), Size = new Size(btnW, btnH), Location = new Point(c * (btnW + pad), r * (btnH + pad)), BackColor = Color.FromArgb(245, 247, 250), FlatStyle = FlatStyle.Flat, Tag = keys[i] };
-                b.FlatAppearance.BorderSize = 0;
+                var keyText = keys[i];
+                var b = new ModernGradientButton
+                {
+                    Text = keyText,
+                    Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
+                    Size = new Size(btnW, btnH),
+                    Location = new Point(c * (btnW + pad), r * (btnH + pad)),
+                    Tag = keyText,
+                    TabStop = false,
+                    GradientStart = UiTheme.PrimaryStart,
+                    GradientEnd = UiTheme.PrimaryEnd,
+                    ForeColor = Color.White
+                };
+                if (keyText == "←")
+                {
+                    b.GradientStart = UiTheme.SecondaryStart;
+                    b.GradientEnd = UiTheme.SecondaryEnd;
+                }
+                else if (keyText == "OK")
+                {
+                    b.GradientStart = UiTheme.SuccessStart;
+                    b.GradientEnd = UiTheme.SuccessEnd;
+                }
                 b.Click += (s, e) =>
                 {
                     var key = (string)((Button)s).Tag;
@@ -361,7 +405,6 @@ namespace TaMi_Einzahlautomat
             e.Handled = true;
         }
 
-        [System.Runtime.InteropServices.DllImport("gdi32.dll", SetLastError = true)]
-        private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
+        
     }
 }

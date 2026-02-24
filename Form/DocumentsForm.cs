@@ -73,7 +73,7 @@ namespace TaMi_Einzahlautomat
                 Title = "Dokumente",
                 ShowMinimize = false
             };
-            _header.CloseClicked += () => { try { Close(); } catch { } };
+            _header.CloseClicked += () => Close();
             Controls.Add(_header);
 
             try
