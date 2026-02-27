@@ -6,7 +6,7 @@ namespace TaMi_Einzahlautomat
 {
     public class PersonalInfo
     {
-        public const string DB_FIELDS = "PID,Name,Vorname,NFCTagUID,Fahrercode,Gesperrt,EintrittAm,AustrittAm,AppRechte,EMail";
+        public const string DB_FIELDS = "PID,Name,Vorname,NFCTagUID,Fahrercode,Gesperrt,EintrittAm,AustrittAm,AppRechte,Flags,EMail";
 
         public int PID { get; set; }
         public string Name { get; set; }
@@ -23,6 +23,8 @@ namespace TaMi_Einzahlautomat
 
         public int AppRights1 { get; set; }
         public int AppRights2 { get; set; }
+
+        public int Flags { get; set; }
 
         public bool IsAutomatAdmin
         {

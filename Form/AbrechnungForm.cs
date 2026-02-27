@@ -922,12 +922,16 @@ namespace TaMi_Einzahlautomat
             catch { }
 
             // Personal-Flag: Zeiterfassungsansicht komplett ausblenden
+            // Regel: Wenn `KEINE_ZEITERFASSUNGS_ANSICHT` gesetzt ist -> Button ausblenden,
+            // Ausnahme/Override: wenn zusätzlich `ZEITERFASSUNG_EINZAHLAUTOMAT` gesetzt ist -> trotzdem anzeigen.
             try
             {
                 if (_personal != null)
                 {
-                    var flags = (SuE.TaMi.PersonalFlags)_personal.AppRights2;
-                    if (((int)flags & (int)SuE.TaMi.PersonalFlags.PERSONAL_FLAG_KEINE_ZEITERFASSUNGS_ANSICHT) == (int)SuE.TaMi.PersonalFlags.PERSONAL_FLAG_KEINE_ZEITERFASSUNGS_ANSICHT)
+                    var flags = (SuE.TaMi.PersonalFlags)_personal.Flags;
+                    bool hide = (((int)flags & (int)SuE.TaMi.PersonalFlags.PERSONAL_FLAG_KEINE_ZEITERFASSUNGS_ANSICHT) == (int)SuE.TaMi.PersonalFlags.PERSONAL_FLAG_KEINE_ZEITERFASSUNGS_ANSICHT);
+                    bool forceShow = (((int)flags & (int)SuE.TaMi.PersonalFlags.PERSONAL_FLAG_ZEITERFASSUNG_EINZAHLAUTOMAT) == (int)SuE.TaMi.PersonalFlags.PERSONAL_FLAG_ZEITERFASSUNG_EINZAHLAUTOMAT);
+                    if (hide && !forceShow)
                         hoursEnabled = false;
                 }
             }
@@ -1898,11 +1902,12 @@ namespace TaMi_Einzahlautomat
                 Location = new Point(pad, y),
                 Size = new Size(200, 56),
                 Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
-                BackColor = Color.FromArgb(46, 125, 50),
+                BackColor = Color.FromArgb(160, 160, 160),
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                Enabled = false
             };
-            ApplyModernButtonStyle(btnAbrechnen, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32));
+            ApplyModernButtonStyle(btnAbrechnen, Color.FromArgb(160, 160, 160), Color.FromArgb(120, 120, 120));
             btnAbrechnen.Click += btnAbrechnen_Click;
             _abrechnenInnerPanel.Controls.Add(btnAbrechnen);
 
@@ -2128,7 +2133,22 @@ namespace TaMi_Einzahlautomat
                 if (btnAbrechnen != null)
                 {
                     btnAbrechnen.Enabled = enabled;
-                    try { btnAbrechnen.BackColor = enabled ? Color.FromArgb(46, 125, 50) : Color.FromArgb(160, 160, 160); btnAbrechnen.ForeColor = Color.White; } catch { }
+                    try
+                    {
+                        if (enabled)
+                        {
+                            btnAbrechnen.BackColor = Color.FromArgb(46, 125, 50);
+                            btnAbrechnen.Tag = new Tuple<Color, Color>(Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32));
+                        }
+                        else
+                        {
+                            btnAbrechnen.BackColor = Color.FromArgb(160, 160, 160);
+                            btnAbrechnen.Tag = new Tuple<Color, Color>(Color.FromArgb(160, 160, 160), Color.FromArgb(120, 120, 120));
+                        }
+                        btnAbrechnen.ForeColor = Color.White;
+                        btnAbrechnen.Invalidate();
+                    }
+                    catch { }
                 }
             }
             catch { }

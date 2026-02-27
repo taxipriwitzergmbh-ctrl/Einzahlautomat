@@ -492,6 +492,7 @@ namespace TaMi_Einzahlautomat
                         Austrittsdatum = reader.IsDBNull(reader.GetOrdinal("AustrittAm")) ? (DateTime?)null : Convert.ToDateTime(reader["AustrittAm"]),
                         AppRights1 = (int)appRights1,
                         AppRights2 = (int)appRigths2,
+                         Flags = reader.IsDBNull(reader.GetOrdinal("Flags")) ? 0 : Convert.ToInt32(reader["Flags"]),
                     };
                 }
             }
@@ -506,7 +507,7 @@ namespace TaMi_Einzahlautomat
 
             using (var cmd=_connection.CreateCommand()) 
             { 
-                cmd.CommandText= "SELECT TOP 1 PID,Name,Vorname,NFCTagUID,Fahrercode,Gesperrt,EintrittAm,AustrittAm,AppRechte,EMail FROM TPersonal WITH (NOLOCK) WHERE NFCTagUID=@nfc"; 
+                cmd.CommandText= "SELECT TOP 1 PID,Name,Vorname,NFCTagUID,Fahrercode,Gesperrt,EintrittAm,AustrittAm,AppRechte,Flags,EMail FROM TPersonal WITH (NOLOCK) WHERE NFCTagUID=@nfc"; 
                 cmd.Parameters.AddWithValue("@nfc", nfcToken); 
                 
                 using (var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleRow).ConfigureAwait(false)) 
@@ -544,6 +545,7 @@ namespace TaMi_Einzahlautomat
                         Austrittsdatum = status.AustrittAm,
                         AppRights1 = (int)appRights1,
                         AppRights2 = (int)appRigths2,
+                         Flags = reader.IsDBNull(reader.GetOrdinal("Flags")) ? 0 : Convert.ToInt32(reader["Flags"]),
                     };
                 } 
             }
@@ -568,7 +570,7 @@ namespace TaMi_Einzahlautomat
 
             using (var cmd = _connection.CreateCommand())
             {
-                cmd.CommandText = @";WITH lastPg AS (SELECT TOP 1 SaldoPersonalguthaben FROM TKassenbuch WITH (NOLOCK) WHERE PersId=@PID AND Typ=5 AND DeviceID=@DID ORDER BY ErfasstAm DESC), lastShift AS (SELECT TOP 1 s.SchichtId,s.PersId,s.PersName,s.FhzId,s.ManID,s.StartZeit,s.EndZeit,ISNULL(s.EinnahmenBar1,0)-ISNULL(s.EinzahlungFahrer1,0) AS Betrag19,ISNULL(s.EinnahmenBar2,0)-ISNULL(s.EinzahlungFahrer2,0) AS Betrag7,ISNULL(s.EinnahmenBar3,0)-ISNULL(s.EinzahlungFahrer3,0) AS Betrag0,ISNULL(s.EinzahlungFahrer,0) AS EinzahlungBisher FROM TSchichten s WITH (NOLOCK) WHERE (s.Flags & 1)=0 AND (s.Flags & 4)=0 AND s.PersId=@PID ORDER BY s.StartZeit DESC) SELECT p.PID,p.Name,p.Vorname,p.NFCTagUID,p.Fahrercode,p.Gesperrt,p.EintrittAm,p.AustrittAm,p.AppRechte,p.EMail,(SELECT SaldoPersonalguthaben FROM lastPg) AS Guthaben,ls.SchichtId,ls.PersId AS ShiftPersId,ls.PersName,ls.FhzId,ls.ManID,ls.StartZeit,ls.EndZeit,ls.Betrag19,ls.Betrag7,ls.Betrag0,ls.EinzahlungBisher FROM TPersonal p WITH (NOLOCK) LEFT JOIN lastShift ls ON ls.PersId=p.PID WHERE p.PID=@PID;";
+                cmd.CommandText = @";WITH lastPg AS (SELECT TOP 1 SaldoPersonalguthaben FROM TKassenbuch WITH (NOLOCK) WHERE PersId=@PID AND Typ=5 AND DeviceID=@DID ORDER BY ErfasstAm DESC), lastShift AS (SELECT TOP 1 s.SchichtId,s.PersId,s.PersName,s.FhzId,s.ManID,s.StartZeit,s.EndZeit,ISNULL(s.EinnahmenBar1,0)-ISNULL(s.EinzahlungFahrer1,0) AS Betrag19,ISNULL(s.EinnahmenBar2,0)-ISNULL(s.EinzahlungFahrer2,0) AS Betrag7,ISNULL(s.EinnahmenBar3,0)-ISNULL(s.EinzahlungFahrer3,0) AS Betrag0,ISNULL(s.EinzahlungFahrer,0) AS EinzahlungBisher FROM TSchichten s WITH (NOLOCK) WHERE (s.Flags & 1)=0 AND (s.Flags & 4)=0 AND s.PersId=@PID ORDER BY s.StartZeit DESC) SELECT p.PID,p.Name,p.Vorname,p.NFCTagUID,p.Fahrercode,p.Gesperrt,p.EintrittAm,p.AustrittAm,p.AppRechte,p.Flags,p.EMail,(SELECT SaldoPersonalguthaben FROM lastPg) AS Guthaben,ls.SchichtId,ls.PersId AS ShiftPersId,ls.PersName,ls.FhzId,ls.ManID,ls.StartZeit,ls.EndZeit,ls.Betrag19,ls.Betrag7,ls.Betrag0,ls.EinzahlungBisher FROM TPersonal p WITH (NOLOCK) LEFT JOIN lastShift ls ON ls.PersId=p.PID WHERE p.PID=@PID;";
                 cmd.Parameters.AddWithValue("@PID", persId); 
                 cmd.Parameters.AddWithValue("@DID", CurrentDeviceId);
 
@@ -592,6 +594,7 @@ namespace TaMi_Einzahlautomat
                             Austrittsdatum = rdr.IsDBNull(rdr.GetOrdinal("AustrittAm")) ? (DateTime?)null : Convert.ToDateTime(rdr["AustrittAm"]),
                             AppRights1 = (int)appRights1,
                             AppRights2 = (int)appRigths2,
+                            Flags = rdr.IsDBNull(rdr.GetOrdinal("Flags")) ? 0 : Convert.ToInt32(rdr["Flags"]),
                         };
 
                         ctx.Guthaben = rdr.IsDBNull(rdr.GetOrdinal("Guthaben")) ? 0m : Convert.ToDecimal(rdr["Guthaben"]);

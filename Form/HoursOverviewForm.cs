@@ -105,6 +105,7 @@ namespace TaMi_Einzahlautomat
     {
         private readonly PersonalInfo _personal;
         private readonly bool _allowStamping;
+        private readonly bool _hideTimeTable;
 
         // Pfad für Abhängigkeits-Assemblies (konfigurierbar über INI, sonst Standardpfad)
         private static readonly string AssemblyBasePath = InitAssemblyBasePath();
@@ -186,8 +187,17 @@ namespace TaMi_Einzahlautomat
             _personal = personal ?? throw new ArgumentNullException(nameof(personal));
             try
             {
-                var flags = (SuE.TaMi.PersonalFlags)_personal.AppRights2;
+                var flags = (SuE.TaMi.PersonalFlags)_personal.Flags;
                 _allowStamping = (((int)flags & (int)SuE.TaMi.PersonalFlags.PERSONAL_FLAG_ZEITERFASSUNG_EINZAHLAUTOMAT) == (int)SuE.TaMi.PersonalFlags.PERSONAL_FLAG_ZEITERFASSUNG_EINZAHLAUTOMAT);
+
+                _hideTimeTable = (((int)flags & (int)SuE.TaMi.PersonalFlags.PERSONAL_FLAG_KEINE_ZEITERFASSUNGS_ANSICHT) == (int)SuE.TaMi.PersonalFlags.PERSONAL_FLAG_KEINE_ZEITERFASSUNGS_ANSICHT);
+
+                // Fallback: ältere Installationen können das Flag ggf. in AppRights2 tragen
+                if (!_allowStamping)
+                {
+                    var flagsFallback = (SuE.TaMi.PersonalFlags)_personal.AppRights2;
+                    _allowStamping = (((int)flagsFallback & (int)SuE.TaMi.PersonalFlags.PERSONAL_FLAG_ZEITERFASSUNG_EINZAHLAUTOMAT) == (int)SuE.TaMi.PersonalFlags.PERSONAL_FLAG_ZEITERFASSUNG_EINZAHLAUTOMAT);
+                }
             }
             catch { _allowStamping = false; }
             BuildUi();
@@ -325,6 +335,36 @@ namespace TaMi_Einzahlautomat
             _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(220, 240, 255);
             _grid.DefaultCellStyle.SelectionForeColor = Color.Black;
             Controls.Add(_grid);
+
+            // Wenn keine Zeiterfassungsansicht erlaubt ist, die Tabelle komplett ausblenden
+            // und das Summary-Panel auf die gesamte Resthöhe ausdehnen.
+            try
+            {
+                if (_hideTimeTable)
+                {
+                    if (_grid != null) _grid.Visible = false;
+                    if (_summaryPanel != null)
+                    {
+                        _summaryPanel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+                        _summaryPanel.Height = Math.Max(96, ClientSize.Height - _summaryPanel.Top - 16);
+                    }
+
+                    try
+                    {
+                        SizeChanged += (s, e) =>
+                        {
+                            try
+                            {
+                                if (_summaryPanel != null)
+                                    _summaryPanel.Height = Math.Max(96, ClientSize.Height - _summaryPanel.Top - 16);
+                            }
+                            catch { }
+                        };
+                    }
+                    catch { }
+                }
+            }
+            catch { }
 
             try { _header.BringToFront(); _cbMonth.BringToFront(); _cbYear.BringToFront(); _btnPrev.BringToFront(); _btnNext.BringToFront(); _btnHelp.BringToFront(); } catch { }
         }

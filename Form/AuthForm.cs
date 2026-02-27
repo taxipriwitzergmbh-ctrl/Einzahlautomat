@@ -120,6 +120,16 @@ namespace TaMi_Einzahlautomat
                 }
                 catch { }
 
+                // Fallback: wenn keine Datei vorhanden ist, das eingebettete Resource-Bild benutzen
+                try
+                {
+                    if (_picNfc.Image == null)
+                    {
+                        _picNfc.Image = TaMi_Einzahlautomat.Properties.Resources.NFC;
+                    }
+                }
+                catch { }
+
                 if (_requireNfc)
                 {
                     _numPadPanel.Visible = false;
