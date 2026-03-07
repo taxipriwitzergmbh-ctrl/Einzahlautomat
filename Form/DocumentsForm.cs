@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.Drawing.Printing;
 using System.Drawing.Imaging;
+using System.Text.RegularExpressions;
 using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
@@ -325,8 +326,9 @@ namespace TaMi_Einzahlautomat
                 }
                 catch { depth = 0; }
 
-                // Erst ab Unterordner-Ebene (>=2) Dateien anzeigen
-                if (depth >= 2)
+                // Dateien anzeigen ab Kategorie-Ebene (>=1)
+                // (Root=0, Kategorie=1, Unterordner=2...)
+                if (depth >= 1)
                 {
                     var files = GetFilesForCurrentFolder();
                     foreach (var f in files.OrderByDescending(p => SafeGetWriteTime(p)))
@@ -785,16 +787,21 @@ namespace TaMi_Einzahlautomat
         {
             try
             {
-                var name = Path.GetFileNameWithoutExtension(filePath);
-                var parts = (name ?? string.Empty).Split('_');
-                if (parts.Length == 0) return false;
-                string last = parts[parts.Length - 1];
-                if (last == null) return false;
-                last = last.Trim();
-                last = last.TrimStart('0');
-                if (last.Length == 0) last = "0";
+                if (pid <= 0) return false;
+                var name = Path.GetFileNameWithoutExtension(filePath) ?? string.Empty;
+
+                // Robust: letzte Ziffernfolge im Namen als PID interpretieren
+                // Beispiele: "Allgemein_1", "Lohnsteuer..._20251_1", "Allgemein_0001", "Allgemein_1 (1)"
+                var m = Regex.Match(name, @"(\d+)\D*$");
+                if (!m.Success) return false;
+
+                string digits = m.Groups[1].Value;
+                digits = digits.TrimStart('0');
+                if (digits.Length == 0) digits = "0";
+
                 int filePid;
-                if (!int.TryParse(last, out filePid)) return false;
+                if (!int.TryParse(digits, out filePid)) return false;
+
                 return filePid == pid;
             }
             catch { return false; }
