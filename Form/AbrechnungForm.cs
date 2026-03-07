@@ -718,6 +718,8 @@ namespace TaMi_Einzahlautomat
             ClientSize = new Size(1280, 1024);
             BackColor = Color.White;
             DoubleBuffered = true;
+            try { SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true); } catch { }
+            try { UpdateStyles(); } catch { }
 
             headerPanel = new Panel
             {
@@ -1182,6 +1184,8 @@ namespace TaMi_Einzahlautomat
 
             tabAbrechnen = new TabPage("Abrechnen") { BackColor = Color.Transparent };
             tabWechseln = new TabPage("Wechseln") { BackColor = Color.Transparent };
+            try { EnableDoubleBufferingRecursive(tabAbrechnen); } catch { }
+            try { EnableDoubleBufferingRecursive(tabWechseln); } catch { }
             try
             {
                 tabAbrechnen.UseVisualStyleBackColor = false;
@@ -1258,11 +1262,29 @@ namespace TaMi_Einzahlautomat
             {
                 if (tabControl.SelectedTab == tabWechseln)
                 {
+                    try { tabWechseln.SuspendLayout(); } catch { }
                     SafeRefreshAvailability();
                     UpdateCoinAvailabilityLabels();
                     UpdateMaxVerfuegbar();
+                    try { tabWechseln.ResumeLayout(true); tabWechseln.Invalidate(true); } catch { }
                 }
             };
+        }
+
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                var cp = base.CreateParams;
+                try
+                {
+                    // Reduces flicker when switching tabs by compositing the whole form.
+                    // (Tradeoff: can feel a bit less snappy on very old GPUs, but fixes the partial redraw.)
+                    cp.ExStyle |= 0x02000000; // WS_EX_COMPOSITED
+                }
+                catch { }
+                return cp;
+            }
         }
 
         private void EnableDoubleBufferingRecursive(Control root)
