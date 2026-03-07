@@ -54,6 +54,7 @@ namespace TaMi_Einzahlautomat
 
         private void BuildUi()
         {
+            try { SuspendLayout(); } catch { }
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
             ClientSize = _allowCode ? new Size(520, 740) : (_requireNfc ? new Size(500, 700) : new Size(520, 420));
@@ -78,7 +79,9 @@ namespace TaMi_Einzahlautomat
             _lblInfo = new Label { Text = $"Mitarbeiter: {_personal?.Vorname} {_personal?.Name}", AutoSize = false, Location = new Point(24, contentTop), Size = new Size(ClientSize.Width - 48, 30), Font = new Font("Segoe UI", 12F, FontStyle.Bold) };
             Controls.Add(_lblInfo);
 
-            _txtCode = new TextBox { Location = new Point(24, _lblInfo.Bottom + 12), Size = new Size(ClientSize.Width - 48, 50), Font = new Font("Segoe UI Variable", 20F), UseSystemPasswordChar = true, TextAlign = HorizontalAlignment.Center, Visible = _allowCode };
+            // TextBox initial unsichtbar bauen, um ein kurzes "Aufblinken" links beim ersten Paint zu vermeiden.
+            // Sie wird in `OnShown` nach finalem Relayout wieder eingeblendet.
+            _txtCode = new TextBox { Location = new Point(24, _lblInfo.Bottom + 12), Size = new Size(ClientSize.Width - 48, 50), Font = new Font("Segoe UI Variable", 20F), UseSystemPasswordChar = true, TextAlign = HorizontalAlignment.Center, Visible = false };
             Controls.Add(_txtCode);
 
             int padTop = _txtCode.Bottom + 12;
@@ -86,7 +89,9 @@ namespace TaMi_Einzahlautomat
             int numPadBtnW = 110, numPadBtnH = 60, numPadGap = 12;
             int numPadRows = 4;
             int numPadHeight = numPadRows * numPadBtnH + (numPadRows - 1) * numPadGap;
-            _numPadPanel = new Panel { Location = new Point(24, padTop), Size = new Size(ClientSize.Width - 48, numPadHeight), Visible = _allowCode };
+            // Numpad initial unsichtbar bauen, um ein kurzes "Aufblinken" links beim ersten Paint zu vermeiden.
+            // Es wird in `OnShown` nach finalem Relayout wieder eingeblendet.
+            _numPadPanel = new Panel { Location = new Point(24, padTop), Size = new Size(ClientSize.Width - 48, numPadHeight), Visible = false };
             Controls.Add(_numPadPanel);
             if (_allowCode) BuildNumPad();
 
@@ -139,7 +144,16 @@ namespace TaMi_Einzahlautomat
             }
 
             // Centered buttons
-            int buttonsTop = (_allowCode ? _numPadPanel.Bottom + 18 : ClientSize.Height - 80);
+            int contentBottom = 0;
+            try
+            {
+                if (_allowCode) contentBottom = _numPadPanel.Bottom;
+                else if (_picNfc != null) contentBottom = _picNfc.Bottom;
+                else contentBottom = _lblInfo.Bottom;
+            }
+            catch { contentBottom = _allowCode ? _numPadPanel.Bottom : _lblInfo.Bottom; }
+
+            int buttonsTop = contentBottom + 18;
             int btnW = 140, btnH = 44;
             int totalW = btnW * 2 + 20;
             int startX = (ClientSize.Width - totalW) / 2;
@@ -161,6 +175,27 @@ namespace TaMi_Einzahlautomat
                 if (overflow > 0)
                 {
                     _btnOk.Top = Math.Max(_header.Bottom + 10, _btnOk.Top - overflow);
+                    _btnCancel.Top = _btnOk.Top;
+                }
+            }
+            catch { }
+
+            // Wenn Buttons in den sichtbaren Content reinragen (z.B. NFC-Bild), Buttons zusätzlich nach unten/oben korrigieren
+            try
+            {
+                int minTop = contentBottom + 12;
+                if (_btnCancel.Top < minTop)
+                {
+                    _btnOk.Top = minTop;
+                    _btnCancel.Top = minTop;
+                }
+
+                // sicherstellen, dass sie niemals unten abgeschnitten sind
+                int bottomMargin = 18;
+                int overflow2 = (_btnCancel.Bottom + bottomMargin) - ClientSize.Height;
+                if (overflow2 > 0)
+                {
+                    _btnOk.Top = Math.Max(_header.Bottom + 10, _btnOk.Top - overflow2);
                     _btnCancel.Top = _btnOk.Top;
                 }
             }
@@ -188,6 +223,105 @@ namespace TaMi_Einzahlautomat
                 if (_requireNfc && _txtNfcHidden != null) { ActiveControl = _txtNfcHidden; _txtNfcHidden.Focus(); }
             }
             catch { }
+
+            void RelayoutCentered()
+            {
+                try
+                {
+                    int marginX = 24;
+                    int contentW = ClientSize.Width - marginX * 2;
+                    if (_lblInfo != null) { _lblInfo.Left = marginX; _lblInfo.Width = contentW; }
+                    if (_txtCode != null) { _txtCode.Left = marginX; _txtCode.Width = contentW; }
+
+                    if (_allowCode && _numPadPanel != null)
+                    {
+                        // Numpad mit fester Breite zentrieren (3 Spalten)
+                        int btnW = 110, gap = 12;
+                        int numPadW = btnW * 3 + gap * 2;
+                        _numPadPanel.Width = Math.Min(contentW, numPadW);
+                        _numPadPanel.Left = marginX + (contentW - _numPadPanel.Width) / 2;
+                    }
+
+                    // Buttons zentriert unter dem Content
+                    int contentBottom = 0;
+                    try
+                    {
+                        if (_allowCode) contentBottom = _numPadPanel.Bottom;
+                        else if (_picNfc != null) contentBottom = _picNfc.Bottom;
+                        else contentBottom = _lblInfo.Bottom;
+                    }
+                    catch { contentBottom = _allowCode ? _numPadPanel.Bottom : _lblInfo.Bottom; }
+
+                    int buttonsTop = contentBottom + 18;
+                    int btnW2 = 140, btnH2 = 44;
+                    int totalW = btnW2 * 2 + 20;
+                    int startX = (ClientSize.Width - totalW) / 2;
+
+                    if (_btnOk != null)
+                    {
+                        _btnOk.Location = new Point(startX, buttonsTop);
+                        _btnOk.Size = new Size(btnW2, btnH2);
+                    }
+                    if (_btnCancel != null)
+                    {
+                        _btnCancel.Location = new Point(startX + btnW2 + 20, buttonsTop);
+                        _btnCancel.Size = new Size(btnW2, btnH2);
+                    }
+
+                    // nichts unten abschneiden
+                    int bottomMargin = 18;
+                    int overflow = (_btnCancel.Bottom + bottomMargin) - ClientSize.Height;
+                    if (overflow > 0)
+                    {
+                        int newTop = Math.Max(_header.Bottom + 10, _btnCancel.Top - overflow);
+                        if (_btnOk != null) _btnOk.Top = newTop;
+                        _btnCancel.Top = newTop;
+                    }
+                }
+                catch { }
+            }
+
+            try { RelayoutCentered(); } catch { }
+            try
+            {
+                if (_allowCode)
+                {
+                    if (_txtCode != null) _txtCode.Visible = true;
+                    if (_numPadPanel != null) _numPadPanel.Visible = true;
+                }
+            }
+            catch { }
+
+            try { ResumeLayout(true); } catch { }
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+            try
+            {
+                // Vor dem ersten Anzeigen layouten, damit beim initialen Paint nichts "links" aufblitzt
+                void RelayoutCentered_PrePaint()
+                {
+                    try
+                    {
+                        int marginX = 24;
+                        int contentW = ClientSize.Width - marginX * 2;
+                        if (_allowCode && _numPadPanel != null)
+                        {
+                            int btnW = 110, gap = 12;
+                            int numPadW = btnW * 3 + gap * 2;
+                            _numPadPanel.Width = Math.Min(contentW, numPadW);
+                            _numPadPanel.Left = marginX + (contentW - _numPadPanel.Width) / 2;
+                        }
+                    }
+                    catch { }
+                }
+
+                RelayoutCentered_PrePaint();
+                Resize += (s, ev) => { try { RelayoutCentered_PrePaint(); } catch { } };
+            }
+            catch { }
         }
 
         protected override void OnActivated(EventArgs e)
@@ -204,6 +338,7 @@ namespace TaMi_Einzahlautomat
 
         private void BuildNumPad()
         {
+            try { _numPadPanel.SuspendLayout(); } catch { }
             int btnW = 110, btnH = 60, pad = 12;
             string[] keys = { "1","2","3","4","5","6","7","8","9","←","0","OK" };
             int cols = 3;
