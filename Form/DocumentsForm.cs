@@ -48,7 +48,7 @@ namespace TaMi_Einzahlautomat
         {
             _personal = personal ?? throw new ArgumentNullException(nameof(personal));
             BuildUi();
-            try { AppLogger.Log($"Dokumente ge�ffnet: PID={_personal.PID}, Name={_personal.Vorname} {_personal.Name}"); } catch { }
+            try { AppLogger.Log($"Dokumente geöffnet: PID={_personal.PID}, Name={_personal.Vorname} {_personal.Name}"); } catch { }
             _root = GetDocStoreRoot();
             if (string.IsNullOrWhiteSpace(_root))
             {
@@ -138,7 +138,7 @@ namespace TaMi_Einzahlautomat
                     try { loaded = _pdfViewer.ReadyState == WebBrowserReadyState.Complete && _pdfViewer.Document != null; } catch { loaded = false; }
                     if (!loaded && !string.IsNullOrEmpty(_currentPreviewPath))
                     {
-                        // Fallback: extern �ffnen
+                        // Fallback: extern öffnen
                         HidePreview();
                         OpenExternal(_currentPreviewPath);
                     }
@@ -456,7 +456,7 @@ namespace TaMi_Einzahlautomat
                 if (mailCfg == null || !mailCfg.IsConfigured) { MessageBox.Show(this, "Maileinstellungen sind nicht konfiguriert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                 if (!ShowMailConsentDialog(employeeMail)) return;
 
-                try { AppLogger.Log($"Dokumente: E-Mail-Versand gestartet � Datei='{Path.GetFileName(path)}' an '{employeeMail}'"); } catch { }
+                try { AppLogger.Log($"Dokumente: E-Mail-Versand gestartet - Datei='{Path.GetFileName(path)}' an '{employeeMail}'"); } catch { }
                 Cursor prev = Cursor.Current; Cursor.Current = Cursors.WaitCursor;
                 try
                 {
@@ -479,7 +479,7 @@ namespace TaMi_Einzahlautomat
                             client.Send(msg);
                         }
                     }
-                    try { AppLogger.Log($"Dokumente: E-Mail gesendet � Datei='{Path.GetFileName(path)}' an '{employeeMail}'"); } catch { }
+                    try { AppLogger.Log($"Dokumente: E-Mail gesendet - Datei='{Path.GetFileName(path)}' an '{employeeMail}'"); } catch { }
                     MessageBox.Show(this, "E-Mail wurde gesendet.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
@@ -575,13 +575,13 @@ namespace TaMi_Einzahlautomat
                 var body = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(20, 20 + topOffset, 20, 20), AutoScroll = true };
                 dlg.Controls.Add(body);
 
-                var lblMail = new Label { Text = "Empf�nger: " + email, AutoSize = true, Font = new Font("Segoe UI", 12.5F), Dock = DockStyle.Top, Padding = new Padding(0, 0, 0, 10) };
+                var lblMail = new Label { Text = "Empfänger: " + email, AutoSize = true, Font = new Font("Segoe UI", 12.5F), Dock = DockStyle.Top, Padding = new Padding(0, 0, 0, 10) };
                 body.Controls.Add(lblMail);
 
                 int calcWidth() { return Math.Max(320, body.ClientSize.Width - body.Padding.Horizontal); }
                 var info = new Label
                 {
-                    Text = "Hinweis: Der Versand per E-Mail kann Datenschutzrisiken bergen (Weiterleitung, ungesicherte Postf�cher). Ich bin einverstanden, dass mir das Dokument an die oben angezeigte Adresse zugesendet wird.",
+                    Text = "Hinweis: Der Versand per E-Mail kann Datenschutzrisiken bergen (Weiterleitung, ungesicherte Postfächer). Ich bin einverstanden, dass mir das Dokument an die oben angezeigte Adresse zugesendet wird.",
                     AutoSize = true,
                     MaximumSize = new Size(640, 0),
                     Font = new Font("Segoe UI", 11.5F),
@@ -704,7 +704,7 @@ namespace TaMi_Einzahlautomat
         private static string Truncate(string s, int max)
         {
             if (string.IsNullOrEmpty(s) || s.Length <= max) return s;
-            return s.Substring(0, Math.Max(0, max - 1)) + "�";
+            return s.Substring(0, Math.Max(0, max - 1)) + "€";
         }
 
         private string GetDocStoreRoot()
@@ -736,7 +736,7 @@ namespace TaMi_Einzahlautomat
                 if (string.IsNullOrWhiteSpace(path)) return;
                 string full = Path.GetFullPath(path);
                 string rootFull = Path.GetFullPath(_root);
-                if (!full.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase)) return; // nicht �ber Root
+                if (!full.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase)) return; // nicht über Root
                 if (!Directory.Exists(full)) return;
                 _currentPath = full;
                 HidePreview();
@@ -932,7 +932,7 @@ namespace TaMi_Einzahlautomat
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "�ffnen fehlgeschlagen: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, "öffnen fehlgeschlagen: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -941,7 +941,7 @@ namespace TaMi_Einzahlautomat
             try
             {
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
-                try { AppLogger.Log($"Dokument ge�ffnet: '{Path.GetFileName(path)}'"); } catch { }
+                try { AppLogger.Log($"Dokument geöffnet: '{Path.GetFileName(path)}'"); } catch { }
                 if (IsPdf(path) || IsImage(path))
                 {
                     ShowPreview(path);
@@ -951,7 +951,7 @@ namespace TaMi_Einzahlautomat
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "�ffnen fehlgeschlagen: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, "öffnen fehlgeschlagen: " + ex.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -971,7 +971,7 @@ namespace TaMi_Einzahlautomat
                         var ps = new PrinterSettings { PrinterName = printer };
                         if (!ps.IsValid)
                         {
-                            MessageBox.Show(this, "Der konfigurierte Drucker ist ung�ltig oder nicht erreichbar: " + printer, "Drucker", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            MessageBox.Show(this, "Der konfigurierte Drucker ist ungültig oder nicht erreichbar: " + printer, "Drucker", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             return;
                         }
                     }
@@ -1001,7 +1001,7 @@ namespace TaMi_Einzahlautomat
                 }
 
                 // Unknown types are not supported
-                MessageBox.Show(this, "Dieser Dateityp wird zum Drucken nicht unterst�tzt.", "Druckfehler", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, "Dieser Dateityp wird zum Drucken nicht unterstützt.", "Druckfehler", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             catch (Exception ex)
             {
@@ -1048,7 +1048,7 @@ namespace TaMi_Einzahlautomat
 
                 var title = new Label
                 {
-                    Text = "PDF-Drucker ben�tigt",
+                    Text = "PDF-Drucker benötigt",
                     AutoSize = false,
                     TextAlign = ContentAlignment.MiddleLeft,
                     Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
@@ -1062,7 +1062,7 @@ namespace TaMi_Einzahlautomat
                 dlg.Controls.Add(body);
                 var info = new Label
                 {
-                    Text = "F�r den direkten PDF-Druck wird SumatraPDF ben�tigt.\r\nKlicken Sie auf 'Herunterladen', um die offizielle Download-Seite zu �ffnen.",
+                    Text = "Für den direkten PDF-Druck wird SumatraPDF benötigt.\r\nKlicken Sie auf 'Herunterladen', um die offizielle Download-Seite zu öffnen.",
                     AutoSize = false,
                     Location = new Point(16, 20),
                     Size = new Size(520, 60),
@@ -1118,7 +1118,7 @@ namespace TaMi_Einzahlautomat
 
                 var btnClose = new Button
                 {
-                    Text = "Schlie�en",
+                    Text = "Schließen",
                     Width = 120,
                     Height = 44,
                     FlatStyle = FlatStyle.Flat,

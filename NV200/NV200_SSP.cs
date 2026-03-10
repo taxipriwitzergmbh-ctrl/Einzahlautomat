@@ -18,12 +18,12 @@ namespace TaMi_Einzahlautomat
         private bool _verbosePollLogging = false;
         public void SetVerbosePollLogging(bool enable) { _verbosePollLogging = enable; }
 
-        // Einzahlungs-Animationsfelder (Scheine) � hinzugef�gt
-        private volatile bool _noteDepositAnimActive = false; // l�uft gerade eine Einzahlungsanzeige
-        private DateTime _lastNoteDepositUtc = DateTime.MinValue; // letzter Zeitstempel einer Notenaktivit�t
+        // Einzahlungs-Animationsfelder (Scheine)  hinzugefügt
+        private volatile bool _noteDepositAnimActive = false; // läuft gerade eine Einzahlungsanzeige
+        private DateTime _lastNoteDepositUtc = DateTime.MinValue; // letzter Zeitstempel einer Notenaktivität
 
         // Daten-Ablage: bevorzugt <AppBase>\Logs\NV200, Fallback %LocalAppData%\Geldautomat\Logs\NV200
-        private string DataRootDir; // fr�her: readonly LocalAppData
+        private string DataRootDir; // früher: readonly LocalAppData
         private string Nv200Dir
         {
             get
@@ -168,22 +168,22 @@ namespace TaMi_Einzahlautomat
 
         private int Current_read_Note = 0;
 
-        // Feld in der Klasse erg�nzen
+        // Feld in der Klasse ergänzen
         private int _lastRequestedPayoutSumCent = 0;
         private DateTime _lastAutoEnable = DateTime.MinValue;
 
-        // Neu: Flag f�r optionales Auto-Enable (Standard: aus)
+        // Neu: Flag für optionales Auto-Enable (Standard: aus)
         private bool _autoEnableOnDisabled = false;
         public void AllowAutoEnable(bool allow) => _autoEnableOnDisabled = allow;
 
-        // NEU: Flag f�r den aktiven Notenzyklus (soll w�hrend der Auszahlung nicht ver�ndert werden)
+        // NEU: Flag für den aktiven Notenzyklus (soll während der Auszahlung nicht verändert werden)
         private volatile bool _noteCycleActive = false;
 
-        // Drosselung f�r Level-Requests (Flooding vermeiden)
+        // Drosselung für Level-Requests (Flooding vermeiden)
         private DateTime _lastLevelReqUtc = DateTime.MinValue;
         private readonly TimeSpan _minLevelInterval = TimeSpan.FromSeconds(6);
 
-        // Felder vorhanden lassen (nicht verwendet), um Kompatibilit�t zu wahren
+        // Felder vorhanden lassen (nicht verwendet), um Kompatibilität zu wahren
         //private bool? _route5, _route10, _route20, _route50, _route100, _route200, _route500;
 
         public bool is_in_use()
@@ -237,7 +237,7 @@ namespace TaMi_Einzahlautomat
                     "Logs");
                 Directory.CreateDirectory(DataRootDir);
                 Directory.CreateDirectory(Nv200Dir);
-                Ereignis_adden("Datenpfad im Installationsverzeichnis nicht beschreibbar � Fallback auf LocalAppData genutzt.");
+                Ereignis_adden("Datenpfad im Installationsverzeichnis nicht beschreibbar - Fallback auf LocalAppData genutzt.");
             }
             catch (Exception ex)
             {
@@ -249,7 +249,7 @@ namespace TaMi_Einzahlautomat
 
             LoadMaxConfigFromIni();
 
-            // Cashbox-Z�hler aus Registry laden
+            // Cashbox-Zähler aus Registry laden
             LoadCashboxSnapshot();
 
             Protokoll_laden();
@@ -515,7 +515,7 @@ namespace TaMi_Einzahlautomat
                                     if (_consecutiveSendFails < MaxSendFailsBeforeReconnect)
                                     {
                                         // Attempt lightweight recovery: re-sync once, clear encryption, requeue command
-                                        Ereignis_adden($"Send Command verlieh false (Versuch {_consecutiveSendFails}/{MaxSendFailsBeforeReconnect - 1}) � versuche Sync statt sofortigem Neustart");
+                                        Ereignis_adden($"Send Command verlieh false (Versuch {_consecutiveSendFails}/{MaxSendFailsBeforeReconnect - 1})  versuche Sync statt sofortigem Neustart");
                                         Encryption_OK = false;
                                         sync();
                                         // Requeue original element (front) to retry after sync
@@ -524,7 +524,7 @@ namespace TaMi_Einzahlautomat
                                         continue; // stay in inner loop
                                     }
                                     // Too many failures -> break to outer reconnect
-                                    Ereignis_adden("Send Command verlieh false � �berschreitet Toleranz, Neustart erforderlich");
+                                    Ereignis_adden("Send Command verlieh false - überschreitet Toleranz, Neustart erforderlich");
                                     state = AppendState(state, ";SendFailMax");
                                     Sendeliste.Clear();
                                     Encryption_OK = false;
@@ -564,7 +564,7 @@ namespace TaMi_Einzahlautomat
                                             {
                                                 if (_isDispensing)
                                                 {
-                                                    Ereignis_adden("245 w�hrend Dispensing ignoriert (toleriert)");
+                                                    Ereignis_adden("245 während Dispensing ignoriert (toleriert)");
                                                     continue;
                                                 }
                                                 Ereignis_adden("Response not ok (PBD): " + (CommandStructure.ResponseDataLength >= 2 ? CommandStructure.ResponseData[1].ToString() : "?"));
@@ -583,7 +583,7 @@ namespace TaMi_Einzahlautomat
                                             // NEW: treat single non-OK while idle as warning only (do not modify state drastically)
                                             if (Element[2] == CCommands.SSP_CMD_POLL)
                                             {
-                                                Ereignis_adden($"Warn: Poll Response not OK ({CommandStructure.ResponseData[0]}) � wird ignoriert (Transient)");
+                                                Ereignis_adden($"Warn: Poll Response not OK ({CommandStructure.ResponseData[0]})  wird ignoriert (Transient)");
                                                 // Skip fatal handling and continue polling
                                                 Thread.Sleep(120);
                                                 continue;
@@ -710,14 +710,14 @@ namespace TaMi_Einzahlautomat
                 SetInhibit(true);           // explizit sperren
                 GetSerialNumber();
                 Set_Routing();              // initiale Routen setzen
-                //ApplyManualRouteOverrides(); // deaktiviert � dynamisches Routing
+                //ApplyManualRouteOverrides(); // deaktiviert  dynamisches Routing
                 ConfigureBezel(255, 0, 0);  // rot
 
-                // NEU: Nach erfolgreichem Handshake automatischer vollst�ndiger Freigabe
+                // NEU: Nach erfolgreichem Handshake automatischer vollständiger Freigabe
                 if (_autoEnableOnDisabled)
                 {
                     Freigeben();
-                    Ereignis_adden("Auto-Freigeben nach Reset/Handshake ausgef�hrt.");
+                    Ereignis_adden("Auto-Freigeben nach Reset/Handshake ausgeführt.");
                 }
 
                 return;
@@ -733,7 +733,7 @@ namespace TaMi_Einzahlautomat
                 return;
             }
 
-            // SETUP_REQUEST -> Channel-Values (f�r Note_read Mapping)
+            // SETUP_REQUEST -> Channel-Values (für Note_read Mapping)
             if (sendElement[2] == CCommands.SSP_CMD_SETUP_REQUEST)
             {
                 try

@@ -32,7 +32,7 @@ namespace TaMi_Einzahlautomat
         }
 
 
-        // NEU: vorab geladener Guthaben-Saldo (LoginContext) � falls gesetzt, erneute DB-Abfrage im AbrechnungForm vermeiden
+        // NEU: vorab geladener Guthaben-Saldo (LoginContext) - falls gesetzt, erneute DB-Abfrage im AbrechnungForm vermeiden
         public decimal PreloadedGuthaben { get; set; }
 
 
