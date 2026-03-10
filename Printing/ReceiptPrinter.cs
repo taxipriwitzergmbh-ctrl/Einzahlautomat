@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Printing;
@@ -11,7 +11,7 @@ namespace TaMi_Einzahlautomat.Printing
     {
         private readonly ReceiptPrinterSettings _cfg;
         private IList<string> _linesToPrint;
-        private static readonly string[] KnownTypes = new[] { "SCHICHTABRECHNUNG","NACHZAHLUNG","RÜCKZAHLUNG","RUECKZAHLUNG","EINZAHLUNG","AUSZAHLUNG" };
+        private static readonly string[] KnownTypes = new[] { "SCHICHTABRECHNUNG","NACHZAHLUNG","Rï¿½CKZAHLUNG","RUECKZAHLUNG","EINZAHLUNG","AUSZAHLUNG" };
         public ReceiptPrinter(ReceiptPrinterSettings cfg){ _cfg = cfg ?? new ReceiptPrinterSettings(); }
 
         public void PrintSimpleReceipt(string title, IEnumerable<string> bodyLines)
@@ -27,12 +27,12 @@ namespace TaMi_Einzahlautomat.Printing
                 list.Add(new string('=',24));
                 _linesToPrint = WrapLines(list, Math.Max(10,_cfg.CharsPerLine));
 
-                // Konfiguration für Legacy seriell immer setzen
+                // Konfiguration fï¿½r Legacy seriell immer setzen
                 LegacyItlPrinterManager.Configure(
                     new LegacyItlPrinterConfig { Enabled=_cfg.Legacy1Enabled, ComPort=_cfg.Legacy1ComPort, BaudRate=_cfg.Legacy1Baud, CharsPerLine=_cfg.Legacy1Chars, CutAfterPrint=_cfg.Legacy1Cut },
                     new LegacyItlPrinterConfig { Enabled=_cfg.Legacy2Enabled, ComPort=_cfg.Legacy2ComPort, BaudRate=_cfg.Legacy2Baud, CharsPerLine=_cfg.Legacy2Chars, CutAfterPrint=_cfg.Legacy2Cut });
 
-                // 1) ITL Ticket Printer Versuch für LEGACY Namen (SSP Ticketdrucker) -> COM-Port aus Legacy1/2 Einstellungen
+                // 1) ITL Ticket Printer Versuch fï¿½r LEGACY Namen (SSP Ticketdrucker) -> COM-Port aus Legacy1/2 Einstellungen
                 if (TryItlTicketPrint(_cfg.PrinterName, title)) return;
                 if (!IsLegacyName(_cfg.PrinterName))
                 {
@@ -44,7 +44,7 @@ namespace TaMi_Einzahlautomat.Printing
                     if (LegacyItlPrinterManager.Print(_cfg.PrinterName, title, _linesToPrint.ToArray())) return;
                 }
 
-                // Sekundär
+                // Sekundï¿½r
                 if (_cfg.UseSecondaryOnFailure && !string.IsNullOrWhiteSpace(_cfg.SecondaryPrinterName))
                 {
                     if (TryItlTicketPrint(_cfg.SecondaryPrinterName, title)) return;
@@ -54,10 +54,12 @@ namespace TaMi_Einzahlautomat.Printing
                     }
                     else if (LegacyItlPrinterManager.Print(_cfg.SecondaryPrinterName, title, _linesToPrint.ToArray())) return;
                 }
-                SafeWriteFallback(_linesToPrint ?? new List<string>{"PRINT ERROR"});
+                try { AppLogger.Log("[ReceiptPrinter] Druck fehlgeschlagen (kein receipt_fallback wird erstellt)"); } catch { }
             }
             catch (Exception)
-            { try { SafeWriteFallback(_linesToPrint ?? new List<string>{"PRINT ERROR"}); } catch { } }
+            {
+                try { AppLogger.Log("[ReceiptPrinter] Druck fehlgeschlagen (Exception, kein receipt_fallback wird erstellt)"); } catch { }
+            }
         }
 
         private bool TryItlTicketPrint(string logicalName, string header)
@@ -70,7 +72,7 @@ namespace TaMi_Einzahlautomat.Printing
                 if (string.Equals(logicalName,"LEGACY1",StringComparison.OrdinalIgnoreCase)) { enabled = _cfg.Legacy1Enabled; com = _cfg.Legacy1ComPort; }
                 else if (string.Equals(logicalName,"LEGACY2",StringComparison.OrdinalIgnoreCase)) { enabled = _cfg.Legacy2Enabled; com = _cfg.Legacy2ComPort; }
                 if (!enabled || string.IsNullOrWhiteSpace(com)) return false;
-                // Ticketlänge heuristisch aus CharsPerLine ableiten (oder Standard 90)
+                // Ticketlï¿½nge heuristisch aus CharsPerLine ableiten (oder Standard 90)
                 try { length = Math.Max(60, Math.Min(200, 20 + (_linesToPrint?.Count ?? 6)*10)); } catch { }
                 using (var pr = new ItlTicketPrinter(com, length))
                 {
@@ -89,10 +91,10 @@ namespace TaMi_Einzahlautomat.Printing
         }
 
         private bool IsLegacyName(string name){ if (string.IsNullOrWhiteSpace(name)) return false; var n=name.Trim().ToUpperInvariant(); return n=="LEGACY1"|| n=="LEGACY2"; }
-        private bool TryWindowsPrint(string printerName){ try { var doc=new PrintDocument(); if(!string.IsNullOrWhiteSpace(printerName)) doc.PrinterSettings.PrinterName=printerName; doc.PrintPage += Doc_PrintPage; if(!doc.PrinterSettings.IsValid) throw new InvalidOperationException("Printer invalid: "+printerName); doc.Print(); return true;} catch(Exception ex){ try { var lines=new List<string>(_linesToPrint??new List<string>()); lines.Add("-- Fehler: "+ex.Message); SafeWriteFallback(lines);} catch { } return false; } }
-        private string DetectTitleFromBody(IList<string> body){ if(body==null) return null; foreach(var line in body){ if(string.IsNullOrWhiteSpace(line)) continue; var upper=line.Trim().ToUpperInvariant(); foreach(var k in KnownTypes){ if(upper==k || upper.StartsWith(k+" ") || upper.Contains(" "+k+" ") || upper.EndsWith(" "+k) || upper.StartsWith(k+":") || upper.StartsWith(k+";")) return k=="RUECKZAHLUNG"?"RÜCKZAHLUNG":k; } } return null; }
+        private bool TryWindowsPrint(string printerName){ try { var doc=new PrintDocument(); if(!string.IsNullOrWhiteSpace(printerName)) doc.PrinterSettings.PrinterName=printerName; doc.PrintPage += Doc_PrintPage; if(!doc.PrinterSettings.IsValid) throw new InvalidOperationException("Printer invalid: "+printerName); doc.Print(); return true;} catch(Exception ex){ try { AppLogger.Log("[ReceiptPrinter] Windows Druck fehlgeschlagen: "+ex.Message); } catch { } return false; } }
+        private string DetectTitleFromBody(IList<string> body){ if(body==null) return null; foreach(var line in body){ if(string.IsNullOrWhiteSpace(line)) continue; var upper=line.Trim().ToUpperInvariant(); foreach(var k in KnownTypes){ if(upper==k || upper.StartsWith(k+" ") || upper.Contains(" "+k+" ") || upper.EndsWith(" "+k) || upper.StartsWith(k+":") || upper.StartsWith(k+";")) return k=="RUECKZAHLUNG"?"Rï¿½CKZAHLUNG":k; } } return null; }
         private void Doc_PrintPage(object s, PrintPageEventArgs e){ using(var font=new Font("Consolas",9f)){ float y=0; float h=font.GetHeight(e.Graphics)+2; foreach(var line in _linesToPrint){ e.Graphics.DrawString(line,font,Brushes.Black,0,y); y+=h; } } e.HasMorePages=false; }
         private List<string> WrapLines(IEnumerable<string> lines, int width){ var result=new List<string>(); foreach(var l in lines){ if(l.Length<=width){ result.Add(l); continue;} int idx=0; while(idx<l.Length){ int take=Math.Min(width,l.Length-idx); result.Add(l.Substring(idx,take)); idx+=take; } } return result; }
-        private void SafeWriteFallback(IEnumerable<string> lines){ try { var path=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"receipt_fallback_"+DateTime.Now.ToString("yyyyMMdd_HHmmss")+".txt"); File.WriteAllLines(path, lines?? new[]{"(leer)"}); } catch { } }
+        private void SafeWriteFallback(IEnumerable<string> lines){ }
     }
 }
