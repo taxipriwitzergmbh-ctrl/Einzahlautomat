@@ -47,6 +47,7 @@ namespace TaMi_Einzahlautomat
         private Button btnPrinterConfig; // NEU
         private Label _lblExeInfo; // NEU: Build-/Versionsinfo
         private Button btnCheckUpdate; // NEU: Update prüfen
+        private Button btnUpdateHints; // NEU: Updatehinweise anzeigen
 
         private string _lastNv1Bezel = null; // track last applied bezel color as "R,G,B"
         private string _lastNv2Bezel = null;
@@ -269,6 +270,17 @@ namespace TaMi_Einzahlautomat
                 try
                 {
                     Program.CheckForUpdateNow(this);
+                }
+                catch { }
+            };
+
+            ys += h60 + gapSmall;
+            btnUpdateHints = CreateMenuButton(_tabSettings, "Updatehinweise", ys, h60, Color.FromArgb(0, 122, 204), f14);
+            btnUpdateHints.Click += (s, e) =>
+            {
+                try
+                {
+                    Program.ShowUpdateHints(this);
                 }
                 catch { }
             };

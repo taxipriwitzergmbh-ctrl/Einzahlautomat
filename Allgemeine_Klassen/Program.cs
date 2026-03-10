@@ -376,6 +376,9 @@ namespace TaMi_Einzahlautomat
             _background.Bounds = Screen.PrimaryScreen.Bounds;
             _background.Show();
 
+            // Nach einem Update beim ersten Start die Release Notes anzeigen
+            try { Task.Run(() => ShowReleaseNotesAsync(_background, forceShow: false)); } catch { }
+
             var login = new LoginForm(NV200Instance);
             CenterOverBackground(login);
             login.StartPosition = FormStartPosition.Manual;
@@ -648,6 +651,118 @@ namespace TaMi_Einzahlautomat
         }
 
         private const string UpdateMsiUrl = "http://kassenautomat.priwitzer-dienstleistungsgmbh.de/Update_Einzahlautomat/Einzahlautomat_Setup.msi";
+        private const string ReleaseNotesUrl = "http://kassenautomat.priwitzer-dienstleistungsgmbh.de/Update_Einzahlautomat/releasenotes.txt";
+
+        private const string AppIniSection = "App";
+        private const string LastSeenVersionKey = "LastSeenVersion";
+
+        public static void ShowUpdateHints(Form owner)
+        {
+            try { Task.Run(() => ShowReleaseNotesAsync(owner, forceShow: true)); } catch { }
+        }
+
+        private static Version GetCurrentAppVersion()
+        {
+            try
+            {
+                var v = Assembly.GetExecutingAssembly().GetName().Version;
+                return v ?? new Version(0, 0, 0, 0);
+            }
+            catch { return new Version(0, 0, 0, 0); }
+        }
+
+        private static Version ReadLastSeenVersion()
+        {
+            try
+            {
+                var s = IniHelper.ReadValue(AppIniSection, LastSeenVersionKey, AppSettings.IniPath);
+                if (string.IsNullOrWhiteSpace(s)) return null;
+                Version v;
+                return Version.TryParse(s.Trim(), out v) ? v : null;
+            }
+            catch { return null; }
+        }
+
+        private static void WriteLastSeenVersion(Version v)
+        {
+            if (v == null) return;
+            try { IniHelper.WriteValue(AppIniSection, LastSeenVersionKey, v.ToString(), AppSettings.IniPath); } catch { }
+        }
+
+        private static async Task<string> TryDownloadReleaseNotesAsync()
+        {
+            try
+            {
+                using (var wc = new WebClient())
+                {
+                    wc.Proxy = WebRequest.DefaultWebProxy;
+                    wc.Encoding = System.Text.Encoding.UTF8;
+                    var txt = await wc.DownloadStringTaskAsync(ReleaseNotesUrl).ConfigureAwait(false);
+                    if (string.IsNullOrWhiteSpace(txt)) return null;
+                    return txt;
+                }
+            }
+            catch (Exception ex)
+            {
+                SafeLog("ReleaseNotes Download fehlgeschlagen: " + ex.Message);
+                return null;
+            }
+        }
+
+        private static void ShowReleaseNotesOnUi(Form owner, string notesText)
+        {
+            var ui = owner ?? _background;
+            if (ui == null || ui.IsDisposed) return;
+            try
+            {
+                ui.BeginInvoke(new Action(() =>
+                {
+                    try
+                    {
+                        var title = "Updatehinweise";
+                        if (!string.IsNullOrWhiteSpace(Application.ProductVersion))
+                        {
+                            title += " (" + Application.ProductVersion + ")";
+                        }
+                        MessageBox.Show(ui, notesText ?? "Keine Updatehinweise verfügbar.", title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch { }
+                }));
+            }
+            catch { }
+        }
+
+        private static async Task ShowReleaseNotesAsync(Form owner, bool forceShow)
+        {
+            try
+            {
+                var current = GetCurrentAppVersion();
+                var last = ReadLastSeenVersion();
+
+                bool shouldShow = forceShow;
+                if (!shouldShow)
+                {
+                    if (last == null) shouldShow = true;
+                    else if (current > last) shouldShow = true;
+                }
+
+                if (!shouldShow) return;
+
+                var notes = await TryDownloadReleaseNotesAsync().ConfigureAwait(false);
+                if (string.IsNullOrWhiteSpace(notes))
+                {
+                    notes = "Keine Updatehinweise gefunden (releasenotes.txt).";
+                }
+
+                ShowReleaseNotesOnUi(owner, notes);
+
+                if (!forceShow)
+                {
+                    WriteLastSeenVersion(current);
+                }
+            }
+            catch { }
+        }
         private static async Task PromptUpdateIfAvailable()
         {
             // Automatischer/Background-Check (z.B. beim Start): keine "Up-to-date" Meldung anzeigen
