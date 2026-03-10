@@ -48,6 +48,7 @@ namespace TaMi_Einzahlautomat
         private Label _lblPort;
         private Label _lblLastEvt;
         private Label _lblState;
+        private Label _lblCashboxTypeStatus;
         private Timer _tmrStatus;
         private DateTime _lastEvtUtc = DateTime.MinValue;
 
@@ -122,6 +123,7 @@ namespace TaMi_Einzahlautomat
 
             // Anfangswerte setzen
             txtComPort.Text = _ssp?.ComPort ?? "";
+            try { if (_lblCashboxTypeStatus != null && cboCashboxType != null) _lblCashboxTypeStatus.Text = cboCashboxType.Text; } catch { }
             UpdateEnableButtonVisual();
             UpdateStatusUi();
             RefreshBestand();
@@ -197,18 +199,19 @@ namespace TaMi_Einzahlautomat
             btnComPortSpeichern.Click += BtnComPortSpeichern_Click;
             Controls.Add(btnComPortSpeichern);
 
-            // Cashbox-Typ Auswahl (in Bestands-Panel integriert)
-            var lblCashboxType = new Label
+            // Bestands-Panel muss existieren bevor Controls hinzugefügt werden
+            _panelBestand = new Panel
             {
-                Text = "Cashbox-Typ:",
-                Location = new Point(20, 360),
-                Size = new Size(110, 20)
+                Location = new Point(850, yStart + 180),
+                Size = new Size(380, 420),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BackColor = Color.FromArgb(245, 247, 250)
             };
-            _panelBestand.Controls.Add(lblCashboxType);
+            Controls.Add(_panelBestand);
 
             cboCashboxType = new ComboBox
             {
-                Location = new Point(130, 356),
+                Location = new Point(140, 138),
                 Size = new Size(220, 26),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
@@ -235,8 +238,9 @@ namespace TaMi_Einzahlautomat
                     IniHelper.WriteValue("NV200/1", "CashboxType", saveVal, iniPath);
                 }
                 catch { }
+                try { if (_lblCashboxTypeStatus != null) _lblCashboxTypeStatus.Text = cboCashboxType.Text; } catch { }
             };
-            _panelBestand.Controls.Add(cboCashboxType);
+            // wird unten dem Status-Panel hinzugefügt
 
             // NEU: Freigeben/Sperren (analog AdminCoinForm)
             btnEnableToggle = new ModernGradientButton
@@ -295,7 +299,7 @@ namespace TaMi_Einzahlautomat
             _panelStatus = new Panel
             {
                 Location = new Point(850, yStart),
-                Size = new Size(380, 160),
+                Size = new Size(380, 178),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 BackColor = Color.FromArgb(245, 247, 250)
             };
@@ -330,15 +334,22 @@ namespace TaMi_Einzahlautomat
             _lblState = new Label { Text = "-", Location = new Point(140, 116), AutoSize = true, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
             _panelStatus.Controls.Add(_lblState);
 
-            // --- Bestands-Panel ---
-            _panelBestand = new Panel
+            // Cashbox-Typ unter Zustand im Status-Panel
+            var lCbt = new Label { Text = "Cashbox-Typ:", Location = new Point(20, 142), AutoSize = true, Font = new Font("Segoe UI Variable", 11F) };
+            _panelStatus.Controls.Add(lCbt);
+            _lblCashboxTypeStatus = new Label
             {
-                Location = new Point(850, yStart + 180),
-                Size = new Size(380, 420),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                BackColor = Color.FromArgb(245, 247, 250)
+                Text = "-",
+                Location = new Point(140, 140),
+                AutoSize = true,
+                Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold)
             };
-            Controls.Add(_panelBestand);
+            _panelStatus.Controls.Add(_lblCashboxTypeStatus);
+
+            // ComboBox optisch passend im Status-Panel platzieren
+            cboCashboxType.Location = new Point(140, 138);
+            cboCashboxType.Size = new Size(220, 26);
+            _panelStatus.Controls.Add(cboCashboxType);
 
             var lblTitel = new Label
             {
