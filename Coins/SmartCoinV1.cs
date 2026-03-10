@@ -104,6 +104,8 @@ namespace TaMi_Einzahlautomat.Coins
         private DateTime _lastDeviceFullLogUtc = DateTime.MinValue;
         private int _deviceFullRepeatCount = 0;
 
+        private DateTime _lastDeviceFullMailUtc = DateTime.MinValue;
+
         public void Connect()
         {
             if (Connected) return;
@@ -774,11 +776,11 @@ namespace TaMi_Einzahlautomat.Coins
                         case CCommands.SSP_POLL_DEVICE_FULL:
                             {
                                 // SmartCoin meldet vollen Hopper/Stack � korrekt behandeln statt UNSUPPORTED
-                                SetStatus("Maximaler F�llstand erreicht");
+                                SetStatus("Maximaler Füllstand erreicht");
                                 var now = DateTime.UtcNow;
                                 if ((now - _lastDeviceFullLogUtc).TotalSeconds >= 5)
                                 {
-                                    Log("Device FULL (Maximaler F�llstand erreicht)");
+                                    Log("Device FULL (Maximaler Füllstand erreicht)");
                                     _lastDeviceFullLogUtc = now;
                                     _deviceFullRepeatCount = 0;
                                 }

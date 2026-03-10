@@ -57,6 +57,8 @@ namespace TaMi_Einzahlautomat
         // Events toggeln
         private bool _eventsAttached = false;
 
+        private ComboBox cboCashboxType;
+
         // Routing Checkbox (Rout_X in INI)
         private CheckBox _chkRouteAllPayout;
         
@@ -200,6 +202,47 @@ namespace TaMi_Einzahlautomat
             };
             btnComPortSpeichern.Click += BtnComPortSpeichern_Click;
             Controls.Add(btnComPortSpeichern);
+
+            // Cashbox-Typ Auswahl (in Bestands-Panel integriert)
+            var lblCashboxType = new Label
+            {
+                Text = "Cashbox-Typ:",
+                Location = new Point(20, 360),
+                Size = new Size(110, 20)
+            };
+            _panelBestand.Controls.Add(lblCashboxType);
+
+            cboCashboxType = new ComboBox
+            {
+                Location = new Point(130, 356),
+                Size = new Size(220, 26),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            try
+            {
+                cboCashboxType.FlatStyle = FlatStyle.Flat;
+                cboCashboxType.BackColor = Color.FromArgb(245, 247, 250);
+                cboCashboxType.ForeColor = Color.FromArgb(33, 37, 41);
+            }
+            catch { }
+            cboCashboxType.Items.AddRange(new object[] { "1000 Note", "500 Note" });
+            try
+            {
+                string v = IniHelper.ReadValue("NV200/2", "CashboxType", iniPath);
+                if (v != null && v.Trim() == "500") cboCashboxType.SelectedIndex = 1;
+                else cboCashboxType.SelectedIndex = 0;
+            }
+            catch { cboCashboxType.SelectedIndex = 0; }
+            cboCashboxType.SelectedIndexChanged += (s, e) =>
+            {
+                try
+                {
+                    string saveVal = cboCashboxType.SelectedIndex == 1 ? "500" : "1000";
+                    IniHelper.WriteValue("NV200/2", "CashboxType", saveVal, iniPath);
+                }
+                catch { }
+            };
+            _panelBestand.Controls.Add(cboCashboxType);
 
             // Enable/Sperren
             btnEnableToggle = new ModernGradientButton

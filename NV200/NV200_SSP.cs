@@ -1821,6 +1821,88 @@ namespace TaMi_Einzahlautomat
         private readonly object _persistLock = new object();
         private string CashboxRegPath => @"Software\Geldautomat\NV200\" + (ComPort ?? "Unknown");
 
+        private void CheckCashboxOverLimitAndAlert()
+        {
+            try
+            {
+                int nowCount = 0;
+                try
+                {
+                    nowCount =
+                        Math.Max(0, Cashbox_5_euro) +
+                        Math.Max(0, Cashbox_10_euro) +
+                        Math.Max(0, Cashbox_20_euro) +
+                        Math.Max(0, Cashbox_50_euro) +
+                        Math.Max(0, Cashbox_100_euro) +
+                        Math.Max(0, Cashbox_200_euro) +
+                        Math.Max(0, Cashbox_500_euro);
+                }
+                catch { nowCount = 0; }
+
+                // Default: 1000er Cashbox => Warnung ab 900 Scheinen
+                int limitCount = 900;
+                try
+                {
+                    var sec = DetermineNvSection();
+                    string typ = null;
+                    try { typ = IniHelper.ReadValue(sec, "CashboxType", AppSettings.IniPath); } catch { typ = null; }
+                    // Allowed: "500" or "1000"
+                    if (!string.IsNullOrWhiteSpace(typ))
+                    {
+                        var t = typ.Trim();
+                        if (t == "500") limitCount = 450;
+                        else if (t == "1000") limitCount = 900;
+                    }
+                }
+                catch { limitCount = 900; }
+
+                int prevCount = -1;
+                bool prevValid = false;
+
+                lock (_persistLock)
+                {
+                    using (var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(CashboxRegPath))
+                    {
+                        if (key != null)
+                        {
+                            try
+                            {
+                                prevCount = Convert.ToInt32(key.GetValue("CashboxSumCount", -1));
+                                prevValid = prevCount >= 0;
+                                key.SetValue("CashboxSumCount", nowCount, Microsoft.Win32.RegistryValueKind.DWord);
+                            }
+                            catch { prevValid = false; }
+                        }
+                    }
+                }
+
+                if (!prevValid) return;
+
+                if (prevCount <= limitCount && nowCount > limitCount)
+                {
+                    int cashboxIndex = 1;
+                    try
+                    {
+                        var sec = DetermineNvSection();
+                        if (!string.IsNullOrWhiteSpace(sec) && sec.EndsWith("/2", StringComparison.Ordinal)) cashboxIndex = 2;
+                    }
+                    catch { cashboxIndex = 1; }
+
+                    string device = (AppSettings.AutomatenName ?? string.Empty).Trim();
+                    string body =
+                        "Hinweis: Cashbox-Füllstand überschritten.\r\n\r\n" +
+                        "Gerät: " + device + "\r\n" +
+                        "Cashbox: " + cashboxIndex + "\r\n" +
+                        "Anzahl Scheine: " + nowCount + "\r\n" +
+                        "Limit: " + limitCount + "\r\n\r\n" +
+                        "Bitte Cashbox " + cashboxIndex + " leeren.";
+
+                    EmailReceiptService.SendAlertOnly("Cashbox leeren", body);
+                }
+            }
+            catch { }
+        }
+
         private void SaveCashboxSnapshot()
         {
             try
@@ -1840,6 +1922,8 @@ namespace TaMi_Einzahlautomat
                         key.SetValue("UpdatedUtc",  DateTime.UtcNow.Ticks, Microsoft.Win32.RegistryValueKind.QWord);
                     }
                 }
+
+                try { CheckCashboxOverLimitAndAlert(); } catch { }
             }
             catch { /* robust gegen Ausnahmen */ }
         }

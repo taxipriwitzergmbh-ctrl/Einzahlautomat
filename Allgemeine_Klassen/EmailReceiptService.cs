@@ -398,6 +398,71 @@ namespace TaMi_Einzahlautomat
             }
         }
 
+        // Alert-Mail NUR an die konfigurierten "AlertEmail" Empfänger (ohne Support)
+        public static void SendAlertOnly(string subjectSuffix, string message)
+        {
+            try
+            {
+                DienstkontoCfg dk;
+                bool useDienstkonto = TryGetDienstkontoCfg(out dk);
+
+                MailSettings cfg = null;
+                if (!useDienstkonto)
+                {
+                    cfg = MailSettings.Load();
+                    if (!cfg.IsConfigured) return;
+                }
+
+                string alert = IniHelper.ReadValue("Mail", "AlertEmail", AppSettings.IniPath);
+                if (string.IsNullOrWhiteSpace(alert) && cfg != null) alert = cfg.AlertEmail;
+                if (string.IsNullOrWhiteSpace(alert)) return;
+
+                string device = (AppSettings.AutomatenName ?? string.Empty).Trim();
+                string subject = string.IsNullOrWhiteSpace(device) ? $"Automat – Meldung {subjectSuffix}" : $"{device} – Meldung {subjectSuffix}";
+
+                var mail = new MailMessage();
+                if (useDienstkonto)
+                {
+                    string loginAddr = dk.User ?? dk.FromAddress;
+                    mail.From = new MailAddress(string.IsNullOrWhiteSpace(loginAddr) ? dk.FromAddress : loginAddr, dk.FromName, Encoding.UTF8);
+                }
+                else
+                {
+                    string loginAddr = string.IsNullOrWhiteSpace(cfg.Username) ? cfg.FromAddress : cfg.Username;
+                    mail.From = new MailAddress(loginAddr, cfg.FromDisplayName, Encoding.UTF8);
+                }
+
+                var recipients = alert.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                      .Select(s => s.Trim())
+                                      .Where(s => !string.IsNullOrWhiteSpace(s));
+
+                foreach (var r in recipients)
+                {
+                    try { mail.To.Add(r); } catch { }
+                }
+                if (mail.To.Count == 0) return;
+
+                mail.Subject = subject;
+                mail.SubjectEncoding = Encoding.UTF8;
+                mail.Body = (message ?? string.Empty);
+                mail.BodyEncoding = Encoding.UTF8;
+                mail.IsBodyHtml = false;
+
+                Exception err;
+                if (useDienstkonto)
+                {
+                    if (!TrySendWithPorts(dk.Host, dk.User, dk.Password, mail, dk.Port, out err))
+                        try { AppLogger.Log("AlertOnly-Mail Senden fehlgeschlagen: " + err?.ToString()); } catch { }
+                }
+                else
+                {
+                    if (!TrySendWithPorts(cfg.SmtpHost, cfg.Username, cfg.Password, mail, cfg.SmtpPort, out err))
+                        try { AppLogger.Log("AlertOnly-Mail Senden fehlgeschlagen: " + err?.ToString()); } catch { }
+                }
+            }
+            catch { }
+        }
+
         private static string BuildSimpleReceiptHtml(string content)
         {
             string safe = HtmlEscape(content ?? string.Empty);
