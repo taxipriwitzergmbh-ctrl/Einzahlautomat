@@ -1,8 +1,9 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Threading.Tasks;
+using TaMi_Einzahlautomat.UI.Layout;
 
 namespace TaMi_Einzahlautomat
 {
@@ -12,56 +13,31 @@ namespace TaMi_Einzahlautomat
         private ListBox listBox;
         private Button btnOk;
         private Button btnCancel;
-        private Label lblTitle;
-        private Panel headerPanel;
+        private ModernHeaderPanel _header;
 
         public AuswahlDialog(List<AuswahlItem> items)
         {
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterParent;
-            Width = 800; // Breiter gemacht
-            Height = 420;
+            ClientSize = new Size(800, 420);
             BackColor = Color.White;
             DoubleBuffered = true;
 
-            headerPanel = new Panel
-            {
-                Location = new Point(0, 0),
-                Size = new Size(Width, 60),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-            };
-            headerPanel.Paint += (s, e) =>
-            {
-                using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(headerPanel.ClientRectangle,
-                    Color.FromArgb(33, 150, 243), Color.FromArgb(33, 203, 243), 0f))
-                {
-                    e.Graphics.FillRectangle(brush, headerPanel.ClientRectangle);
-                }
-            };
-            Controls.Add(headerPanel);
-
-            lblTitle = new Label
-            {
-                Text = "Schicht oder Zahlung auswählen",
-                AutoSize = false,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
-                ForeColor = Color.White,
-                Location = new Point(24, 0),
-                Size = new Size(Width - 48, 60),
-                BackColor = Color.Transparent
-            };
-            headerPanel.Controls.Add(lblTitle);
+            _header = new ModernHeaderPanel { Title = "Auswahl" };
+            _header.CloseClicked += () => { try { DialogResult = DialogResult.Cancel; } catch { } };
+            Controls.Add(_header);
+            _header.BringToFront();
+            try { _header.ApplyRoundedRegionToForm(this); } catch { }
 
             listBox = new ListBox
             {
                 Location = new Point(40, 80),
-                Size = new Size(Width - 80, 220),
+                Size = new Size(ClientSize.Width - 80, 220),
                 Font = new Font("Segoe UI Variable", 16F),
                 BorderStyle = BorderStyle.FixedSingle
             };
 
-            // Neue Logik: AnzeigeText für Schichten (Nachzahlung/Rückzahlung) direkt berechnen
+            // Neue Logik: AnzeigeText fï¿½r Schichten (Nachzahlung/Rï¿½ckzahlung) direkt berechnen
             LoadAnzeigeTextAsync(items);
 
             Controls.Add(listBox);
@@ -70,13 +46,29 @@ namespace TaMi_Einzahlautomat
             {
                 Text = "OK",
                 Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
-                BackColor = Color.FromArgb(46, 125, 50),
-                ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Size = new Size(140, 48),
-                Location = new Point(Width - 320, Height - 90)
+                Location = new Point(ClientSize.Width - 320, ClientSize.Height - 90)
             };
             btnOk.FlatAppearance.BorderSize = 0;
+            try
+            {
+                var themed = new ModernGradientButton
+                {
+                    Text = btnOk.Text,
+                    Font = btnOk.Font,
+                    Size = btnOk.Size,
+                    Location = btnOk.Location,
+                    GradientStart = UiTheme.SuccessStart,
+                    GradientEnd = UiTheme.SuccessEnd
+                };
+                btnOk = themed;
+            }
+            catch
+            {
+                btnOk.BackColor = Color.FromArgb(46, 125, 50);
+                btnOk.ForeColor = Color.White;
+            }
             btnOk.Click += (s, e) =>
             {
                 if (listBox.SelectedIndex >= 0)
@@ -91,38 +83,52 @@ namespace TaMi_Einzahlautomat
             {
                 Text = "Abbrechen",
                 Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
-                BackColor = Color.FromArgb(229, 57, 53),
-                ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Size = new Size(140, 48),
-                Location = new Point(Width - 160, Height - 90)
+                Location = new Point(ClientSize.Width - 160, ClientSize.Height - 90)
             };
             btnCancel.FlatAppearance.BorderSize = 0;
+            try
+            {
+                var themed = new ModernGradientButton
+                {
+                    Text = btnCancel.Text,
+                    Font = btnCancel.Font,
+                    Size = btnCancel.Size,
+                    Location = btnCancel.Location,
+                    GradientStart = UiTheme.DangerStart,
+                    GradientEnd = UiTheme.DangerEnd
+                };
+                btnCancel = themed;
+            }
+            catch
+            {
+                btnCancel.BackColor = Color.FromArgb(229, 57, 53);
+                btnCancel.ForeColor = Color.White;
+            }
             btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
             Controls.Add(btnCancel);
 
-            try
-            {
-                Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24));
-            }
-            catch { }
-
-            headerPanel.MouseDown += (s, e) =>
-            {
-                if (e.Button == MouseButtons.Left)
-                    _mouseDownLocation = e.Location;
-            };
-            headerPanel.MouseMove += (s, e) =>
-            {
-                if (e.Button == MouseButtons.Left)
-                {
-                    Left += e.X - _mouseDownLocation.X;
-                    Top += e.Y - _mouseDownLocation.Y;
-                }
-            };
+            Resize += (s, e) => ApplyLayout();
+            ApplyLayout();
         }
 
-        // AnzeigeText für Schichten (Nachzahlung/Rückzahlung) direkt berechnen und Betrag anhängen
+        private void ApplyLayout()
+        {
+            try
+            {
+                if (listBox != null)
+                {
+                    listBox.Location = new Point(40, 80);
+                    listBox.Size = new Size(ClientSize.Width - 80, Math.Max(120, ClientSize.Height - 200));
+                }
+                if (btnOk != null) btnOk.Location = new Point(ClientSize.Width - 320, ClientSize.Height - 90);
+                if (btnCancel != null) btnCancel.Location = new Point(ClientSize.Width - 160, ClientSize.Height - 90);
+            }
+            catch { }
+        }
+
+        // AnzeigeText fï¿½r Schichten (Nachzahlung/Rï¿½ckzahlung) direkt berechnen und Betrag anhï¿½ngen
         private async void LoadAnzeigeTextAsync(List<AuswahlItem> items)
         {
             listBox.Items.Clear();
@@ -156,7 +162,7 @@ namespace TaMi_Einzahlautomat
                         if (diff > 0)
                             text = $"Nachzahlung Schicht \"{kennzeichen}\" vom {datum}{betragStr}";
                         else if (diff < 0)
-                            text = $"Rückzahlung Schicht \"{kennzeichen}\" vom {datum}{betragStr}";
+                            text = $"Rï¿½ckzahlung Schicht \"{kennzeichen}\" vom {datum}{betragStr}";
                         else
                             text = $"Schicht \"{kennzeichen}\" vom {datum}{betragStr}";
                     }
