@@ -769,7 +769,7 @@ namespace TaMi_Einzahlautomat
                 return;
             }
 
-            // GET_DENOMINATION_LEVEL -> nur Payout-Level �bernehmen, Cashbox nicht anfassen
+            // GET_DENOMINATION_LEVEL -> nur Payout-Level übernehmen, Cashbox nicht anfassen
             if (sendElement[2] == CCommands.SSP_CMD_GET_DENOMINATION_LEVEL && CommandStructure.ResponseDataLength >= 2)
             {
                 int wert = sendElement[3]
@@ -803,7 +803,7 @@ namespace TaMi_Einzahlautomat
                         break;
                 }
 
-                // Dynamisches Routing unmittelbar f�r diese Denomination anpassen
+                // Dynamisches Routing unmittelbar für diese Denomination anpassen
                 try
                 {
                     bool toPayout = ShouldStackToPayout(wert);
@@ -861,16 +861,16 @@ namespace TaMi_Einzahlautomat
                                 if (CommandStructure.ResponseDataLength == 2) Ereignis_adden("Unit disabled...");
                                 if (_autoEnableOnDisabled)
                                 {
-                                    // nach Disabled-Ger�testatus automatisch vollst�ndig freigeben
-                                    // NEU: W�hrend einer Auszahlung kein Auto-Re-Enable ausf�hren
+                                    // nach Disabled-Gerätestatus automatisch vollständig freigeben
+                                    // NEU: Während einer Auszahlung kein Auto-Re-Enable ausführen
                                     if (_isDispensing)
                                     {
-                                        Ereignis_adden("Auto-Re-Enable �bersprungen (w�hrend Dispensing)");
+                                        Ereignis_adden("Auto-Re-Enable übersprungen (während Dispensing)");
                                     }
                                     else
                                     {
                                         Freigeben();
-                                        Ereignis_adden("Auto-Re-Enable (erlaubt) ausgef�hrt.");
+                                        Ereignis_adden("Auto-Re-Enable (erlaubt) ausgeführt.");
                                     }
                                 }
                                 try { SyncCoinFeederByIdle(false); } catch { }
@@ -882,16 +882,16 @@ namespace TaMi_Einzahlautomat
                                     if (channel > 0)
                                     {
                                         _noteCycleActive = true;
-                                        _isDisabled = false; // Ger�t ist aktiv
+                                        _isDisabled = false; // Gerät ist aktiv
                                         Current_read_Note = channel;
                                         int euro = ChannelValueByChannel(channel);
                                         if (euro > 0)
                                         {
-                                            // euro kommt �blicherweise als 5/10/20/50/100/200/500 (Euro). Falls Firmware Cent liefert (>=1000), nicht erneut *100.
+                                            // euro kommt üblicherweise als 5/10/20/50/100/200/500 (Euro). Falls Firmware Cent liefert (>=1000), nicht erneut *100.
                                             int denomCent = euro >= 1000 ? euro : euro * 100;
                                             bool toPayout = ShouldStackToPayout(denomCent);
                                             ChangeNoteRoute(denomCent, toPayout);
-                                            Ereignis_adden($"Pre-Stack routing {denomCent / 100}� -> {(toPayout ? "PAYOUT" : "CASHBOX")} (PayoutCount={GetPayoutCountFor(denomCent)}, Max={GetMaxFor(denomCent)})");
+                                            Ereignis_adden($"Pre-Stack routing {denomCent / 100}€ -> {(toPayout ? "PAYOUT" : "CASHBOX")} (PayoutCount={GetPayoutCountFor(denomCent)}, Max={GetMaxFor(denomCent)})");
                                             try { Ereignis_adden($"Note in escrow, channel {channel}, {(denomCent/100m):0.00} EUR"); } catch { Ereignis_adden($"Note in escrow, channel {channel}, {euro} (raw)"); }
                                         }
                                         if (euro > 0) SafeInvoke(Note_read, euro);
@@ -938,7 +938,7 @@ namespace TaMi_Einzahlautomat
                                     }
                                 }
                                 catch { }
-                                // tats�chliche Route: CASHBOX
+                                // tatsächliche Route: CASHBOX
                                 Note_stored_or_Stacked(Current_read_Note, storedInPayout: false);
                                 _noteCycleActive = false; // Cycle Ende
                                 Current_read_Note = 0;
@@ -957,7 +957,7 @@ namespace TaMi_Einzahlautomat
                                     }
                                 }
                                 catch { }
-                                // tats�chliche Route: PAYOUT
+                                // tatsächliche Route: PAYOUT
                                 Note_stored_or_Stacked(Current_read_Note, storedInPayout: true);
                                 _noteCycleActive = false; // Cycle Ende
                                 Current_read_Note = 0;
@@ -993,13 +993,13 @@ namespace TaMi_Einzahlautomat
                                     var prompt = new TaMi_Einzahlautomat.CashboxActionPromptForm(this, "Cashbox");
                                     prompt.Show();
                                 }));
-                                // NEU: Event ausl�sen, damit UIs (z.B. KassensturzNV200) sofort aktualisieren
+                                // NEU: Event auslösen, damit UIs (z.B. KassensturzNV200) sofort aktualisieren
                                 SafeInvoke(Cashbox_Replaced, 0);
                                 try { SyncCoinFeederByIdle(false); } catch { }
                                 break;
                             case CCommands.SSP_POLL_DISPENSING:
                                 Ereignis_adden("Dispensing...");
-                                _isDispensing = true; // Auszahlung l�uft
+                                _isDispensing = true; // Auszahlung läuft
                                 try { SyncCoinFeederByIdle(false); } catch { }
                                 if (i + 5 < CommandStructure.ResponseDataLength)
                                 {
@@ -1022,7 +1022,7 @@ namespace TaMi_Einzahlautomat
                                         }
                                         catch { }
 
-                                        // Interne To_Payout_* Z�hler reduzieren, damit Noch_Verfuegbar stimmt
+                                        // Interne To_Payout_* Zähler reduzieren, damit Noch_Verfuegbar stimmt
                                         switch (delta)
                                         {
                                             case 500: if (To_Payout_5Euro > 0) To_Payout_5Euro--; break;
@@ -1045,7 +1045,7 @@ namespace TaMi_Einzahlautomat
 
                                         Last_Dispensed_count = dispensed;
                                     }
-                                    // i um 4 erh�hen, da 4 Payload-Bytes (nach code und count) gelesen wurden
+                                    // i um 4 erhöhen, da 4 Payload-Bytes (nach code und count) gelesen wurden
                                     i += 4;
                                 }
                                 else
@@ -1069,14 +1069,14 @@ namespace TaMi_Einzahlautomat
                                         i += 4;
                                     }
 
-                                    // NEU: Fallback � falls im DISPENSING kein Delta erkannt wurde
+                                    // NEU: Fallback - falls im DISPENSING kein Delta erkannt wurde
                                     if (paid > 0 && Last_Dispensed_count == 0)
                                     {
-                                        try { AppLogger.Log($"({DetermineNvSection()}) ---> Schein ausgezahlt: {(paid / 100.0):0.00} �"); } catch { }
+                                        try { AppLogger.Log($"({DetermineNvSection()}) ---> Schein ausgezahlt: {(paid / 100.0):0.00} €"); } catch { }
                                         try
                                         {
                                             Eingezahlt = Math.Max(0, Eingezahlt - paid);
-                                            Ereignis_adden($"Eingezahlt minus Auszahlung: {(Eingezahlt / 100.0):0.00} �");
+                                            Ereignis_adden($"Eingezahlt minus Auszahlung: {(Eingezahlt / 100.0):0.00} €");
                                         }
                                         catch { }
                                         Last_Dispensed_count = paid;
@@ -1085,7 +1085,7 @@ namespace TaMi_Einzahlautomat
                                     try
                                     {
                                         int total = paid > 0 ? paid : neu;
-                                        AppLogger.Log($"({DetermineNvSection()}) Auszahlung abgeschlossen: {(total / 100.0):0.00} �");
+                                        AppLogger.Log($"({DetermineNvSection()}) Auszahlung abgeschlossen: {(total / 100.0):0.00} €");
                                     }
                                     catch { }
                                     SafeInvoke(Dispensing_Complete, paid > 0 ? paid : neu);
@@ -1159,10 +1159,10 @@ namespace TaMi_Einzahlautomat
         }
 
 
-        // Neu: Note_stored_or_Stacked � z�hlt strikt nach tats�chlicher Route (Payout/Cashbox) und normalisiert Euro/Cent
+        // Neu: Note_stored_or_Stacked - zählt strikt nach tatsächlicher Route (Payout/Cashbox) und normalisiert Euro/Cent
         private void Note_stored_or_Stacked(int noteChannel, bool storedInPayout)
         {
-            int raw = ChannelValueByChannel(noteChannel); // kann 5/10/� oder 500/1000/� (Cent) sein
+            int raw = ChannelValueByChannel(noteChannel); // kann 5/10/€ oder 500/1000/€ (Cent) sein
             if (raw <= 0) { Current_read_Note = -1; return; }
 
             // Wenn kein Mitarbeiter eingeloggt ist, Schein rejecten!
@@ -1178,7 +1178,7 @@ namespace TaMi_Einzahlautomat
             int denomCent = raw >= 1000 ? raw : raw * 100;
             int denomEuro = raw >= 1000 ? (raw / 100) : raw;
 
-            // F�r jeden Wert: exakt dort z�hlen, wo der Schein gelandet ist
+            // Für jeden Wert: exakt dort zählen, wo der Schein gelandet ist
             void incByRoute(ref int payout, ref int cashbox)
             {
                 Poll();
@@ -1193,14 +1193,14 @@ namespace TaMi_Einzahlautomat
                     SaveCashboxSnapshot();
                 }
 
-                // zuk�nftiges Routing dynamisch anpassen
+                // zukünftiges Routing dynamisch anpassen
                 bool toPayoutNext = ShouldStackToPayout(denomCent);
                 ChangeNoteRoute(denomCent, toPayoutNext);
                 Ereignis_adden($"{denomEuro} Euro akzepted ({(storedInPayout ? "PAYOUT" : "CASHBOX")})");
                 SafeInvoke(Note_akzepted, denomEuro);
 
                 Eingezahlt += denomEuro * 100;
-                Ereignis_adden($"Eingezahlt gesamt: {Eingezahlt / 100.0:0.00} �");
+                Ereignis_adden($"Eingezahlt gesamt: {Eingezahlt / 100.0:0.00} €");
             }
 
             switch (denomEuro)
@@ -1213,7 +1213,7 @@ namespace TaMi_Einzahlautomat
                 case 200: incByRoute(ref Payout_200_euro, ref Cashbox_200_euro); break;
                 case 500: incByRoute(ref Payout_500_euro, ref Cashbox_500_euro); break;
                 default:
-                    Ereignis_adden($"Warnung: Unbekannter Nennwert (raw={raw}) � Z�hler unver�ndert.");
+                    Ereignis_adden($"Warnung: Unbekannter Nennwert (raw={raw}) € Zähler unverändert.");
                     break;
             }
 
@@ -1245,7 +1245,7 @@ namespace TaMi_Einzahlautomat
         // Routing einer Denomination setzen (in Payout oder Cashbox).
         public void ChangeNoteRoute(int note, bool stack_to_Payout)
         {
-            // W�hrend einer Auszahlung keine Route-�nderungen senden, um Busy/245 zu vermeiden
+            // Während einer Auszahlung keine Route-änderungen senden, um Busy/245 zu vermeiden
             if (_isDispensing)
             {
                 if (_verbosePollLogging) try { Ereignis_adden("Skip route change (dispensing)"); } catch { }
@@ -1266,7 +1266,7 @@ namespace TaMi_Einzahlautomat
             element.Add(82); // 'R'
             Sendeliste.Add(element);
 
-            try { Ereignis_adden($"Set route {note / 100}� -> {(stack_to_Payout ? "PAYOUT" : "CASHBOX")}"); } catch { }
+            try { Ereignis_adden($"Set route {note / 100}€ -> {(stack_to_Payout ? "PAYOUT" : "CASHBOX")}"); } catch { }
         }
         
         // replace auto-property with backing field to allow logout action
@@ -1288,7 +1288,7 @@ namespace TaMi_Einzahlautomat
         }
 
         public int Eingezahlt { get; private set; } = 0;
-        // NEU: Schein zur�ckgeben (Reject)
+        // NEU: Schein zurückgeben (Reject)
         private void RejectNote() 
         {
             var element = new List<byte>();
@@ -1298,10 +1298,10 @@ namespace TaMi_Einzahlautomat
             Sendeliste.Add(element);
         }
 
-        // Optional: falls noch nicht vorhanden � f�r automatische Routenwahl.
+        // Optional: falls noch nicht vorhanden - für automatische Routenwahl.
         public void Set_Routing()
         {
-            // W�hrend einer Auszahlung keine Routing-Massenupdates senden
+            // Während einer Auszahlung keine Routing-Massenupdates senden
             if (_isDispensing)
             {
                 if (_verbosePollLogging) try { Ereignis_adden("Skip Set_Routing (dispensing)"); } catch { }
@@ -1336,13 +1336,13 @@ namespace TaMi_Einzahlautomat
                 _lastBezelSig = sig;
 
                 // Keep bezel configuration for the NV200 device only.
-                // Do NOT send CoinFeeder commands from here � CoinFeeder must be driven solely by SyncCoinFeederByIdle
+                // Do NOT send CoinFeeder commands from here - CoinFeeder must be driven solely by SyncCoinFeederByIdle
                 // so remove feeder.SendTemplate calls that previously caused multiple sends from different code paths.
             }
             catch { }
         }
 
-        // Ger�t deaktivieren
+        // Gerät deaktivieren
         public void Disable_Device()
         {
             var element = new List<byte>();
@@ -1433,7 +1433,7 @@ namespace TaMi_Einzahlautomat
             _isDisabled = false;
         }
 
-        // Payout-Ger�t aktivieren
+        // Payout-Gerät aktivieren
         public void Enable_Payout_Device()
         {
             var element = new List<byte>();
@@ -1465,20 +1465,20 @@ namespace TaMi_Einzahlautomat
             Sendeliste.Add(element);
         }
 
-        // Inhibits setzen (hier: alle Kan�le erlauben; bei Bedarf feiner steuern)
+        // Inhibits setzen (hier: alle Kanäle erlauben; bei Bedarf feiner steuern)
         public void SetInhibits()
         {
             SetChannelInhibits(0xFF, 0xFF);
         }
 
-        // Ger�t gezielt inhibitieren oder freigeben (alle Channels)
+        // Gerät gezielt inhibitieren oder freigeben (alle Channels)
         public void SetInhibit(bool inhibit)
         {
             // true => sperren (0x00/0x00), false => erlauben (0xFF/0xFF)
             SetChannelInhibits(inhibit ? (byte)0x00 : (byte)0xFF, inhibit ? (byte)0x00 : (byte)0xFF);
         }
 
-        // Hilfsmethode f�r Channel-Inhibits (0x00/0x00 = gesperrt, 0xFF/0xFF = freigegeben)
+        // Hilfsmethode für Channel-Inhibits (0x00/0x00 = gesperrt, 0xFF/0xFF = freigegeben)
         private void SetChannelInhibits(byte low, byte high)
         {
             var element = new List<byte>();
@@ -1502,15 +1502,15 @@ namespace TaMi_Einzahlautomat
             Enable_Device();
             Enable_Payout_Device();
             Set_Routing();
-            //ApplyManualRouteOverrides(); // deaktiviert � dynamisches Routing
-            // NEU: Nach erfolgreicher Freigabe LED auf gr�n
+            //ApplyManualRouteOverrides(); // deaktiviert - dynamisches Routing
+            // NEU: Nach erfolgreicher Freigabe LED auf grün
             ConfigureBezel(0, 255, 0);
         }
 
-        // Best�nde angleichen (falls noch nicht vorhanden)
+        // Bestände angleichen (falls noch nicht vorhanden)
         public void Payout_angleichen()
         {
-            // W�hrend Banknote verarbeitet wird oder Auszahlung l�uft: keine Maintenance-Kommandos senden
+            // Während Banknote verarbeitet wird oder Auszahlung läuft: keine Maintenance-Kommandos senden
             if (_noteCycleActive || _isDispensing)
             {
                 try { Ereignis_adden("Skip angleichen: busy (note/dispense)"); } catch { }
@@ -1555,7 +1555,7 @@ namespace TaMi_Einzahlautomat
         // PAYOUT_BY_DENOMINATION im VB-Format senden: Count(2) + Value(4) + 'EUR' + Flag(88)
         public void PayoutByDenomination(int[] counts)
         {
-            // Sicherstellen, dass das Ger�t aktiv ist
+            // Sicherstellen, dass das Gerät aktiv ist
             Enable_Device();
             Enable_Payout_Device();
             Thread.Sleep(200); // kurze Wartezeit
@@ -1563,7 +1563,7 @@ namespace TaMi_Einzahlautomat
             Ereignis_adden("DEBUG: PayoutByDenomination aufgerufen");
             if (counts == null || counts.Length < 7)
             {
-                Ereignis_adden("PayoutByDenomination: ung�ltige Z�hl-Liste.");
+                Ereignis_adden("PayoutByDenomination: ungültige Zähl-Liste.");
                 return;
             }
 
@@ -1578,7 +1578,7 @@ namespace TaMi_Einzahlautomat
             To_Payout_200Euro = counts[5];
             To_Payout_500Euro = counts[6];
 
-            // Summe in Cent merken (f�r Fallback)
+            // Summe in Cent merken (für Fallback)
             _lastRequestedPayoutSumCent =
                   counts[0]*500  + counts[1]*1000 + counts[2]*2000 +
                   counts[3]*5000 + counts[4]*10000+ counts[5]*20000+
@@ -1599,11 +1599,11 @@ namespace TaMi_Einzahlautomat
 
             if (denoms.Count == 0)
             {
-                Ereignis_adden("PayoutByDenomination: keine St�ckzahlen > 0 gew�hlt.");
+                Ereignis_adden("PayoutByDenomination: keine Stückzahlen > 0 gewählt.");
                 return;
             }
 
-            // L�nge: 1(cmd) + 1(versch. Scheine) + N*(2(count)+4(value)+3('EUR')) + 1(flag)
+            // Länge: 1(cmd) + 1(versch. Scheine) + N*(2(count)+4(value)+3('EUR')) + 1(flag)
             int len = 3 + denoms.Count * 9;
 
             var element = new List<byte>();
@@ -1626,7 +1626,7 @@ namespace TaMi_Einzahlautomat
                 element.Add(69); element.Add(85); element.Add(82);
             }
 
-            element.Add(88); // Real Payout (VB nutzt 88; 25 w�re Test)
+            element.Add(88); // Real Payout (VB nutzt 88; 25 wäre Test)
 
             Ereignis_adden($"Queue PAYOUT_BY_DENOMINATION: 5x{counts[0]},10x{counts[1]},20x{counts[2]},50x{counts[3]},100x{counts[4]},200x{counts[5]},500x{counts[6]} (Len={len})");
 
@@ -1635,21 +1635,21 @@ namespace TaMi_Einzahlautomat
             for (int i = 0; i < element.Count; i++) dbg += element[i] + (i + 1 < element.Count ? "-" : "");
             Ereignis_adden(dbg);
 
-            // F�r Dispensing-Delta wie im VB
+            // Für Dispensing-Delta wie im VB
             Last_Dispensed_count = 0;
 
             Sendeliste.Add(element);
             Ereignis_adden($"Starte Auszahlung (Denoms: {denoms.Count}).");
         }
 
-        // Optional: Fallback auf PAYOUT_AMOUNT (0x33) � zahlt nur die Summe aus.
+        // Optional: Fallback auf PAYOUT_AMOUNT (0x33) - zahlt nur die Summe aus.
         public void PayoutAmountFromQueuedDenoms()
         {
             Enable_Device();
             Enable_Payout_Device();
             Thread.Sleep(200); // kurze Wartezeit
 
-            // Prim�r die zuletzt angeforderte Summe verwenden,
+            // Primär die zuletzt angeforderte Summe verwenden,
             // da To_Payout_* im Fehlerfall evtl. schon 0 sind.
             int sum = _lastRequestedPayoutSumCent;
 
@@ -1722,7 +1722,7 @@ namespace TaMi_Einzahlautomat
             _emptyingActive = true; // mark emptying cycle active
         }
 
-        // Thread-sicheres Logging: Feld hinzuf�gen
+        // Thread-sicheres Logging: Feld hinzufügen
         private readonly object _logLock = new object();
 
         // Field to avoid repeated CoinFeeder sends for same bezel color
@@ -1733,7 +1733,7 @@ namespace TaMi_Einzahlautomat
         public void StartLiveFrameLogging() { _frameLogIntervalMs = 0; _logDetailedFrames = true; }
         public void EndLiveFrameLogging() { _frameLogIntervalMs = 500; _logDetailedFrames = false; }
 
-        // 1. Feld erg�nzen:
+        // 1. Feld ergänzen:
         private bool _isDispensing = false;
         // Track emptying state (SMART_EMPTY / EMPTY_ALL)
         private bool _emptyingActive = false;
@@ -1817,7 +1817,7 @@ namespace TaMi_Einzahlautomat
             }
         }
 
-        // Persistenz (Registry) f�r Cashbox-Z�hler
+        // Persistenz (Registry) für Cashbox-Zähler
         private readonly object _persistLock = new object();
         private string CashboxRegPath => @"Software\Geldautomat\NV200\" + (ComPort ?? "Unknown");
 
@@ -1946,12 +1946,12 @@ namespace TaMi_Einzahlautomat
                         Cashbox_500_euro = Convert.ToInt32(key.GetValue("Cashbox_500", Cashbox_500_euro));
                     }
                 }
-                try { Ereignis_adden($"Cashbox aus Registry geladen: {GetCashboxSumCent()/100.0:0.00} �"); } catch { }
+                try { Ereignis_adden($"Cashbox aus Registry geladen: {GetCashboxSumCent()/100.0:0.00} €"); } catch { }
             }
-            catch { /* falls Registry nicht verf�gbar, weiter */ }
+            catch { /* falls Registry nicht verfügbar, weiter */ }
         }
 
-        // Summenhelfer (Snapshots der aktuellen Best�nde)
+        // Summenhelfer (Snapshots der aktuellen Bestände)
         public int GetPayoutSumCent()
         {
             int p5   = System.Threading.Volatile.Read(ref Payout_5_euro);
@@ -2058,7 +2058,7 @@ namespace TaMi_Einzahlautomat
                     return def;
                 }
 
-                // MAX-Konfig: mehrere m�gliche Schl�sselnamen unterst�tzen
+                // MAX-Konfig: mehrere mögliche Schlüsselnamen unterstützen
                 int v5   = ReadInt("MAX_5",   MAX_PayoutCount_of_5Euro);
                 int v10  = ReadInt("MAX_10",  MAX_PayoutCount_of_10Euro);
                 int v20  = ReadInt("MAX_20",  MAX_PayoutCount_of_20Euro);
@@ -2067,7 +2067,7 @@ namespace TaMi_Einzahlautomat
                 int v200 = ReadInt("MAX_200", MAX_PayoutCount_of_200Euro);
                 int v500 = ReadInt("MAX_500", MAX_PayoutCount_of_500Euro);
 
-                // Fallback-Schl�ssel (falls andere Namen genutzt werden)
+                // Fallback-Schlüssel (falls andere Namen genutzt werden)
                 v5   = ReadInt("MAX_PayoutCount_of_5Euro",   v5);
                 v10  = ReadInt("MAX_PayoutCount_of_10Euro",  v10);
                 v20  = ReadInt("MAX_PayoutCount_of_20Euro",  v20);
@@ -2110,7 +2110,7 @@ namespace TaMi_Einzahlautomat
             return "NV200/1"; // Default
         }
 
-        // Ordnername f�r Logs dynamisch aus NV200-Section ableiten
+        // Ordnername für Logs dynamisch aus NV200-Section ableiten
         private string DetermineNvFolderName()
         {
             try
@@ -2135,7 +2135,7 @@ namespace TaMi_Einzahlautomat
             Cashbox_200_euro = Math.Max(0, c200);
             Cashbox_500_euro = Math.Max(0, c500);
             SaveCashboxSnapshot();
-            Ereignis_adden($"Cashbox gez�llt: {GetCashboxSumCent() / 100.0:0.00} �");
+            Ereignis_adden($"Cashbox gezällt: {GetCashboxSumCent() / 100.0:0.00} €");
 }
 
         // Graceful stop (called on shutdown)

@@ -55,13 +55,13 @@ namespace TaMi_Einzahlautomat.Coins
         // Enable-Puffer, damit Enable nach Handshake automatisch angewandt wird
         private volatile bool _wantEnabled = false;
 
-        // Vorr�tige M�nzen (Index 0..7 = {1,2,5,10,20,50,100,200} Cent). -1 = unbekannt
+        // Vorrätige Münzen (Index 0..7 = {1,2,5,10,20,50,100,200} Cent). -1 = unbekannt
         private readonly int[] _coinLevels = new int[8] { -1, -1, -1, -1, -1, -1, -1, -1 };
         private readonly object _levelsLock = new object();
 
         // Flag: falls verschlüsselt nicht akzeptiert -> unverschlüsselt probieren
         private volatile bool _retryGetDenomUnenc = false;
-        private DateTime _lastCoinCreditUtc = DateTime.MinValue; // Timestamp letzter M�nze f�r Level-Abfrage Verz�gerung
+        private DateTime _lastCoinCreditUtc = DateTime.MinValue; // Timestamp letzter Münze für Level-Abfrage Verzögerung
 
         // TEMP: Raw-Debug aktiv (bei Bedarf wieder auf false setzen)
         private bool _debugRawPoll = true; // TEMP: Raw-Debug aktiv (bei Bedarf wieder auf false setzen)
@@ -81,7 +81,7 @@ namespace TaMi_Einzahlautomat.Coins
         // NEU: Zeitstempel der letzten verarbeiteten POLL-Antwort für faire Interleaving-Strategie
         private DateTime _lastPollUtc = DateTime.MinValue;
         // Minimalintervall zwischen zwei Polls auch bei fuller Queue (ms)
-        private const int MaxPollGapMs = 150; // enger takten, damit einzelne M�nzen erfasst werden
+        private const int MaxPollGapMs = 150; // enger takten, damit einzelne Münzen erfasst werden
         private volatile bool _requestLevelsOnNextPoll = false; // trigger from external events
 
         // NEU: Tracking SmartEmpty
@@ -89,7 +89,7 @@ namespace TaMi_Einzahlautomat.Coins
         private DateTime _lastSmartEmptyActivityUtc = DateTime.MinValue; // aktualisiert bei Dispensing / Credits
         private int _smartEmptyRetryCount = 0;
         private int _smartEmptyInitialLevelSum = -1;
-        private const int SmartEmptyWatchdogMs = 7000; // 7s ohne Aktivit�t => Retry
+        private const int SmartEmptyWatchdogMs = 7000; // 7s ohne Aktivität => Retry
         private const int SmartEmptyMaxRetries = 2;
         private volatile bool _suspendLevelRequests = false; // während SmartEmpty keine Level-Kommandos einreihen
 
@@ -151,12 +151,12 @@ namespace TaMi_Einzahlautomat.Coins
             if (enable)
             {
                 if (_encryptionOk) EnqueueEnableSequence();
-                else Log("Enable vorgemerkt (wird nach Handshake ausgef�hrt)");
+                else Log("Enable vorgemerkt (wird nach Handshake ausgeführt)");
             }
             else
             {
                 if (_encryptionOk) EnqueueDisableSequence();
-                else Log("Disable vorgemerkt (wird nach Handshake ausgef�hrt)");
+                else Log("Disable vorgemerkt (wird nach Handshake ausgeführt)");
             }
         }
 
@@ -186,18 +186,18 @@ namespace TaMi_Einzahlautomat.Coins
                         SetStatus("Verbunden");
                         try
                         {
-                            // Einige Ger�te ben�tigen nach Neustart einen expliziten RESET, wie im KassensystemPRO.
+                            // Einige Geräte benötigen nach Neustart einen expliziten RESET, wie im KassensystemPRO.
                             // Sende vor dem Handshake einmal RESET, danach wie gewohnt SYNC/Key-Exchange.
                             Enqueue((byte)0, (byte)1, (byte)CCommands.SSP_CMD_RESET);
                             Log("RESET enqueued (Startup)");
                             SetStatus("Reset...");
                         }
                         catch { }
-                        Sync(); // unverschl�sselt
+                        Sync(); // unverschlüsselt
 
                         while (!_stop)
                         {
-                            // SmartEmpty Watchdog pr�fen
+                            // SmartEmpty Watchdog prüfen
                             if (_smartEmptyInProgress)
                             {
                                 if (_lastSmartEmptyActivityUtc != DateTime.MinValue)
@@ -208,7 +208,7 @@ namespace TaMi_Einzahlautomat.Coins
                                         int currentSum = CurrentLevelSum();
                                         if (currentSum > 0)
                                         {
-                                            Log("SmartEmpty Watchdog: keine Aktivit�t seit " + idleMs + "ms, LevelsSum=" + currentSum + ", Retry " + (_smartEmptyRetryCount + 1));
+                                            Log("SmartEmpty Watchdog: keine Aktivität seit " + idleMs + "ms, LevelsSum=" + currentSum + ", Retry " + (_smartEmptyRetryCount + 1));
                                             _smartEmptyRetryCount++;
                                             // Queue leeren und SmartEmpty erneut schicken
                                             ClearQueue();
@@ -221,11 +221,11 @@ namespace TaMi_Einzahlautomat.Coins
                                         int remain = CurrentLevelSum();
                                         if (remain > 0)
                                         {
-                                            Log("SmartEmpty Watchdog: Abbruch nach max. Retries, verbleibende M�nzen (Summe)=" + remain);
+                                            Log("SmartEmpty Watchdog: Abbruch nach max. Retries, verbleibende Münzen (Summe)=" + remain);
                                             _smartEmptyInProgress = false;
                                             _suspendLevelRequests = false;
                                             Enable(true);
-                                            try { CoinPayoutError?.Invoke("SmartEmpty unvollst�ndig � bitte erneut versuchen."); } catch { }
+                                            try { CoinPayoutError?.Invoke("SmartEmpty unvollständig - bitte erneut versuchen."); } catch { }
                                             ScheduleLevelsRequest();
                                         }
                                     }
@@ -261,7 +261,7 @@ namespace TaMi_Einzahlautomat.Coins
                             }
                             else
                             {
-                                // Wenn l�nger kein Poll verarbeitet wurde, schiebe einen Poll vorn ein (ohne Pause)
+                                // Wenn länger kein Poll verarbeitet wurde, schiebe einen Poll vorn ein (ohne Pause)
                                 if ((DateTime.UtcNow - _lastPollUtc).TotalMilliseconds > MaxPollGapMs)
                                 {
                                     EnqueueFront((byte)0, (byte)1, (byte)CCommands.SSP_CMD_POLL);
@@ -375,7 +375,7 @@ namespace TaMi_Einzahlautomat.Coins
             _threadEnded = true;
         }
 
-        // Helfer f�rs Hex-Loggen
+        // Helfer fürs Hex-Loggen
         private string Hex(byte[] data, int len)
         {
             if (data == null || len <= 0) return "";
@@ -393,7 +393,7 @@ namespace TaMi_Einzahlautomat.Coins
         }
         private char GetHex(int v) => (char)(v < 10 ? '0' + v : 'A' + (v - 10));
 
-        // NEU: Status setzen (nur bei �nderung)
+        // NEU: Status setzen (nur bei Änderung)
         internal void SetStatus(string s)
         {
             if (string.IsNullOrEmpty(s)) return;
@@ -605,16 +605,16 @@ namespace TaMi_Einzahlautomat.Coins
                             }
                         case 0xC1:
                             {
-                                // Extended header marker � actual coin credit follows in 0xBF fragment(s)
+                                // Extended header marker - actual coin credit follows in 0xBF fragment(s)
                                 SetStatus("Einwurf");
                                 if (_debugRawPoll) Log("COIN_EXT_HDR RAW=" + HexSlice(i, 10));
-                                // WICHTIG: Hier NICHTs verbrauchen � 0xBF wird im n�chsten Switch-Zweig geparst
+                                // WICHTIG: Hier NICHTs verbrauchen - 0xBF wird im nächsten Switch-Zweig geparst
                                 break;
                             }
                         case 191:
                             {
                                 // KassensystemPRO-kompatibel: 0xBF trägt die Extended-Coin-Infos.
-                                // Verwende Low-Byte f�r Einzelm�nzen; falls unplausibel, nimm v32 (aggregierter Cent-Wert).
+                                // Verwende Low-Byte für Einzelmünzen; falls unplausibel, nimm v32 (aggregierter Cent-Wert).
                                 if (_debugRawPoll) Log("FRAG_191 RAW=" + HexSlice(i, 9));
 
                                 if (i + 2 < _cmd.ResponseDataLength)
@@ -645,8 +645,8 @@ namespace TaMi_Einzahlautomat.Coins
                                         Log($"FRAG_191 Low-Byte unplausibel: {low}");
                                     }
                                 }
-                                // Blockl�nge: BF + 8 Datenbytes (1 Count + 4 Value + 3 'EUR')
-                                // For-Loop erh�ht zus�tzlich um +1 => hier i += 8
+                                // Blocklänge: BF + 8 Datenbytes (1 Count + 4 Value + 3 'EUR')
+                                // For-Loop erhöht zusätzlich um +1 => hier i += 8
                                 i += 8;
                                 break;
                             }
@@ -654,10 +654,10 @@ namespace TaMi_Einzahlautomat.Coins
                         case CCommands.SSP_POLL_DISPENSING:
                             Log("Dispensing coin(s)");
                             SetStatus("Busy (Dispensing)");
-                            _lastSmartEmptyActivityUtc = DateTime.UtcNow; // Aktivit�t
+                            _lastSmartEmptyActivityUtc = DateTime.UtcNow; // Aktivität
                             int disp = ReadInt32(i + 2);
 
-                            // BUGFIX 2: Z�hler-Reset / Wrap erkennen (zweite Auszahlung hatte keine Einzel-Events)
+                            // BUGFIX 2: Zähler-Reset / Wrap erkennen (zweite Auszahlung hatte keine Einzel-Events)
                             if (disp < _lastDispensedCount)
                             {
                                 Log("Dispense counter reset detected (DISPENSING) old=" + _lastDispensedCount + " new=" + disp + ". Reset baseline.");
@@ -687,7 +687,7 @@ namespace TaMi_Einzahlautomat.Coins
 
                         case CCommands.SSP_POLL_DISPENSED:
                             Log("Dispensed Coin(s)");
-                            _lastSmartEmptyActivityUtc = DateTime.UtcNow; // Aktivit�t
+                            _lastSmartEmptyActivityUtc = DateTime.UtcNow; // Aktivität
                             try
                             {
                                 int totalDisp = ReadInt32(i + 2);
@@ -745,9 +745,9 @@ namespace TaMi_Einzahlautomat.Coins
                                     default: errName = "UNBEKANNT"; break;
                                 }
                                 Log("Fehlercode: " + errName);
-                                SetStatus("St�rung: " + errName);
+                                SetStatus("Störung: " + errName);
                                 _smartEmptyInProgress = false; _suspendLevelRequests = false; _smartEmptyRetryCount = 0; _smartEmptyInitialLevelSum = -1; _toPay_1 = _toPay_2 = _toPay_5 = _toPay_10 = _toPay_20 = _toPay_50 = _toPay_100 = _toPay_200 = 0;
-                                // Animation VOR MessageBox schlie�en
+                                // Animation VOR MessageBox schließen
                                 try { BusyAnimationManager.End("Coins Fehler"); } catch { }
                                 try { CoinPayoutError?.Invoke("Fehler / Abbruch: " + errName); } catch { }
                                 Enable(true); if (_encryptionOk) ScheduleLevelsRequest();
@@ -756,12 +756,12 @@ namespace TaMi_Einzahlautomat.Coins
 
                         case CCommands.SSP_POLL_JAMMED:
                             Log("Unit jammed...");
-                            SetStatus("St�rung (Jammed)");
+                            SetStatus("Störung (Jammed)");
                             _smartEmptyInProgress = false; _suspendLevelRequests = false;
                             try { BusyAnimationManager.End("Coins Jammed"); } catch { }
                             RequestCoinLevels();
                             i += ((_cmd.ResponseData[i + 1] * 7) + 1);
-                            try { CoinPayoutError?.Invoke("M�nzger�t blockiert (JAMMED)."); } catch { }
+                            try { CoinPayoutError?.Invoke("Münzgerät blockiert (JAMMED)."); } catch { }
                             break;
 
                         case CCommands.SSP_POLL_TIME_OUT:
@@ -770,12 +770,12 @@ namespace TaMi_Einzahlautomat.Coins
                             _smartEmptyInProgress = false; _suspendLevelRequests = false;
                             try { BusyAnimationManager.End("Coins Timeout"); } catch { }
                             i += ((_cmd.ResponseData[i + 1] * 7) + 1);
-                            try { CoinPayoutError?.Invoke("M�nzauszahlung zeit�berschritten."); } catch { }
+                            try { CoinPayoutError?.Invoke("Münzauszahlung zeitüberschritten."); } catch { }
                             break;
 
                         case CCommands.SSP_POLL_DEVICE_FULL:
                             {
-                                // SmartCoin meldet vollen Hopper/Stack � korrekt behandeln statt UNSUPPORTED
+                                // SmartCoin meldet vollen Hopper/Stack - korrekt behandeln statt UNSUPPORTED
                                 SetStatus("Maximaler Füllstand erreicht");
                                 var now = DateTime.UtcNow;
                                 if ((now - _lastDeviceFullLogUtc).TotalSeconds >= 5)
@@ -789,7 +789,7 @@ namespace TaMi_Einzahlautomat.Coins
                                     _deviceFullRepeatCount++;
                                     if (_deviceFullRepeatCount % 10 == 0) Log("Device FULL besteht weiterhin...");
                                 }
-                                // Animationsabbruch � es k�nnen keine weiteren M�nzen angenommen werden
+                                // Animationsabbruch - es können keine weiteren Münzen angenommen werden
                                 try { BusyAnimationManager.End("coins full"); } catch { }
                                 // WICHTIG: Einige Geräte gehen bei FULL in einen deaktivierten Zustand über und
                                 // verarbeiten danach keine Auszahlungsbefehle mehr, bis ENABLE erneut gesendet wurde.
@@ -800,13 +800,13 @@ namespace TaMi_Einzahlautomat.Coins
                                 break;
                             }
 
-                        // NEU: Zust�nde beim SmartEmpty
+                        // NEU: Zustände beim SmartEmpty
                         case CCommands.SSP_POLL_SMART_EMPTYING:
                         {
                             Log("SMART Emptying...");
                             SetStatus("Smart Emptying");
-                            _lastSmartEmptyActivityUtc = DateTime.UtcNow; // Aktivit�t markieren -> Watchdog ruhigstellen
-                            // Datenblock �berspringen wie bei anderen Events mit Payload
+                            _lastSmartEmptyActivityUtc = DateTime.UtcNow; // Aktivität markieren -> Watchdog ruhigstellen
+                            // Datenblock überspringen wie bei anderen Events mit Payload
                             i += ((_cmd.ResponseData[i + 1] * 7) + 1);
                             break;
                         }
@@ -820,7 +820,7 @@ namespace TaMi_Einzahlautomat.Coins
                             _smartEmptyRetryCount = 0;
                             _smartEmptyInitialLevelSum = -1;
 
-                            // Ger�t wieder freigeben und Levels aktualisieren
+                            // Gerät wieder freigeben und Levels aktualisieren
                             Enable(true);
                             SetStatus("Bereit");
                             try { BusyAnimationManager.End("Coins fertig"); } catch { }
@@ -830,7 +830,7 @@ namespace TaMi_Einzahlautomat.Coins
                             break;
                         }
 
-                        // Optional (einige Ger�te benutzen EMPTYING/EMPTIED anstelle SMART_*):
+                        // Optional (einige Geräte benutzen EMPTYING/EMPTIED anstelle SMART_*):
                         case CCommands.SSP_POLL_EMPTYING:
                         {
                             Log("Emptying...");
@@ -863,7 +863,7 @@ namespace TaMi_Einzahlautomat.Coins
                 }
             }
 
-            if (cmd == (byte)0xB5) // GET_ALL_LEVELS f�r SCS (selten)
+            if (cmd == (byte)0xB5) // GET_ALL_LEVELS für SCS (selten)
             {
                 try
                 {
@@ -912,7 +912,7 @@ namespace TaMi_Einzahlautomat.Coins
                         }
                         else
                         {
-                            Log($"ALL_LEVELS: unbekannt/�bersprungen val={valueCent}, count={count}");
+                            Log($"ALL_LEVELS: unbekannt/übersprungen val={valueCent}, count={count}");
                         }
                     }
 
@@ -923,7 +923,7 @@ namespace TaMi_Einzahlautomat.Coins
                     }
                     else
                     {
-                        Log("GET_ALL_LEVELS enthielt keine verwertbaren Eintr�ge.");
+                        Log("GET_ALL_LEVELS enthielt keine verwertbaren Einträge.");
                     }
                 }
                 catch (Exception ex)
@@ -949,16 +949,16 @@ namespace TaMi_Einzahlautomat.Coins
             _requestLevelsOnNextPoll = true;
         }
 
-        // Zerlege eine aggregierte Dispense-Summe in Einzelm�nzen und feuere je M�nze ein Delta-Event
+        // Zerlege eine aggregierte Dispense-Summe in Einzelmünzen und feuere je Münze ein Delta-Event
         private bool EmitPerCoinDeltas(int diff)
         {
-            if (_smartEmptyInProgress) return false; // keine Einzel-Events w�hrend SmartEmpty
+            if (_smartEmptyInProgress) return false; // keine Einzel-Events während SmartEmpty
             if (diff <= 0) return false;
             int before = diff;
 
             Action<int> raise = (val) => { try { CoinDispensedDeltaCent?.Invoke(val); } catch { } };
 
-            // Hilfs-Lokalfunktion: solange m�glich von einem Nominalwert abziehen
+            // Hilfs-Lokalfunktion: solange möglich von einem Nominalwert abziehen
             void Consume(ref int remaining, ref int counter, int value)
             {
                 while (remaining >= value && counter > 0)
@@ -967,7 +967,7 @@ namespace TaMi_Einzahlautomat.Coins
                 }
             }
 
-            // Erst anhand der geplanten St�ckzahlen (_toPay_*) abbauen (gro� -> klein)
+            // Erst anhand der geplanten Stückzahlen (_toPay_*) abbauen (groß -> klein)
             Consume(ref diff, ref _toPay_200, 200);
             Consume(ref diff, ref _toPay_100, 100);
             Consume(ref diff, ref _toPay_50, 50);
@@ -976,11 +976,11 @@ namespace TaMi_Einzahlautomat.Coins
             Consume(ref diff, ref _toPay_5, 5);
             Consume(ref diff, ref _toPay_2, 2);
             // In der Praxis kann vom Gerät gelegentlich eine ungerade Differenz (1ct) gemeldet werden
-            // � obwohl 1ct regul�r nicht ausgezahlt wird. Um Kassen-/Guthaben-Anzeigen konsistent zu halten,
+            //  obwohl 1ct regulär nicht ausgezahlt wird. Um Kassen-/Guthaben-Anzeigen konsistent zu halten,
             // verbuchen wir auch diese 1ct als Delta-Event.
             Consume(ref diff, ref _toPay_1, 1);
 
-            // Falls noch Rest bleibt (z. B. weil _toPay_* nicht exakt passten), greedy ohne Counter aufl�sen
+            // Falls noch Rest bleibt (z. B. weil _toPay_* nicht exakt passten), greedy ohne Counter auflösen
             int[] vals = new[] { 200, 100, 50, 20, 10, 5, 2, 1 };
             foreach (var v in vals)
             {
@@ -1019,7 +1019,7 @@ namespace TaMi_Einzahlautomat.Coins
                 {
                     if (!BusyAnimationManager.IsActive)
                     {
-                        BusyAnimationManager.Begin("Einzahlung l�uft");
+                        BusyAnimationManager.Begin("Einzahlung läuft");
                         _coinDepositAnimActive = true;
                     }
                 }
@@ -1074,15 +1074,15 @@ namespace TaMi_Einzahlautomat.Coins
             Enqueue((byte)1, (byte)2, (byte)CCommands.SSP_CMD_HOST_PROTOCOL_VERSION, v);
         }
 
-        // M�nzauszahlung nach St�ckzahlen (Index: {1,2,5,10,20,50,100,200} Cent)
+        // Münzauszahlung nach Stückzahlen (Index: {1,2,5,10,20,50,100,200} Cent)
         public void PayoutCoins(int[] countsByIndex)
         {
             if (countsByIndex == null || countsByIndex.Length < 8)
             {
-                Log("PayoutCoins: ung�ltige St�ckzahlliste.");
+                Log("PayoutCoins: ungültige Stückzahlliste.");
                 return;
             }
-            try { BusyAnimationManager.Begin("M�nzauszahlung l�uft"); } catch { }
+            try { BusyAnimationManager.Begin("Münzauszahlung lüuft"); } catch { }
 
             int[] valOrder = new[] { 1, 2, 5, 10, 20, 50, 100, 200 };
 
@@ -1095,7 +1095,7 @@ namespace TaMi_Einzahlautomat.Coins
 
                 denoms.Add((v, (ushort)Math.Min(65535, c)));
 
-                // interne ToPay-Z�hler grob pflegen
+                // interne ToPay-Zähler grob pflegen
                 switch (v)
                 {
                     case 1: _toPay_1 += c; break;
@@ -1111,7 +1111,7 @@ namespace TaMi_Einzahlautomat.Coins
 
             if (denoms.Count == 0)
             {
-                Log("PayoutCoins: keine unterst�tzten M�nzen > 0 ausgew�hlt.");
+                Log("PayoutCoins: keine unterstützten Münzen > 0 ausgewählt.");
                 return;
             }
 
@@ -1130,7 +1130,7 @@ namespace TaMi_Einzahlautomat.Coins
                 elem.Add((byte)(d.count & 0xFF));
                 elem.Add((byte)((d.count >> 8) & 0xFF));
 
-                // Value (4 LE) � Cent
+                // Value (4 LE) - Cent
                 var v = BitConverter.GetBytes(d.valueCent);
                 elem.Add(v[0]); elem.Add(v[1]); elem.Add(v[2]); elem.Add(v[3]);
 
@@ -1143,35 +1143,35 @@ namespace TaMi_Einzahlautomat.Coins
             lock (_queueLock)
             {
                 _sendQueue.Add(elem);
-                // Kopie f�r evtl. Retry nach KEY_NOT_SET
+                // Kopie für evtl. Retry nach KEY_NOT_SET
                 _pendingPayoutCmd = new List<byte>(elem);
             }
             Log("PayoutCoins enqueued.");
         }
 
-        // M�nz-Level anfragen (wird vom UI zyklisch genutzt)
+        // Münz-Level anfragen (wird vom UI zyklisch genutzt)
         public void RequestCoinLevels()
         {
-            // W�hrend sehr kurzer Zeit nach Einwurf keine Levelabfragen (Vermeidet Event-Zerhackung bei vielen Polls)
+            // Während sehr kurzer Zeit nach Einwurf keine Levelabfragen (Vermeidet Event-Zerhackung bei vielen Polls)
             if ((DateTime.UtcNow - _lastCoinCreditUtc).TotalMilliseconds < 400)
             {
                 return; // kurz aussetzen
             }
-            // Instanzbasiertes Gate je Ger�t (separat f�r Coin/1 und Coin/2)
+            // Instanzbasiertes Gate je Gerät (separat für Coin/1 und Coin/2)
             var now = DateTime.UtcNow;
             lock (_instanceLevelsLock)
             {
                 int minMs = _kassensturzMode ? _kassensturzCooldownMs : 1200;
                 if ((now - _lastInstanceLevelsRequestUtc).TotalMilliseconds < minMs)
                 {
-                    return; // geblockt f�r dieses Ger�t
+                    return; // geblockt für dieses Gerät
                 }
-                _lastInstanceLevelsRequestUtc = now; // Timestamp pro Ger�t
+                _lastInstanceLevelsRequestUtc = now; // Timestamp pro Gerät
             }
             AlignPayoutLevels(false);
         }
 
-        // GET_ALL_LEVELS � optional
+        // GET_ALL_LEVELS - optional
         private void RequestAllLevels(bool encrypted)
         {
             byte enc = (byte)(encrypted ? 1 : 0);
@@ -1180,7 +1180,7 @@ namespace TaMi_Einzahlautomat.Coins
             Log($"REQ GET_ALL_LEVELS {(encrypted ? "[enc]" : "[plain]")}");
         }
 
-        // Verf�gbarkeiten kopiert zur�ckgeben
+        // Verfügbarkeiten kopiert zurückgeben
         public int[] GetCoinAvailability()
         {
             lock (_levelsLock)
@@ -1210,7 +1210,7 @@ namespace TaMi_Einzahlautomat.Coins
             lock (_queueLock) { _sendQueue.Add(elem); }
         }
 
-        // NEU: Front-Queueing f�r priorisierte Polls
+        // NEU: Front-Queueing für priorisierte Polls
         private void EnqueueFront(byte enc, byte len, byte cmd, params byte[] rest)
         {
             var elem = NewCmd(enc, len, cmd);
@@ -1254,12 +1254,12 @@ namespace TaMi_Einzahlautomat.Coins
             // Bei laufendem SmartEmpty verbale Roh-Poll Logs etwas drosseln
             if (_smartEmptyInProgress && _debugRawPoll && s.IndexOf("RAW=", StringComparison.OrdinalIgnoreCase) >= 0)
             {
-                // �berspringe detaillierte RAW-Eintr�ge um UI (EventLog) nicht zu �berlasten
+                // überspringe detaillierte RAW-Einträge um UI (EventLog) nicht zu überlasten
                 return;
             }
             try { EventLog?.Invoke("[V1] " + s); } catch { }
 
-            // Zus�tzlich in dedizierte SmartCoin-Logdatei schreiben
+            // Zusätzlich in dedizierte SmartCoin-Logdatei schreiben
             try
             {
                 string folder = null;
@@ -1352,7 +1352,7 @@ namespace TaMi_Einzahlautomat.Coins
             }
         }
 
-        // Wiederhergestellt: HardDisconnect f�r Manager
+        // Wiederhergestellt: HardDisconnect für Manager
         public void HardDisconnect()
         {
             try { Log("HardDisconnect init"); } catch { }
@@ -1378,12 +1378,12 @@ namespace TaMi_Einzahlautomat.Coins
             try { BusyAnimationManager.EndForce(); } catch { }
         }
 
-        // -- ZENTRALE WRAPPER: einheitliche Level-Abfragen �ber eine Stelle --
+        // -- ZENTRALE WRAPPER: einheitliche Level-Abfragen über eine Stelle --
         public static void RequestLevelsGlobal()
         {
             try
             {
-                // Kein globales Gate mehr: jede Instanz filtert selbst per Ger�t
+                // Kein globales Gate mehr: jede Instanz filtert selbst per Gerät
                 try
                 {
                     var inst = CoinManager.Instance;
@@ -1409,7 +1409,7 @@ namespace TaMi_Einzahlautomat.Coins
             try { (Coin2Manager.Instance as SmartCoinV1)?.ScheduleLevelsRequest(); } catch { }
         }
 
-        // Kassensturz-Mode einschalten/abschalten; setzt globales 5s-Gate f�r Level-Requests
+        // Kassensturz-Mode einschalten/abschalten; setzt globales 5s-Gate für Level-Requests
         public static void EnableKassensturzMode(bool enabled, int cooldownMs = 5000)
         {
             lock (_globalModeLock)
