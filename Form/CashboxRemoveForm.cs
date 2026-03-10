@@ -63,7 +63,12 @@ namespace TaMi_Einzahlautomat
             _cashboxEuro = _ssp.GetCashboxSumCent() / 100m;
             _tip = new ToolTip();
             BuildModernLayout();
-            LoadKassenAsync();
+
+            // Daten/Rows erst nach dem ersten Paint laden, damit das Fenster sofort „steht“
+            Shown += (s, e) =>
+            {
+                try { BeginInvoke((Action)(() => LoadKassenAsync())); } catch { }
+            };
 
             // Sicherstellen, dass das Fenster im Vordergrund bleibt
             this.Deactivate += (s, e) =>
@@ -80,6 +85,7 @@ namespace TaMi_Einzahlautomat
 
         private void BuildModernLayout()
         {
+            SuspendLayout();
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
             ClientSize = new Size(1280, 1024);
@@ -158,6 +164,7 @@ namespace TaMi_Einzahlautomat
                 BackColor = Color.White,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
+            TryEnableDoubleBuffer(_columnsHeaderPanel);
             _columnsHeaderPanel.Paint += (s, e) =>
             {
                 // Untere Trennlinie
@@ -186,6 +193,7 @@ namespace TaMi_Einzahlautomat
                 BackColor = Color.White,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom
             };
+            TryEnableDoubleBuffer(_panel);
             Controls.Add(_panel);
 
             // Summary Card
@@ -196,6 +204,7 @@ namespace TaMi_Einzahlautomat
                 BackColor = Color.White,
                 Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
             };
+            TryEnableDoubleBuffer(_summaryCard);
             _summaryCard.Paint += (s, e) =>
             {
                 var r = _summaryCard.ClientRectangle;
@@ -273,6 +282,19 @@ namespace TaMi_Einzahlautomat
                 if (_lblStepCaption != null) _lblStepCaption.Location = new Point(ClientSize.Width - 360, 16);
                 if (_cmbStep != null) _cmbStep.Location = new Point(ClientSize.Width - 270, 16);
             };
+
+            ResumeLayout(performLayout: true);
+        }
+
+        private static void TryEnableDoubleBuffer(Control c)
+        {
+            if (c == null) return;
+            try
+            {
+                var pi = typeof(Control).GetProperty("DoubleBuffered", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                pi?.SetValue(c, true, null);
+            }
+            catch { }
         }
 
         private struct DenomPlan
@@ -400,6 +422,29 @@ namespace TaMi_Einzahlautomat
 
         private async void LoadKassenAsync()
         {
+            if (_panel == null) return;
+
+            // Optionaler „Loading“-Hinweis, damit keine „leeren Rahmen“ sichtbar bleiben
+            Label loading = null;
+            try
+            {
+                if (_panel.Controls.Count == 0)
+                {
+                    loading = new Label
+                    {
+                        Text = "Lade Kassen...",
+                        AutoSize = false,
+                        Width = _panel.Width - 25,
+                        Height = 60,
+                        Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
+                        ForeColor = Color.DimGray,
+                        TextAlign = ContentAlignment.MiddleCenter
+                    };
+                    _panel.Controls.Add(loading);
+                }
+            }
+            catch { }
+
             using (var db = new DatabaseHelper())
             {
                 _kassen = await db.GetLatestKassenbestaendeAsync(AppSettings.AutomatenName);
@@ -463,7 +508,12 @@ namespace TaMi_Einzahlautomat
                 }
             }
 
-            _panel.Controls.Clear();
+            try
+            {
+                _panel.SuspendLayout();
+                _panel.Controls.Clear();
+            }
+            catch { }
 
             for (int i = 0; i < n; i++)
             {
@@ -597,6 +647,8 @@ namespace TaMi_Einzahlautomat
 
                 _panel.Controls.Add(panelRow);
             }
+
+            try { _panel.ResumeLayout(performLayout: true); } catch { }
 
             ValidateSum();
         }
