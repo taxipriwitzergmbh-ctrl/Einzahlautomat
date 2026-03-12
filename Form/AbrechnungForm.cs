@@ -491,6 +491,7 @@ namespace TaMi_Einzahlautomat
         private int[] _coinAvail = new int[8] { -1, -1, -1, -1, -1, -1, -1, -1 };
         private int[] _coin2Avail = new int[8] { -1, -1, -1, -1, -1, -1, -1, -1 };
         private DateTime _lastCoinLevelsRequestUtc = DateTime.MinValue;
+        private DateTime _lastPayoutLevelsScheduleUtc = DateTime.MinValue;
 
         // Payout Münzen (reduziert – ungenutzte Felder entfernt)
         private decimal _geplanteMuenzAuszahlung = 0m;
@@ -3208,7 +3209,8 @@ namespace TaMi_Einzahlautomat
             if (_coin is SmartCoinV1 sc1)
             {
                 sc1.CoinLevelsUpdated += OnCoinLevelsUpdated; sc1.CoinAccepted += CoinOnAccepted; sc1.EventLog += CoinOnLog; sc1.CoinDispensedDeltaCent += OnCoinDispensedDelta; sc1.CoinDispenseComplete += OnCoinDispenseComplete; try { sc1.CoinPayoutError += OnCoinPayoutError; } catch { }
-                _coinEventsAttached = true; try { sc1.RequestCoinLevels(); } catch { }
+                _coinEventsAttached = true;
+                try { RequestCoinLevels(); } catch { }
             }
             else if (_coin is Rm5CctalkValidator rm5)
             {
@@ -3292,7 +3294,7 @@ namespace TaMi_Einzahlautomat
         private void CoinOnAccepted(int cent)
         {
             if (cent <= 0) return;
-            try { BeginInvoke((Action)(() => { AddEingezahlt(cent / 100m); })); } catch { }
+            try { BeginInvoke((Action)(() => { AddEingezahlt(cent / 100m); try { SmartCoinV1.ScheduleLevelsGlobal(); } catch { } })); } catch { }
         }
         private void CoinOnLog(string msg) { try { BeginInvoke((Action)(() => Text = $"Schicht abrechnen – Coin: {msg}")); } catch { } }
 
@@ -3308,6 +3310,7 @@ namespace TaMi_Einzahlautomat
                     try { sc1.CoinPayoutError += OnCoinPayoutError; } catch { }
                 }
                 _coin2EventsAttached = true;
+                try { RequestCoinLevels(); } catch { }
             }
             catch { }
         }
@@ -3856,6 +3859,7 @@ namespace TaMi_Einzahlautomat
                 }
             }
             if (!_payoutInProgress && lblSummeAuszahlung != null) lblSummeAuszahlung.Text = "0,00 €"; _geplanteAuszahlung = 0m; _notesDispensedCent = 0;
+            try { _lastPayoutLevelsScheduleUtc = DateTime.MinValue; } catch { }
         }
 
         private async void OnCoinDispenseComplete()
@@ -3891,6 +3895,7 @@ namespace TaMi_Einzahlautomat
                 }
             }
             if (!_payoutInProgress && lblSummeAuszahlung != null) lblSummeAuszahlung.Text = "0,00 €"; AppLogger.Log("Münzauszahlung abgeschlossen");
+            try { _lastPayoutLevelsScheduleUtc = DateTime.MinValue; } catch { }
         }
 
         private int GetAvailByIndex(int idx) { var avail = GetCurrentAvailability(); return (idx >= 0 && idx < avail.Length) ? avail[idx] : 0; }
@@ -4101,7 +4106,7 @@ namespace TaMi_Einzahlautomat
                 private int GetCombinedCoinAvail(int idx) { try { int a = (idx >= 0 && idx < _coinAvail.Length) ? _coinAvail[idx] : -1; int b = (idx >= 0 && idx < _coin2Avail.Length) ? _coin2Avail[idx] : -1; if (a < 0 && b < 0) return -1; int sum = 0; if (a > 0) sum += a; if (b > 0) sum += b; return sum; } catch { return -1; } }
                 private void OnCoinDispensedDelta(int cent)
                 {
-                    if (AppLogger.KassensturzActive) return; if (cent <= 0) return; try { BeginInvoke((Action)(() => { _coinsDispensedCentTotal += cent; decimal delta = Math.Round(cent / 100m, 2); if (delta <= 0m) return; decimal remain = delta; if (_eingezahltSession > 0m) { var take = Math.Min(_eingezahltSession, remain); _eingezahltSession = Math.Round(_eingezahltSession - take, 2); remain = Math.Round(remain - take, 2); } if (remain > 0m && _personalGuthaben > 0m) { var takeG = Math.Min(_personalGuthaben, remain); _personalGuthaben = Math.Round(_personalGuthaben - takeG, 2); remain = Math.Round(remain - takeG, 2); _consumedGuthabenCoins = Math.Round(_consumedGuthabenCoins + takeG, 2); } if (remain > 0m) AppLogger.Log($"WARN: Delta {remain:0.00} € nicht gedeckt."); _geplanteMuenzAuszahlung = Math.Max(0m, Math.Round(_geplanteMuenzAuszahlung - delta, 2)); try { SmartCoinV1.ScheduleLevelsGlobal(); } catch { } decimal restScheine = Math.Max(0m, Math.Round(_geplanteAuszahlung - (_notesDispensedCent / 100m), 2)); decimal restMuenzen = Math.Max(0m, Math.Round(_geplanteMuenzAuszahlung, 2)); decimal restSum = restScheine + restMuenzen; if (_payoutInProgress && lblSummeAuszahlung != null) lblSummeAuszahlung.Text = $"{restSum:C2}"; lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; UpdateAbrechnenSummaries(); UpdateMaxVerfuegbar(); })); } catch { }
+                    if (AppLogger.KassensturzActive) return; if (cent <= 0) return; try { BeginInvoke((Action)(() => { _coinsDispensedCentTotal += cent; decimal delta = Math.Round(cent / 100m, 2); if (delta <= 0m) return; decimal remain = delta; if (_eingezahltSession > 0m) { var take = Math.Min(_eingezahltSession, remain); _eingezahltSession = Math.Round(_eingezahltSession - take, 2); remain = Math.Round(remain - take, 2); } if (remain > 0m && _personalGuthaben > 0m) { var takeG = Math.Min(_personalGuthaben, remain); _personalGuthaben = Math.Round(_personalGuthaben - takeG, 2); remain = Math.Round(remain - takeG, 2); _consumedGuthabenCoins = Math.Round(_consumedGuthabenCoins + takeG, 2); } if (remain > 0m) AppLogger.Log($"WARN: Delta {remain:0.00} € nicht gedeckt."); _geplanteMuenzAuszahlung = Math.Max(0m, Math.Round(_geplanteMuenzAuszahlung - delta, 2)); decimal restScheine = Math.Max(0m, Math.Round(_geplanteAuszahlung - (_notesDispensedCent / 100m), 2)); decimal restMuenzen = Math.Max(0m, Math.Round(_geplanteMuenzAuszahlung, 2)); decimal restSum = restScheine + restMuenzen; if (_payoutInProgress && lblSummeAuszahlung != null) lblSummeAuszahlung.Text = $"{restSum:C2}"; if (restSum <= 0m) { try { _lastPayoutLevelsScheduleUtc = DateTime.MinValue; } catch { } } else { try { var now = DateTime.UtcNow; if ((now - _lastPayoutLevelsScheduleUtc).TotalMilliseconds >= 1200) { _lastPayoutLevelsScheduleUtc = now; SmartCoinV1.ScheduleLevelsGlobal(); } } catch { } } lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}"; lblEingezahlt.Text = $"Eingezahlt: {_eingezahltSession:C2}"; UpdateAbrechnenSummaries(); UpdateMaxVerfuegbar(); })); } catch { }
                 }
                 private void SspOnPayoutError(int wert, int neu)
                 {
