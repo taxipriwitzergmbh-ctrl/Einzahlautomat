@@ -38,6 +38,7 @@ namespace TaMi_Einzahlautomat
 
         private Panel _panelBestand;
         private Label[] _lblBestandAnzCoins = new Label[8];
+        private CheckBox[] _chkAcceptCoins = new CheckBox[8];
         private Label _lblBestandSumCoins;
         private Button _btnBestandRefresh;
         private Timer _tmrBestand;
@@ -213,7 +214,10 @@ namespace TaMi_Einzahlautomat
             Controls.Add(_panelBestand);
             var lblTitel = new Label { Text = "Kassenbestand (Münzen, Stück):", Location = new Point(10, 10), AutoSize = true, Font = new Font("Segoe UI Variable", 13F, FontStyle.Bold) };
             _panelBestand.Controls.Add(lblTitel);
+            var lblAcceptTitle = new Label { Text = "Akzeptieren", Location = new Point(190, 28), AutoSize = true, Font = new Font("Segoe UI Variable", 10F, FontStyle.Bold) };
+            _panelBestand.Controls.Add(lblAcceptTitle);
             string[] denomText = { "1 c", "2 c", "5 c", "10 c", "20 c", "50 c", "1 €", "2 €" };
+            string[] acceptKeys = { "Accept1Cent", "Accept2Cent", "Accept5Cent", "Accept10Cent", "Accept20Cent", "Accept50Cent", "Accept1Euro", "Accept2Euro" };
             for (int i = 0; i < denomText.Length; i++)
             {
                 var ldenom = new Label { Text = $"{denomText[i],4}:", Location = new Point(20, 50 + i * 38), AutoSize = true, Font = new Font("Segoe UI Variable", 12F) };
@@ -221,6 +225,28 @@ namespace TaMi_Einzahlautomat
                 var lval = new Label { Text = "0", Location = new Point(120, 50 + i * 38), Size = new Size(60, 32), TextAlign = ContentAlignment.MiddleRight, BorderStyle = BorderStyle.FixedSingle, Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), BackColor = Color.White };
                 _panelBestand.Controls.Add(lval);
                 _lblBestandAnzCoins[i] = lval;
+
+                var chk = new CheckBox
+                {
+                    Location = new Point(225, 57 + i * 38),
+                    Size = new Size(18, 18),
+                    Checked = ReadAcceptIni("SmartCoin/1", acceptKeys[i], true)
+                };
+                int idx = i;
+                chk.CheckedChanged += (s, e) =>
+                {
+                    try
+                    {
+                        WriteAcceptIni("SmartCoin/1", acceptKeys[idx], chk.Checked);
+                        if (_coin is SmartCoinV1 sc && sc.Connected)
+                        {
+                            try { sc.Enable(true); } catch { }
+                        }
+                    }
+                    catch { }
+                };
+                _panelBestand.Controls.Add(chk);
+                _chkAcceptCoins[i] = chk;
             }
             // Reposition sum + refresh below last row (avoids overlap with 2€ row)
             int lastRowYCoins = 50 + (denomText.Length - 1) * 38; // y of last denomination line
@@ -249,6 +275,26 @@ namespace TaMi_Einzahlautomat
             UpdateStatusUi();
             RefreshBestandCoins();
             ApplyDisabledState();
+        }
+
+        private bool ReadAcceptIni(string section, string key, bool def)
+        {
+            try
+            {
+                var s = IniHelper.ReadValue(section, key, _iniPath);
+                if (string.IsNullOrWhiteSpace(s)) return def;
+                s = s.Trim();
+                if (s == "1") return true;
+                if (s == "0") return false;
+                if (bool.TryParse(s, out var b)) return b;
+            }
+            catch { }
+            return def;
+        }
+
+        private void WriteAcceptIni(string section, string key, bool value)
+        {
+            try { IniHelper.WriteValue(section, key, value ? "1" : "0", _iniPath); } catch { }
         }
 
         private void OnTypeChanged()

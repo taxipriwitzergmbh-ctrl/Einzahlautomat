@@ -55,6 +55,68 @@ namespace TaMi_Einzahlautomat.Coins
         // Enable-Puffer, damit Enable nach Handshake automatisch angewandt wird
         private volatile bool _wantEnabled = false;
 
+        // Per-Denom Inhibit (true = erlaubt). Default: alles erlaubt inkl. 1ct.
+        // (Später per UI/Config individuell sperrbar.)
+        private readonly bool[] _denomEnabled = new bool[8] { true, true, true, true, true, true, true, true };
+
+        private string GetIniSectionName()
+        {
+            try
+            {
+                if (object.ReferenceEquals(this, CoinManager.Instance)) return "SmartCoin/1";
+                if (object.ReferenceEquals(this, Coin2Manager.Instance)) return "SmartCoin/2";
+            }
+            catch { }
+            return null;
+        }
+
+        internal void ReloadDenomConfigFromIni()
+        {
+            try
+            {
+                var section = GetIniSectionName();
+                if (string.IsNullOrWhiteSpace(section)) return;
+
+                var path = AppSettings.IniPath;
+
+                bool ReadBool(string key, bool def)
+                {
+                    try
+                    {
+                        var s = IniHelper.ReadValue(section, key, path);
+                        if (string.IsNullOrWhiteSpace(s)) return def;
+                        s = s.Trim();
+                        if (s == "1") return true;
+                        if (s == "0") return false;
+                        if (bool.TryParse(s, out var b)) return b;
+                    }
+                    catch { }
+                    return def;
+                }
+
+                // Default: alles erlaubt
+                _denomEnabled[0] = ReadBool("Accept1Cent", true);
+                _denomEnabled[1] = ReadBool("Accept2Cent", true);
+                _denomEnabled[2] = ReadBool("Accept5Cent", true);
+                _denomEnabled[3] = ReadBool("Accept10Cent", true);
+                _denomEnabled[4] = ReadBool("Accept20Cent", true);
+                _denomEnabled[5] = ReadBool("Accept50Cent", true);
+                _denomEnabled[6] = ReadBool("Accept1Euro", true);
+                _denomEnabled[7] = ReadBool("Accept2Euro", true);
+
+                Log("Denom-INI geladen (" + section + "): " +
+                    "1c=" + (_denomEnabled[0] ? "1" : "0") + "," +
+                    "2c=" + (_denomEnabled[1] ? "1" : "0") + "," +
+                    "5c=" + (_denomEnabled[2] ? "1" : "0") + "," +
+                    "10c=" + (_denomEnabled[3] ? "1" : "0") + "," +
+                    "20c=" + (_denomEnabled[4] ? "1" : "0") + "," +
+                    "50c=" + (_denomEnabled[5] ? "1" : "0") + "," +
+                    "1e=" + (_denomEnabled[6] ? "1" : "0") + "," +
+                    "2e=" + (_denomEnabled[7] ? "1" : "0"));
+            }
+            catch { }
+        }
+
         // Vorrätige Münzen (Index 0..7 = {1,2,5,10,20,50,100,200} Cent). -1 = unbekannt
         private readonly int[] _coinLevels = new int[8] { -1, -1, -1, -1, -1, -1, -1, -1 };
         private readonly object _levelsLock = new object();
@@ -78,10 +140,9 @@ namespace TaMi_Einzahlautomat.Coins
             catch { return ""; }
         }
 
-        // NEU: Zeitstempel der letzten verarbeiteten POLL-Antwort für faire Interleaving-Strategie
+        // Poll-Strategie wie KassensystemPRO: strikt FIFO, kein bevorzugtes Einschieben von Polls
+        // (Kein Interleaving mit EnqueueFront nach Zeitabstand.)
         private DateTime _lastPollUtc = DateTime.MinValue;
-        // Minimalintervall zwischen zwei Polls auch bei fuller Queue (ms)
-        private const int MaxPollGapMs = 150; // enger takten, damit einzelne Münzen erfasst werden
         private volatile bool _requestLevelsOnNextPoll = false; // trigger from external events
 
         // NEU: Tracking SmartEmpty
@@ -109,7 +170,11 @@ namespace TaMi_Einzahlautomat.Coins
         public void Connect()
         {
             if (Connected) return;
+            // Standardzustand beim Start: deaktiviert, damit ohne Login keine Annahme erfolgt.
+            // Login-Flows rufen später explizit Enable(true) (z.B. in LoginForm.LogBestandSnapshot).
+            _wantEnabled = false;
             _stop = false;
+            try { ReloadDenomConfigFromIni(); } catch { }
             _thread = new Thread(CommLoop) { IsBackground = true, Name = "SmartCoinV1-Comm" };
             _thread.Start();
             Connected = true;
@@ -150,6 +215,7 @@ namespace TaMi_Einzahlautomat.Coins
 
             if (enable)
             {
+                try { ReloadDenomConfigFromIni(); } catch { }
                 if (_encryptionOk) EnqueueEnableSequence();
                 else Log("Enable vorgemerkt (wird nach Handshake ausgeführt)");
             }
@@ -184,15 +250,6 @@ namespace TaMi_Einzahlautomat.Coins
                         _encryptionOk = false;
                         Log($"Connected (Port={_cmd.ComPort}, Addr={_cmd.SSPAddress}, Enc={_cmd.EncryptionStatus})");
                         SetStatus("Verbunden");
-                        try
-                        {
-                            // Einige Geräte benötigen nach Neustart einen expliziten RESET, wie im KassensystemPRO.
-                            // Sende vor dem Handshake einmal RESET, danach wie gewohnt SYNC/Key-Exchange.
-                            Enqueue((byte)0, (byte)1, (byte)CCommands.SSP_CMD_RESET);
-                            Log("RESET enqueued (Startup)");
-                            SetStatus("Reset...");
-                        }
-                        catch { }
                         Sync(); // unverschlüsselt
 
                         while (!_stop)
@@ -254,19 +311,9 @@ namespace TaMi_Einzahlautomat.Coins
                                 finally { _requestLevelsOnNextPoll = false; }
                             }
 
-                            // Interleaving-Strategie wie in KassensystemPRO: wenn nichts ansteht -> einfach einen POLL einreihen
+                            // KassensystemPRO: Wenn Sendeliste leer -> einen Poll anfügen, sonst FIFO abarbeiten.
                             if (!HasQueuedItems())
-                            {
                                 Poll();
-                            }
-                            else
-                            {
-                                // Wenn länger kein Poll verarbeitet wurde, schiebe einen Poll vorn ein (ohne Pause)
-                                if ((DateTime.UtcNow - _lastPollUtc).TotalMilliseconds > MaxPollGapMs)
-                                {
-                                    EnqueueFront((byte)0, (byte)1, (byte)CCommands.SSP_CMD_POLL);
-                                }
-                            }
 
                             var elem = Dequeue();
                             if (elem.Count <= 2)
@@ -340,15 +387,23 @@ namespace TaMi_Einzahlautomat.Coins
 
                             if (elem[2] == (byte)CCommands.SSP_CMD_POLL)
                             {
-                                // Wie KassensystemPRO: bei Idle 100ms, sonst 25ms
+                                // Taktung: bei Aktivität (Einwurf/Auszahlung) schneller pollen.
                                 var st = _status ?? string.Empty;
                                 bool idle = st.IndexOf("idle", StringComparison.OrdinalIgnoreCase) >= 0
                                             || st.IndexOf("bereit", StringComparison.OrdinalIgnoreCase) >= 0;
-                                Thread.Sleep(idle ? 100 : 25);
+                                bool deposit = st.IndexOf("einwurf", StringComparison.OrdinalIgnoreCase) >= 0;
+                                bool dispensing = st.IndexOf("dispens", StringComparison.OrdinalIgnoreCase) >= 0
+                                                  || st.IndexOf("busy", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                                if (deposit || dispensing)
+                                    Thread.Sleep(10);
+                                else
+                                    Thread.Sleep(idle ? 60 : 20);
                             }
                             else
                             {
-                                Thread.Sleep(25);
+                                // Auch andere Kommandos (z.B. PAYOUT) etwas schneller takten
+                                Thread.Sleep(15);
                             }
                         }
                     }
@@ -485,7 +540,8 @@ namespace TaMi_Einzahlautomat.Coins
 
                 _encryptionOk = true;
                 SetStatus("Handshake OK");
-                if (_wantEnabled) EnqueueEnableSequence();
+                // KassensystemPRO: nach Key-Exchange nur ProtocolVersion setzen.
+                // Enable/Disable/Inhibits werden dort explizit über separate Methoden (Freigeben/Disable) gesteuert.
 
                 // NEU: einmaligen Retry eines zuvor abgewiesenen Payouts
                 try
@@ -998,6 +1054,7 @@ namespace TaMi_Einzahlautomat.Coins
         private void EnqueueEnableSequence()
         {
             Enqueue((byte)1, (byte)2, (byte)CCommands.SSP_CMD_SET_COIN_MECH_GLOBAL_INHIBIT, (byte)1);
+            EnqueueCoinMechInhibits();
             Enqueue((byte)1, (byte)1, (byte)CCommands.SSP_CMD_ENABLE);
         }
 
@@ -1005,6 +1062,34 @@ namespace TaMi_Einzahlautomat.Coins
         {
             Enqueue((byte)1, (byte)2, (byte)CCommands.SSP_CMD_SET_COIN_MECH_GLOBAL_INHIBIT, (byte)0);
             Enqueue((byte)1, (byte)1, (byte)CCommands.SSP_CMD_DISABLE);
+        }
+
+        // KassensystemPRO setzt Inhibits nicht als Bitmaske, sondern pro Denomination:
+        // DataLength=7: cmd + yes/no + value + 0 + 'E''U''R'
+        // (ja/nein ist dort "1=annehmen", "0=sperren").
+        private void EnqueueCoinMechInhibits()
+        {
+            // Reihenfolge wie VB: 1,2,5,10,20,50,100,200
+            int[] vals = { 1, 2, 5, 10, 20, 50, 100, 200 };
+            for (int i = 0; i < 8; i++)
+            {
+                EnqueueSetInhibit(vals[i], _denomEnabled[i] ? 1 : 0);
+            }
+        }
+
+        private void EnqueueSetInhibit(int valueCent, int yesOrNo)
+        {
+            // VB: [enc=1][len=7][cmd=SET_COIN_MECH_INHIBITS][yes/no][coin][0]['E']['U']['R']
+            if (yesOrNo != 0) yesOrNo = 1;
+            var elem = NewCmd((byte)1, (byte)7, (byte)CCommands.SSP_CMD_SET_COIN_MECH_INHIBITS);
+            elem.Add((byte)yesOrNo);
+            elem.Add((byte)(valueCent & 0xFF));
+            elem.Add(0);
+            elem.Add((byte)'E');
+            elem.Add((byte)'U');
+            elem.Add((byte)'R');
+            lock (_queueLock) { _sendQueue.Add(elem); }
+            Log($"SET_INHIBIT {valueCent}ct={(yesOrNo == 1 ? "on" : "off")}");
         }
 
         private void RaiseCoin(int cent)
@@ -1082,7 +1167,7 @@ namespace TaMi_Einzahlautomat.Coins
                 Log("PayoutCoins: ungültige Stückzahlliste.");
                 return;
             }
-            try { BusyAnimationManager.Begin("Münzauszahlung lüuft"); } catch { }
+            try { BusyAnimationManager.Begin("Münzauszahlung läuft"); } catch { }
 
             int[] valOrder = new[] { 1, 2, 5, 10, 20, 50, 100, 200 };
 
@@ -1210,13 +1295,7 @@ namespace TaMi_Einzahlautomat.Coins
             lock (_queueLock) { _sendQueue.Add(elem); }
         }
 
-        // NEU: Front-Queueing für priorisierte Polls
-        private void EnqueueFront(byte enc, byte len, byte cmd, params byte[] rest)
-        {
-            var elem = NewCmd(enc, len, cmd);
-            foreach (var r in rest) elem.Add(r);
-            lock (_queueLock) { _sendQueue.Insert(0, elem); }
-        }
+        // Hinweis: KassensystemPRO arbeitet FIFO; kein Front-Queueing.
 
         private List<byte> NewCmd(byte enc, byte len, byte cmd)
         {

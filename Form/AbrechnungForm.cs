@@ -1983,12 +1983,33 @@ namespace TaMi_Einzahlautomat
             if (userLocked && _busyLockSince == DateTime.MinValue) _busyLockSince = DateTime.UtcNow; else if (!userLocked) _busyLockSince = DateTime.MinValue;
             try
             {
+                // Nur Busy-Lock setzen; die finale Enabled-Entscheidung + Optik macht UpdateAuszahlenEnabled()
                 if (btnAuszahlen != null) btnAuszahlen.Enabled = !userLocked;
                 if (btnAbmelden != null)
                 {
                     bool newEnabled = !userLocked;
                     bool prevEnabled = _lastAbmeldenEnabled;
                     btnAbmelden.Enabled = newEnabled;
+
+                    // Optik: bei Disabled grau zeichnen (ModernButton_Paint nutzt b.Tag als Gradient-Farben)
+                    try
+                    {
+                        if (newEnabled)
+                        {
+                            btnAbmelden.Tag = new Tuple<Color, Color>(UiTheme.DangerStart, UiTheme.DangerEnd);
+                            btnAbmelden.ForeColor = Color.White;
+                        }
+                        else
+                        {
+                            var g1 = Color.FromArgb(170, 170, 170);
+                            var g2 = Color.FromArgb(130, 130, 130);
+                            btnAbmelden.Tag = new Tuple<Color, Color>(g1, g2);
+                            btnAbmelden.ForeColor = Color.White;
+                        }
+                        btnAbmelden.Invalidate();
+                    }
+                    catch { }
+
                     if (newEnabled && !prevEnabled)
                     {
                         try { BusyAnimationManager.End("abmelden enabled"); } catch { }
@@ -2090,12 +2111,37 @@ namespace TaMi_Einzahlautomat
             {
                 if (btnAuszahlen == null) return;
                 bool userLocked = _payoutInProgress || _bookingInProgress || AdminMode.IsOpen || AnyCoinEinwurf();
-                if (userLocked) { btnAuszahlen.Enabled = false; return; }
-                decimal sumNotes = 0m; for (int i = 0; i < scheinWerte.Length; i++) sumNotes += scheinWerte[i] * auswahlAnzahl[i];
-                decimal sumCoins = 0m; for (int i = 0; i < muenzWerte.Length; i++) sumCoins += (muenzWerte[i] * auswahlAnzahlMuenzen[i]) / 100m;
-                decimal sum = sumNotes + sumCoins;
-                decimal maxVerfuegbar = _eingezahltSession + _personalGuthaben;
-                btnAuszahlen.Enabled = (sum > 0m) && (sum <= maxVerfuegbar);
+                if (userLocked)
+                {
+                    btnAuszahlen.Enabled = false;
+                }
+                else
+                {
+                    decimal sumNotes = 0m; for (int i = 0; i < scheinWerte.Length; i++) sumNotes += scheinWerte[i] * auswahlAnzahl[i];
+                    decimal sumCoins = 0m; for (int i = 0; i < muenzWerte.Length; i++) sumCoins += (muenzWerte[i] * auswahlAnzahlMuenzen[i]) / 100m;
+                    decimal sum = sumNotes + sumCoins;
+                    decimal maxVerfuegbar = _eingezahltSession + _personalGuthaben;
+                    btnAuszahlen.Enabled = (sum > 0m) && (sum <= maxVerfuegbar);
+                }
+
+                // Optik passend zur finalen Enabled-Logik
+                try
+                {
+                    if (btnAuszahlen.Enabled)
+                    {
+                        btnAuszahlen.Tag = new Tuple<Color, Color>(Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32));
+                        btnAuszahlen.ForeColor = Color.White;
+                    }
+                    else
+                    {
+                        var g1 = Color.FromArgb(170, 170, 170);
+                        var g2 = Color.FromArgb(130, 130, 130);
+                        btnAuszahlen.Tag = new Tuple<Color, Color>(g1, g2);
+                        btnAuszahlen.ForeColor = Color.White;
+                    }
+                    btnAuszahlen.Invalidate();
+                }
+                catch { }
             }
             catch { }
         }
@@ -2691,6 +2737,14 @@ namespace TaMi_Einzahlautomat
             btnAuszahlen.FlatAppearance.BorderSize = 0;
             btnAuszahlen.FlatAppearance.MouseOverBackColor = Color.FromArgb(56, 142, 60);
             btnAuszahlen.FlatAppearance.MouseDownBackColor = Color.FromArgb(27, 94, 32);
+            try
+            {
+                ApplyModernButtonStyle(btnAuszahlen, Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32));
+                btnAuszahlen.FlatAppearance.MouseOverBackColor = Color.Transparent;
+                btnAuszahlen.Tag = new Tuple<Color, Color>(Color.FromArgb(46, 125, 50), Color.FromArgb(27, 94, 32));
+                btnAuszahlen.ForeColor = Color.White;
+            }
+            catch { }
             try { btnAuszahlen.Region = rr(btnAuszahlen, 0, 0, btnAuszahlen.Width, btnAuszahlen.Height, 14, 14); } catch { }
             btnAuszahlen.Click += btnAuszahlen_Click;
             footer.Controls.Add(btnAuszahlen);
@@ -3294,7 +3348,16 @@ namespace TaMi_Einzahlautomat
         private void CoinOnAccepted(int cent)
         {
             if (cent <= 0) return;
-            try { BeginInvoke((Action)(() => { AddEingezahlt(cent / 100m); try { SmartCoinV1.ScheduleLevelsGlobal(); } catch { } })); } catch { }
+            try
+            {
+                BeginInvoke((Action)(() =>
+                {
+                    try { UpdateBusyUI(); } catch { }
+                    AddEingezahlt(cent / 100m);
+                    try { SmartCoinV1.ScheduleLevelsGlobal(); } catch { }
+                }));
+            }
+            catch { }
         }
         private void CoinOnLog(string msg) { try { BeginInvoke((Action)(() => Text = $"Schicht abrechnen – Coin: {msg}")); } catch { } }
 
@@ -3336,7 +3399,16 @@ namespace TaMi_Einzahlautomat
         private void Coin2OnAccepted(int cent)
         {
             if (cent <= 0) return;
-            try { BeginInvoke((Action)(() => { AddEingezahlt(cent / 100m); try { SmartCoinV1.ScheduleLevelsGlobal(); } catch { } })); } catch { }
+            try
+            {
+                BeginInvoke((Action)(() =>
+                {
+                    try { UpdateBusyUI(); } catch { }
+                    AddEingezahlt(cent / 100m);
+                    try { SmartCoinV1.ScheduleLevelsGlobal(); } catch { }
+                }));
+            }
+            catch { }
         }
         private void Coin2OnLog(string msg) { try { BeginInvoke((Action)(() => Text = $"Schicht abrechnen – Coin/2: {msg}")); } catch { } }
 
