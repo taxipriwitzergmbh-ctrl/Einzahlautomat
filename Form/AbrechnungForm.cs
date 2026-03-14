@@ -20,6 +20,34 @@ namespace TaMi_Einzahlautomat
 {
     public partial class AbrechnungForm : Form
     {
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            try
+            {
+                if (keyData == (Keys.Control | Keys.M))
+                {
+                    try
+                    {
+                        if (nudManuell != null && btnManuellAdd != null)
+                        {
+                            bool vis = !nudManuell.Visible;
+                            nudManuell.Visible = vis;
+                            btnManuellAdd.Visible = vis;
+                            try { UpdateBuchenEnabled(); } catch { }
+                        }
+                    }
+                    catch { }
+                    return true;
+                }
+                if (keyData == (Keys.Control | Keys.A))
+                {
+                    try { if (btnAdmin != null) btnAdmin.Visible = !btnAdmin.Visible; } catch { }
+                    return true;
+                }
+            }
+            catch { }
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
         private sealed class AbrechnenSurfacePanel : Panel
         {
             protected override void OnPaintBackground(PaintEventArgs e)
@@ -1301,6 +1329,176 @@ namespace TaMi_Einzahlautomat
         }
 
         private Label lblBelegInfo;
+        private Label lblNotizenInfo;
+        private Timer _notesScrollTimer;
+        private int _notesScrollOffsetPx;
+        private int _notesScrollVelocityPx;
+        private int _notesScrollPauseMs;
+        private int _notesScrollPauseRemainingMs;
+        private int _notesScrollLastTextHash;
+        private Bitmap _notesScrollBitmap;
+        private int _notesScrollBitmapTextHash;
+        private int _notesScrollBitmapWidth;
+        private float _notesScrollBitmapFontSize;
+        private List<string> _notesScrollLines;
+        private int _notesScrollFirstLine;
+        private int _notesScrollLineOffsetPx;
+        private int _notesScrollLineHeightPx;
+
+        private void ResetNotesScrollBitmap()
+        {
+            try { _notesScrollBitmap?.Dispose(); } catch { }
+            _notesScrollBitmap = null;
+            _notesScrollBitmapTextHash = 0;
+            _notesScrollBitmapWidth = 0;
+            _notesScrollBitmapFontSize = 0f;
+            _notesScrollLines = null;
+            _notesScrollFirstLine = 0;
+            _notesScrollLineOffsetPx = 0;
+            _notesScrollLineHeightPx = 0;
+        }
+
+        private void EnsureNotesScrollLines(string txt, int wrapWidth)
+        {
+            if (lblNotizenInfo == null) { ResetNotesScrollBitmap(); return; }
+            if (string.IsNullOrEmpty(txt)) { ResetNotesScrollBitmap(); return; }
+            if (wrapWidth <= 0) wrapWidth = 1;
+
+            int h = txt.GetHashCode();
+            float fs = 0f;
+            string fn = string.Empty;
+            FontStyle fsty = FontStyle.Regular;
+            try
+            {
+                if (lblNotizenInfo.Font != null)
+                {
+                    fs = lblNotizenInfo.Font.Size;
+                    fn = lblNotizenInfo.Font.Name ?? string.Empty;
+                    fsty = lblNotizenInfo.Font.Style;
+                }
+            }
+            catch { fs = 0f; fn = string.Empty; fsty = FontStyle.Regular; }
+
+            int fontKey = 0;
+            try { unchecked { fontKey = (fn.GetHashCode() * 397) ^ (int)fsty; } } catch { fontKey = (int)fsty; }
+            int combinedKey = 0;
+            try { unchecked { combinedKey = (h * 397) ^ fontKey; } } catch { combinedKey = h; }
+
+            if (_notesScrollLines != null && _notesScrollBitmapTextHash == combinedKey && _notesScrollBitmapWidth == wrapWidth && Math.Abs(_notesScrollBitmapFontSize - fs) < 0.01f)
+                return;
+
+            _notesScrollBitmapTextHash = combinedKey;
+            _notesScrollBitmapWidth = wrapWidth;
+            _notesScrollBitmapFontSize = fs;
+            _notesScrollFirstLine = 0;
+            _notesScrollLineOffsetPx = 0;
+
+            // line height (TextRenderer uses slightly different metrics than GDI+)
+            try { _notesScrollLineHeightPx = TextRenderer.MeasureText("Ag", lblNotizenInfo.Font, new Size(int.MaxValue, int.MaxValue), TextFormatFlags.NoPadding).Height; }
+            catch { _notesScrollLineHeightPx = 20; }
+            if (_notesScrollLineHeightPx < 12) _notesScrollLineHeightPx = 12;
+
+            // Word-wrap into draw-lines using TextRenderer
+            var result = new List<string>();
+            try
+            {
+                var paragraphs = (txt ?? string.Empty).Replace("\r\n", "\n").Replace("\r", "\n").Split(new[] { '\n' }, StringSplitOptions.None);
+                foreach (var p in paragraphs)
+                {
+                    var line = (p ?? string.Empty);
+                    if (line.Length == 0) { result.Add(string.Empty); continue; }
+
+                    // simple greedy wrap: split by spaces
+                    var words = line.Split(new[] { ' ' }, StringSplitOptions.None);
+                    string cur = string.Empty;
+                    for (int i = 0; i < words.Length; i++)
+                    {
+                        var w = words[i] ?? string.Empty;
+                        var test = string.IsNullOrEmpty(cur) ? w : (cur + " " + w);
+                        int wpx = 0;
+                        try { wpx = TextRenderer.MeasureText(test, lblNotizenInfo.Font, new Size(int.MaxValue, int.MaxValue), TextFormatFlags.NoPadding).Width; }
+                        catch { wpx = wrapWidth + 1; }
+
+                        if (wpx > wrapWidth && !string.IsNullOrEmpty(cur))
+                        {
+                            result.Add(cur);
+                            cur = w;
+                        }
+                        else
+                        {
+                            cur = test;
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(cur)) result.Add(cur);
+                }
+            }
+            catch
+            {
+                result.Clear();
+                result.Add(txt ?? string.Empty);
+            }
+
+            _notesScrollLines = result;
+        }
+
+        private void EnsureNotesScrollBitmap(string txt, int wrapWidth)
+        {
+            if (string.IsNullOrEmpty(txt) || lblNotizenInfo == null) { ResetNotesScrollBitmap(); return; }
+            if (wrapWidth <= 0) wrapWidth = 1;
+            int h = txt.GetHashCode();
+            float fs = 0f;
+            try { fs = lblNotizenInfo.Font != null ? lblNotizenInfo.Font.Size : 0f; } catch { fs = 0f; }
+
+            if (_notesScrollBitmap != null && _notesScrollBitmapTextHash == h && _notesScrollBitmapWidth == wrapWidth && Math.Abs(_notesScrollBitmapFontSize - fs) < 0.01f)
+                return;
+
+            ResetNotesScrollBitmap();
+            _notesScrollBitmapTextHash = h;
+            _notesScrollBitmapWidth = wrapWidth;
+            _notesScrollBitmapFontSize = fs;
+
+            try
+            {
+                // measure required height (with unlimited height but fixed width)
+                int measuredH = 0;
+                using (var g = lblNotizenInfo.CreateGraphics())
+                using (var fmt = new StringFormat())
+                {
+                    fmt.Alignment = StringAlignment.Near;
+                    fmt.LineAlignment = StringAlignment.Near;
+                    fmt.Trimming = StringTrimming.None;
+                    fmt.FormatFlags &= ~StringFormatFlags.NoWrap;
+                    fmt.FormatFlags &= ~StringFormatFlags.NoClip;
+                    var sz = g.MeasureString(txt, lblNotizenInfo.Font, wrapWidth, fmt);
+                    measuredH = (int)Math.Ceiling(sz.Height);
+                }
+                if (measuredH < 1) measuredH = 1;
+
+                // extra padding so last line never clips
+                int padBottom = 12;
+                int bmpH = measuredH + padBottom;
+                var bmp = new Bitmap(Math.Max(1, wrapWidth), Math.Max(1, bmpH), System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+                using (var g2 = Graphics.FromImage(bmp))
+                using (var fmt2 = new StringFormat())
+                {
+                    g2.Clear(Color.Transparent);
+                    g2.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+                    fmt2.Alignment = StringAlignment.Near;
+                    fmt2.LineAlignment = StringAlignment.Near;
+                    fmt2.Trimming = StringTrimming.None;
+                    fmt2.FormatFlags &= ~StringFormatFlags.NoWrap;
+                    fmt2.FormatFlags &= ~StringFormatFlags.NoClip;
+                    var rect = new RectangleF(0, 0, wrapWidth, bmpH);
+                    using (var br = new SolidBrush(lblNotizenInfo.ForeColor))
+                        g2.DrawString(txt, lblNotizenInfo.Font, br, rect, fmt2);
+                }
+                _notesScrollBitmap = bmp;
+            }
+            catch
+            {
+                ResetNotesScrollBitmap();
+            }
+        }
 
         private void BuildAbrechnenTab()
         {
@@ -1623,7 +1821,276 @@ namespace TaMi_Einzahlautomat
             }
             catch { }
 
-            // Mehr Abstand zwischen Beleg-Info-Banner und MwSt-Zeile
+            // Hinweisfeld für Mitarbeiter-Notizen (TNotizen RelTyp=12)
+            try
+            {
+                int notesRightAlignOffsetPx = 38; // ~1cm bei 96dpi
+                Func<int> computeNotesLeft = () =>
+                {
+                    try
+                    {
+                        int leftClear = pad + 8;
+                        int leftLimit = leftClear;
+                        try
+                        {
+                            int wTitle = (_abrechnenCardTitle != null) ? TextRenderer.MeasureText(_abrechnenCardTitle.Text ?? string.Empty, _abrechnenCardTitle.Font).Width : 0;
+                            int wEmp = (lblTitel != null) ? TextRenderer.MeasureText(lblTitel.Text ?? string.Empty, lblTitel.Font).Width : 0;
+                            int wBal = (lblGuthaben != null) ? TextRenderer.MeasureText(lblGuthaben.Text ?? string.Empty, lblGuthaben.Font).Width : 0;
+                            int max = Math.Max(wTitle, Math.Max(wEmp, wBal));
+                            leftLimit = pad + 8 + max + 24;
+                        }
+                        catch { }
+                        return Math.Max(pad, leftLimit + notesRightAlignOffsetPx);
+                    }
+                    catch { return pad; }
+                };
+
+                Func<int> computeNotesWidth = () =>
+                {
+                    try
+                    {
+                        // Dynamisch: rechts so breit wie möglich, aber Titel/Mitarbeiter/Guthaben nicht überdecken
+                        int rightSpace = Math.Max(260, _cardAbrechnen.Width - (pad * 2));
+                        int leftClear = pad + 8;
+                        int leftLimit = leftClear;
+                        try
+                        {
+                            // rechts neben den linken Texten starten (maximale Textbreite der 3 Labels)
+                            int wTitle = (_abrechnenCardTitle != null) ? TextRenderer.MeasureText(_abrechnenCardTitle.Text ?? string.Empty, _abrechnenCardTitle.Font).Width : 0;
+                            int wEmp = (lblTitel != null) ? TextRenderer.MeasureText(lblTitel.Text ?? string.Empty, lblTitel.Font).Width : 0;
+                            int wBal = (lblGuthaben != null) ? TextRenderer.MeasureText(lblGuthaben.Text ?? string.Empty, lblGuthaben.Font).Width : 0;
+                            int max = Math.Max(wTitle, Math.Max(wEmp, wBal));
+                            leftLimit = pad + 8 + max + 24; // Gap
+                        }
+                        catch { }
+
+                        int maxWidth = (_cardAbrechnen.Width - pad) - leftLimit;
+                        if (maxWidth < 260) maxWidth = 260;
+                        if (maxWidth > 720) maxWidth = 720;
+
+                        // Je länger der Name, desto eher etwas breiter (aber innerhalb maxWidth)
+                        int extra = 0;
+                        try
+                        {
+                            string nm = (lblTitel != null ? (lblTitel.Text ?? string.Empty) : string.Empty);
+                            extra = Math.Min(180, Math.Max(0, nm.Length - 18) * 8);
+                        }
+                        catch { extra = 0; }
+
+                        int w = 520 + extra;
+                        // breiter nach links zulassen
+                        if (w < maxWidth) w = maxWidth;
+                        if (w > maxWidth) w = maxWidth;
+                        if (w < 360) w = 360;
+                        if (w > rightSpace) w = rightSpace;
+                        return w;
+                    }
+                    catch { return 520; }
+                };
+
+                // Notizen sollen den gleichen Textstil wie "Personal-Guthaben" haben (aber explizit nicht Bold)
+                Font notesFont = null;
+                try
+                {
+                    if (lblGuthaben != null && lblGuthaben.Font != null)
+                    {
+                        var f = lblGuthaben.Font;
+                        notesFont = new Font(f.FontFamily, f.Size, FontStyle.Regular);
+                    }
+                }
+                catch { notesFont = null; }
+                if (notesFont == null) notesFont = new Font("Segoe UI Variable", 16F, FontStyle.Regular);
+
+                lblNotizenInfo = new Label
+                {
+                    Text = "Hinweisfeld wird geladen...",
+                    Font = notesFont,
+                    // oben rechts im Card-Header (neben Titel/Mitarbeiter/Guthaben)
+                    Size = new Size(computeNotesWidth(), 130),
+                    Location = new Point(computeNotesLeft(), 24),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                    BackColor = Color.FromArgb(0, 255, 255, 255),
+                    ForeColor = Color.FromArgb(15, 23, 42),
+                    AutoSize = false,
+                    Padding = new Padding(12, 10, 12, 10),
+                    TextAlign = ContentAlignment.TopLeft,
+                    Visible = false
+                };
+                // Standard-Text-Rendering des Labels unterdrücken (wir zeichnen selbst)
+                try { lblNotizenInfo.Tag = lblNotizenInfo.Text; lblNotizenInfo.Text = string.Empty; } catch { }
+                lblNotizenInfo.Paint += (s, pe) =>
+                {
+                    try
+                    {
+                        var g = pe.Graphics;
+                        g.SmoothingMode = SmoothingMode.AntiAlias;
+                        var r = lblNotizenInfo.ClientRectangle;
+                        // moderner Card-Look: Soft-Shadow + leichter Verlauf + Akzent
+                        if (r.Width > 2 && r.Height > 2)
+                        {
+                            // Soft shadow (subtil)
+                            try
+                            {
+                                for (int k = 8; k >= 1; k--)
+                                {
+                                    int a = (int)(14f * (k / 8f));
+                                    using (var penS = new Pen(Color.FromArgb(a, 0, 0, 0), 2f))
+                                    {
+                                        var rr = new Rectangle(r.X + (k - 1), r.Y + (k - 1), r.Width - (k - 1) * 2, r.Height - (k - 1) * 2);
+                                        g.DrawRectangle(penS, rr);
+                                    }
+                                }
+                            }
+                            catch { }
+
+                            var body = new Rectangle(r.Left, r.Top, r.Width - 1, r.Height - 1);
+                            using (var br = new LinearGradientBrush(body, Color.FromArgb(110, 255, 255, 255), Color.FromArgb(40, 235, 245, 255), 90f))
+                            { g.FillRectangle(br, body); }
+
+                            // Accent bar + small highlight
+                            using (var accent = new LinearGradientBrush(new Rectangle(body.Left, body.Top, 8, body.Height),
+                                Color.FromArgb(255, 33, 150, 243), Color.FromArgb(200, 13, 71, 161), 90f))
+                            { g.FillRectangle(accent, new Rectangle(body.Left, body.Top, 8, body.Height)); }
+                            using (var hi = new SolidBrush(Color.FromArgb(70, 255, 255, 255)))
+                            { g.FillRectangle(hi, new Rectangle(body.Left + 8, body.Top, body.Width - 8, Math.Max(1, body.Height / 5))); }
+
+                            using (var pen = new Pen(Color.FromArgb(140, 180, 200, 230), 1f))
+                            { g.DrawRectangle(pen, body); }
+                            // inner contour
+                            try
+                            {
+                                using (var pen2 = new Pen(Color.FromArgb(70, 255, 255, 255), 1f))
+                                { g.DrawRectangle(pen2, new Rectangle(body.Left + 1, body.Top + 1, body.Width - 2, body.Height - 2)); }
+                            }
+                            catch { }
+                        }
+                        var txt = lblNotizenInfo.Tag as string;
+                        var viewRect = Rectangle.Inflate(lblNotizenInfo.ClientRectangle, -16, -10);
+                        if (viewRect.Width <= 1 || viewRect.Height <= 1) return;
+
+                        // Draw directly using TextRenderer to match Label rendering (ClearType, no "bitmap look").
+                        EnsureNotesScrollLines(txt ?? string.Empty, viewRect.Width);
+                        if (_notesScrollLines == null || _notesScrollLines.Count == 0) return;
+
+                        var st2 = g.Save();
+                        try
+                        {
+                            g.SetClip(viewRect);
+                            int y0 = viewRect.Top - _notesScrollLineOffsetPx;
+                            int yy = y0;
+                            int idx = _notesScrollFirstLine;
+                            int drawn = 0;
+                            int maxDraw = Math.Max(10, (viewRect.Height / Math.Max(1, _notesScrollLineHeightPx)) + 4);
+                            while (drawn < maxDraw)
+                            {
+                                if (idx >= _notesScrollLines.Count) idx = 0;
+                                var line = _notesScrollLines[idx] ?? string.Empty;
+                                int indentPx = 0;
+                                if (line.Length > 0 && line[0] == '\t')
+                                {
+                                    indentPx = 28; // entspricht optisch ~3 Leerzeichen bei dieser Fontgröße
+                                    line = line.Substring(1);
+                                }
+                                var rLine = new Rectangle(viewRect.Left + indentPx, yy, Math.Max(1, viewRect.Width - indentPx), _notesScrollLineHeightPx);
+                                TextRenderer.DrawText(g, line, lblNotizenInfo.Font, rLine, lblNotizenInfo.ForeColor,
+                                    TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.NoPadding);
+                                yy += _notesScrollLineHeightPx;
+                                idx++;
+                                drawn++;
+                                if (yy > viewRect.Bottom + _notesScrollLineHeightPx) break;
+                            }
+                        }
+                        finally { try { g.Restore(st2); } catch { } }
+
+                        // leichte Rundung (visuell) über Region
+                        try
+                        {
+                            if (lblNotizenInfo.Region == null)
+                                lblNotizenInfo.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, lblNotizenInfo.Width, lblNotizenInfo.Height, 18, 18));
+                        }
+                        catch { }
+                    }
+                    catch { }
+                };
+                _cardAbrechnen.Controls.Add(lblNotizenInfo);
+
+                // Scroll-Setup (nur wenn nötig aktiv)
+                try
+                {
+                    _notesScrollVelocityPx = 1;
+                    _notesScrollPauseMs = 900;
+                    _notesScrollPauseRemainingMs = _notesScrollPauseMs;
+                    _notesScrollOffsetPx = 0;
+                    if (_notesScrollTimer == null)
+                    {
+                        _notesScrollTimer = new Timer { Interval = 35 };
+                        _notesScrollTimer.Tick += (s, e) =>
+                        {
+                            try
+                            {
+                                if (lblNotizenInfo == null || !lblNotizenInfo.Visible) { _notesScrollTimer.Stop(); return; }
+                                var txt = lblNotizenInfo.Tag as string;
+                                if (string.IsNullOrWhiteSpace(txt)) { _notesScrollTimer.Stop(); return; }
+
+                                // Hash change -> reset
+                                int h = txt.GetHashCode();
+                                if (_notesScrollLastTextHash != h)
+                                {
+                                    _notesScrollLastTextHash = h;
+                                    _notesScrollOffsetPx = 0;
+                                    _notesScrollPauseRemainingMs = _notesScrollPauseMs;
+                                }
+
+                                var rc = Rectangle.Inflate(lblNotizenInfo.ClientRectangle, -16, -10);
+                                if (rc.Width <= 1 || rc.Height <= 1) return;
+                                EnsureNotesScrollLines(txt ?? string.Empty, rc.Width);
+                                if (_notesScrollLines == null || _notesScrollLines.Count == 0) return;
+
+                                if (_notesScrollPauseRemainingMs > 0)
+                                {
+                                    _notesScrollPauseRemainingMs -= _notesScrollTimer.Interval;
+                                    return;
+                                }
+
+                                _notesScrollLineOffsetPx += Math.Max(1, _notesScrollVelocityPx);
+                                int lh = Math.Max(1, _notesScrollLineHeightPx);
+                                if (_notesScrollLineOffsetPx >= lh)
+                                {
+                                    _notesScrollLineOffsetPx = 0;
+                                    _notesScrollFirstLine++;
+                                    if (_notesScrollFirstLine >= _notesScrollLines.Count) _notesScrollFirstLine = 0;
+                                }
+
+                                try { lblNotizenInfo.Invalidate(); } catch { }
+                            }
+                            catch { }
+                        };
+                    }
+                }
+                catch { }
+
+                // bei Größenänderung oben rechts halten
+                _cardAbrechnen.SizeChanged += (s, e) =>
+                {
+                    try
+                    {
+                        if (lblNotizenInfo == null) return;
+                        int w = computeNotesWidth();
+                        int h = 130;
+                        int left = computeNotesLeft();
+                        int maxW = Math.Max(260, (_cardAbrechnen.Width - pad) - left);
+                        lblNotizenInfo.Size = new Size(Math.Min(w, maxW), h);
+                        lblNotizenInfo.Left = left;
+                        lblNotizenInfo.Top = 24;
+                        try { ResetNotesScrollBitmap(); } catch { }
+                        try { lblNotizenInfo.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, lblNotizenInfo.Width, lblNotizenInfo.Height, 16, 16)); } catch { }
+                    }
+                    catch { }
+                };
+            }
+            catch { }
+
+            // Mehr Abstand zwischen Banner(n) und MwSt-Zeile
             y += 86;
 
             var b19Init = _details != null ? _details.Betrag19 : 0m;
@@ -1960,16 +2427,64 @@ namespace TaMi_Einzahlautomat
             };
             _abrechnenInnerPanel.Controls.Add(btnCreatePayment);
 
-            // y unverändert lassen, keine zusätzlichen Buttons hier
-
-            y += 78;
-            nudManuell = new NumericUpDown { Location = new Point(pad, y), Size = new Size(220, 46), DecimalPlaces = 2, Minimum = -10000, Maximum = 10000, Increment = 5, Font = new Font("Segoe UI Variable", 16F), Visible = false };
+            // Manuell UI nach oben rechts neben Zahlung (standardmäßig ausgeblendet; per Strg+M)
+            int manW = 180;
+            int manH = 46;
+            int manGap = 12;
+            int yMan = y + (btnCreatePayment.Height - manH) / 2;
+            nudManuell = new NumericUpDown
+            {
+                Location = new Point(btnCreatePayment.Right + manGap, yMan),
+                Size = new Size(manW, manH),
+                DecimalPlaces = 2,
+                Minimum = -10000,
+                Maximum = 10000,
+                Increment = 5,
+                Font = new Font("Segoe UI Variable", 16F),
+                Visible = false,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
             _abrechnenInnerPanel.Controls.Add(nudManuell);
-            btnManuellAdd = new Button { Text = "Manuell hinzufügen", Location = new Point(pad + 240, y), Size = new Size(260, 46), Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold), BackColor = Color.FromArgb(33, 150, 243), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Visible = false };
+
+            btnManuellAdd = new Button
+            {
+                Text = "Manuell hinzufügen",
+                Location = new Point(nudManuell.Right + manGap, yMan),
+                Size = new Size(260, manH),
+                Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
+                BackColor = Color.FromArgb(33, 150, 243),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Visible = false,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
             btnManuellAdd.FlatAppearance.BorderSize = 0;
             try { btnManuellAdd.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnManuellAdd.Width, btnManuellAdd.Height, 12, 12)); } catch { }
             btnManuellAdd.Click += btnManuellAdd_Click;
             _abrechnenInnerPanel.Controls.Add(btnManuellAdd);
+
+            // beim Resize rechts neben Zahlung halten
+            try
+            {
+                _abrechnenInnerPanel.SizeChanged += (s, e) =>
+                {
+                    try
+                    {
+                        if (btnCreatePayment == null || nudManuell == null || btnManuellAdd == null) return;
+                        int y2 = btnCreatePayment.Top + (btnCreatePayment.Height - manH) / 2;
+                        nudManuell.Top = y2;
+                        btnManuellAdd.Top = y2;
+                        nudManuell.Left = btnCreatePayment.Right + manGap;
+                        btnManuellAdd.Left = nudManuell.Right + manGap;
+                    }
+                    catch { }
+                };
+            }
+            catch { }
+
+            // y unverändert lassen, keine zusätzlichen Buttons hier
+
+            y += 78;
 
             if (_ssp != null && !string.IsNullOrWhiteSpace(_ssp.ComPort))
                 UpdateAbrechnenSummaries();
@@ -3255,6 +3770,73 @@ namespace TaMi_Einzahlautomat
             try { lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}"; } catch { }
             UpdateAbrechnenSummaries();
             try { if (btnCreatePayment != null) btnCreatePayment.Visible = PaymentSettingsStore.IsEnabled(); } catch { }
+
+            // Notizen (Mitarbeiterinfo) laden und anzeigen
+            try
+            {
+                using (var db = new DatabaseHelper())
+                {
+                    var notes = await db.GetActiveMitarbeiterNotizenAsync(_personal.PID);
+                    if (lblNotizenInfo != null)
+                    {
+                        if (notes != null && notes.Count > 0)
+                        {
+                            int noteIdx = 0;
+                            Func<string, string> fmt = (n) =>
+                            {
+                                noteIdx++;
+                                var raw = (n ?? string.Empty);
+                                var t = raw.Replace("\r\n", "\n").Replace("\r", "\n");
+                                var lines = t.Split(new[] { '\n' }, StringSplitOptions.None);
+                                if (lines.Length <= 1) return noteIdx.ToString() + ". " + (lines[0] ?? string.Empty).Trim();
+                                // Folgezeilen einrücken: nicht über Spaces (werden von TextRenderer optisch gekürzt),
+                                // sondern über ein Prefix, das wir beim Zeichnen als echten X-Offset interpretieren.
+                                const string indentPrefix = "\t";
+                                return noteIdx.ToString() + ". " + (lines[0] ?? string.Empty).Trim() + "\r\n" + string.Join("\r\n", lines.Skip(1).Select(l => indentPrefix + (l ?? string.Empty).Trim()));
+                            };
+                            string text = string.Join("\r\n\r\n", notes.Select(fmt));
+                            // nach der letzten Notiz zwei Leerzeilen für sauberen Abschluss / Scroll-Loop
+                            text += "\r\n\r\n";
+                            if (text.Length > 900) text = text.Substring(0, 900) + "…";
+                            try { lblNotizenInfo.Tag = text; lblNotizenInfo.Text = string.Empty; } catch { }
+                            lblNotizenInfo.Visible = !string.IsNullOrWhiteSpace(text);
+                            try
+                            {
+                                _notesScrollLastTextHash = 0;
+                                _notesScrollOffsetPx = 0;
+                                _notesScrollFirstLine = 0;
+                                _notesScrollLineOffsetPx = 0;
+                                _notesScrollPauseRemainingMs = _notesScrollPauseMs;
+                                if (lblNotizenInfo.Visible && _notesScrollTimer != null) _notesScrollTimer.Start();
+                            }
+                            catch { }
+                            try { lblNotizenInfo.BringToFront(); } catch { }
+                            try { lblNotizenInfo.Invalidate(); } catch { }
+                        }
+                        else
+                        {
+                            // ausblenden wenn nichts da
+                            lblNotizenInfo.Visible = false;
+                            try { lblNotizenInfo.Tag = string.Empty; lblNotizenInfo.Text = string.Empty; } catch { }
+                            try { _notesScrollOffsetPx = 0; if (_notesScrollTimer != null) _notesScrollTimer.Stop(); } catch { }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    if (lblNotizenInfo != null)
+                    {
+                        lblNotizenInfo.Visible = true;
+                        try { lblNotizenInfo.Tag = "Fehler beim Laden der Notizen: " + ex.Message; lblNotizenInfo.Text = string.Empty; } catch { }
+                        try { _notesScrollLastTextHash = 0; _notesScrollOffsetPx = 0; if (_notesScrollTimer != null) _notesScrollTimer.Start(); } catch { }
+                        lblNotizenInfo.Invalidate();
+                    }
+                }
+                catch { }
+            }
         }
 
         private void AttachCoinEvents()

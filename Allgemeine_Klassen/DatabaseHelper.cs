@@ -104,6 +104,45 @@ namespace TaMi_Einzahlautomat
         private async Task EnsureOpenAsync()
         { if (_connection.State != ConnectionState.Open) await _connection.OpenAsync().ConfigureAwait(false); }
 
+        // TNotizen: Hinweise für Mitarbeiter (RelTyp=12) – RelID=PID oder -1 (für alle)
+        // Nur wenn `GueltigBis` nicht abgelaufen ist (NULL/"1900" wird als unbegrenzt behandelt)
+        public async Task<List<string>> GetActiveMitarbeiterNotizenAsync(int pid)
+        {
+            if (pid <= 0) return new List<string>();
+            await EnsureOpenAsync().ConfigureAwait(false);
+
+            var list = new List<string>();
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = @"
+SELECT [Text]
+FROM TNotizen WITH (NOLOCK)
+WHERE RelTyp = 12
+  AND (TRY_CONVERT(int, RelID) = @PID OR TRY_CONVERT(int, RelID) = -1)
+  AND (GueltigBis IS NULL OR GueltigBis <= '19000101' OR GueltigBis >= SYSDATETIME())
+  AND (Flags IS NULL OR Flags = 0)  -- Berücksichtige Flags
+ORDER BY Datum DESC, NotizID DESC;";
+                cmd.Parameters.AddWithValue("@PID", pid);
+
+                using (var rdr = await cmd.ExecuteReaderAsync().ConfigureAwait(false))
+                {
+                    while (await rdr.ReadAsync().ConfigureAwait(false))
+                    {
+                        try
+                        {
+                            if (!rdr.IsDBNull(0))
+                            {
+                                var t = Convert.ToString(rdr[0]);
+                                if (!string.IsNullOrWhiteSpace(t)) list.Add(t.Trim());
+                            }
+                        }
+                        catch { }
+                    }
+                }
+            }
+            return list;
+        }
+
         public async Task<bool> PersIdExistsAsync(int persId)
         {
             await EnsureOpenAsync().ConfigureAwait(false);
