@@ -681,10 +681,13 @@ namespace TaMi_Einzahlautomat
 
                 try { UpdateCoinAcceptIndicators(); } catch { }
 
+                // Determine which rows are visible
+                bool[] visRow = new bool[8];
                 for (int i = 0; i < 8; i++)
                 {
                     bool hide = ShouldHideCoinRow(i);
                     bool vis = !hide;
+                    visRow[i] = vis;
 
                     try { if (picMuenzen != null && i < picMuenzen.Length && picMuenzen[i] != null) picMuenzen[i].Visible = vis; } catch { }
                     try { if (lblAnnahmeMuenzen != null && i < lblAnnahmeMuenzen.Length && lblAnnahmeMuenzen[i] != null) lblAnnahmeMuenzen[i].Visible = vis; } catch { }
@@ -693,6 +696,85 @@ namespace TaMi_Einzahlautomat
                     try { if (btnPlusMuenzen != null && i < btnPlusMuenzen.Length && btnPlusMuenzen[i] != null) btnPlusMuenzen[i].Visible = vis; } catch { }
                     try { if (lblVerfuegbarMuenzen != null && i < lblVerfuegbarMuenzen.Length && lblVerfuegbarMuenzen[i] != null) lblVerfuegbarMuenzen[i].Visible = vis; } catch { }
                 }
+
+                // Reflow visible rows so there are no gaps.
+                // The coin rows are created in BuildWechselnTab with startY=106 and rowH=62.
+                try
+                {
+                    int startY = 106;
+                    int rowH = 62;
+                    int visibleIdx = 0;
+                    for (int i = 0; i < 8; i++)
+                    {
+                        if (!visRow[i]) continue;
+                        int rowY = startY + visibleIdx * rowH;
+                        visibleIdx++;
+
+                        try { if (picMuenzen != null && picMuenzen[i] != null) picMuenzen[i].Top = rowY + 6; } catch { }
+                        try { if (lblAnnahmeMuenzen != null && lblAnnahmeMuenzen[i] != null) lblAnnahmeMuenzen[i].Top = rowY + 10; } catch { }
+                        try { if (btnMinusMuenzen != null && btnMinusMuenzen[i] != null) btnMinusMuenzen[i].Top = rowY + 9; } catch { }
+                        try { if (lblAnzahlMuenzen != null && lblAnzahlMuenzen[i] != null) lblAnzahlMuenzen[i].Top = rowY + 9; } catch { }
+                        try { if (btnPlusMuenzen != null && btnPlusMuenzen[i] != null) btnPlusMuenzen[i].Top = rowY + 9; } catch { }
+                        try { if (lblVerfuegbarMuenzen != null && lblVerfuegbarMuenzen[i] != null) lblVerfuegbarMuenzen[i].Top = rowY + 14; } catch { }
+                    }
+
+                    // Reflow the subtle separators inside the Münzen card (1px panels)
+                    try
+                    {
+                        var host = (Control)(_wechselnSurface ?? tabWechseln);
+                        Panel cardCoins = null;
+                        foreach (Control c in host.Controls)
+                        {
+                            var p = c as Panel;
+                            if (p == null) continue;
+                            // Coins card: contains the coin picture boxes (50x50)
+                            if (p.Controls.OfType<PictureBox>().Any(pb => pb != null && pb.Width == 50 && pb.Height == 50))
+                            {
+                                cardCoins = p;
+                                break;
+                            }
+                        }
+                        if (cardCoins != null)
+                        {
+                            // Identify separator panels by 1px height and the light color used in BuildWechselnTab
+                            var seps = new List<Panel>();
+                            foreach (Control cc in cardCoins.Controls)
+                            {
+                                var pp = cc as Panel;
+                                if (pp == null) continue;
+                                if (pp.Height == 1 && pp.Width >= cardCoins.Width - 50) seps.Add(pp);
+                            }
+
+                            int sepIdx = 1; // after first visible row
+                            foreach (var sep in seps)
+                            {
+                                // Hide all first; then re-enable as needed
+                                try { sep.Visible = false; } catch { }
+                            }
+
+                            int visibleCount = 0;
+                            for (int i = 0; i < 8; i++) if (visRow[i]) visibleCount++;
+                            int needSeps = Math.Max(0, visibleCount - 1);
+                            int use = Math.Min(needSeps, seps.Count);
+                            for (int s = 0; s < use; s++)
+                            {
+                                int rowY = startY + s * rowH;
+                                var sep = seps[s];
+                                try
+                                {
+                                    sep.Top = rowY + rowH - 2;
+                                    sep.Left = 18;
+                                    sep.Width = cardCoins.Width - 36;
+                                    sep.Visible = true;
+                                }
+                                catch { }
+                                sepIdx++;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+                catch { }
 
                 // Safety: re-apply indicator text/colors after visibility update
                 try { UpdateCoinAcceptIndicators(); } catch { }
@@ -3538,12 +3620,49 @@ namespace TaMi_Einzahlautomat
                 if (cardNotes == null) return;
 
                 var ssp1 = _ssp;
-                var ssp2 = Program.NV2002Instance;
+                var ssp2raw = Program.NV2002Instance;
+
+                // Treat NV200/2 as "not present" when disabled so it doesn't affect UI.
+                // Disabled can be configured via INI (Disabled=1) or by leaving ComPort empty.
+                NV200_SSP ssp2 = null;
+                try
+                {
+                    bool disabled2 = false;
+                    try
+                    {
+                        var ini = AppSettings.IniPath;
+                        var v = IniHelper.ReadValue("NV200/2", "Disabled", ini);
+                        if (string.IsNullOrWhiteSpace(v)) v = IniHelper.ReadValue("NV200", "Disabled2", ini); // fallback
+                        if (!string.IsNullOrWhiteSpace(v))
+                        {
+                            v = v.Trim();
+                            disabled2 = (v == "1") || v.Equals("true", StringComparison.OrdinalIgnoreCase) || v.Equals("yes", StringComparison.OrdinalIgnoreCase) || v.Equals("on", StringComparison.OrdinalIgnoreCase);
+                        }
+                    }
+                    catch { disabled2 = false; }
+
+                    if (!disabled2 && ssp2raw != null && !string.IsNullOrWhiteSpace(ssp2raw.ComPort))
+                        ssp2 = ssp2raw;
+                }
+                catch { ssp2 = null; }
 
                 bool err1 = false;
                 bool err2 = false;
                 try { err1 = ssp1 != null && ssp1.LastResponseNotOkUtc != DateTime.MinValue && (DateTime.UtcNow - ssp1.LastResponseNotOkUtc).TotalSeconds >= 1; } catch { err1 = false; }
                 try { err2 = ssp2 != null && ssp2.LastResponseNotOkUtc != DateTime.MinValue && (DateTime.UtcNow - ssp2.LastResponseNotOkUtc).TotalSeconds >= 1; } catch { err2 = false; }
+
+                Func<NV200_SSP, bool> isBadState = (dev) =>
+                {
+                    try
+                    {
+                        if (dev == null) return true;
+                        var st = (dev.states ?? string.Empty).ToUpperInvariant();
+                        if (st.Contains("NEUSTART")) return true;
+                        if (st.Contains("NOT STARTED")) return true;
+                        return false;
+                    }
+                    catch { return true; }
+                };
 
                 foreach (var lbl in cardNotes.Controls.OfType<Label>())
                 {
@@ -3574,18 +3693,31 @@ namespace TaMi_Einzahlautomat
                     string txt = "✓";
                     Color col = Color.FromArgb(0, 128, 0);
 
-                    if (err1 && err2)
+                    bool haveSecond = ssp2 != null;
+                    bool bad1 = isBadState(ssp1) || err1;
+                    bool bad2 = haveSecond ? (isBadState(ssp2) || err2) : false;
+
+                    if (!haveSecond)
+                    {
+                        // Only one NV200: show simple status only (no Links/Rechts)
+                        txt = bad1 ? "X" : "✓";
+                        col = bad1 ? Color.FromArgb(183, 28, 28) : Color.FromArgb(0, 128, 0);
+                        ApplyAccVisual(txt, col);
+                        continue;
+                    }
+
+                    if (bad1 && bad2)
                     {
                         txt = "X";
                         col = Color.FromArgb(183, 28, 28);
                     }
-                    else if (err1)
+                    else if (bad1)
                     {
                         // NV200/1 error -> only NV200/2 usable -> route right
                         txt = "Rechts";
                         col = Color.FromArgb(183, 28, 28);
                     }
-                    else if (err2)
+                    else if (bad2)
                     {
                         // NV200/2 error -> only NV200/1 usable -> route left
                         txt = "Links";
@@ -3651,53 +3783,31 @@ namespace TaMi_Einzahlautomat
                         catch { stueck = 0; }
                         if (stueck < 0) stueck = 0;
 
-                        // If no threshold is configured (0), we treat the note as generally acceptable.
-                        // Reason: routing to cashbox is fine; the indicator should be green in this case.
+                        // Interpretation:
+                        // - If threshold (Stückelung) is configured (>0):
+                        //   If payout stock is BELOW the threshold, notes should be routed into the payout to refill it.
+                        //   If payout stock is >= threshold, notes should go to the cashbox.
+                        // - If no threshold is configured (0): treat as generally acceptable (green).
                         bool thresholdConfigured = stueck > 0;
-                        bool ok1 = ssp1 != null && (!thresholdConfigured || a1 >= stueck);
-                        bool ok2 = ssp2 != null && (!thresholdConfigured || a2 >= stueck);
+                        bool needRefill1 = thresholdConfigured && ssp1 != null && a1 < stueck;
+                        bool needRefill2 = thresholdConfigured && ssp2 != null && a2 < stueck;
 
-                        if (ssp1 == null && ssp2 == null)
+                        // Both devices are alive (no error). Routing hint is only necessary if exactly one side needs payout refill.
+                        if (needRefill1 && !needRefill2)
                         {
-                            txt = "X";
+                            txt = "Links";
                             col = Color.FromArgb(183, 28, 28);
                         }
-                        else if (ssp2 == null)
+                        else if (!needRefill1 && needRefill2)
                         {
-                            // only NV200/1 exists
-                            txt = ok1 ? "✓" : "X";
-                            col = ok1 ? Color.FromArgb(0, 128, 0) : Color.FromArgb(183, 28, 28);
-                        }
-                        else if (ssp1 == null)
-                        {
-                            // only NV200/2 exists
-                            txt = ok2 ? "✓" : "X";
-                            col = ok2 ? Color.FromArgb(0, 128, 0) : Color.FromArgb(183, 28, 28);
+                            txt = "Rechts";
+                            col = Color.FromArgb(183, 28, 28);
                         }
                         else
                         {
-                            if (ok1 && ok2)
-                            {
-                                txt = "✓";
-                                col = Color.FromArgb(0, 128, 0);
-                            }
-                            else if (ok1 && !ok2)
-                            {
-                                // NV200/1 reached threshold (payout >= max) but NV200/2 has space -> better insert on the other (right)
-                                txt = "Rechts";
-                                col = Color.FromArgb(183, 28, 28);
-                            }
-                            else if (!ok1 && ok2)
-                            {
-                                // NV200/2 reached threshold but NV200/1 has space -> better insert on the other (left)
-                                txt = "Links";
-                                col = Color.FromArgb(183, 28, 28);
-                            }
-                            else
-                            {
-                                txt = "X";
-                                col = Color.FromArgb(183, 28, 28);
-                            }
+                            // Either both need refill (doesn't matter) or both are full (cashbox routing) -> still accepted.
+                            txt = "✓";
+                            col = Color.FromArgb(0, 128, 0);
                         }
                     }
 
