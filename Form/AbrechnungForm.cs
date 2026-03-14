@@ -515,11 +515,16 @@ namespace TaMi_Einzahlautomat
         private Label[] lblAnzahlMuenzen = new Label[8];
         private Label[] lblVerfuegbarMuenzen = new Label[8];
 
+        private Label[] lblAnnahmeMuenzen = new Label[8];
+
         private bool _coinEventsAttached = false;
         private int[] _coinAvail = new int[8] { -1, -1, -1, -1, -1, -1, -1, -1 };
         private int[] _coin2Avail = new int[8] { -1, -1, -1, -1, -1, -1, -1, -1 };
         private DateTime _lastCoinLevelsRequestUtc = DateTime.MinValue;
         private DateTime _lastPayoutLevelsScheduleUtc = DateTime.MinValue;
+
+        private bool[] _coinAccept1 = new bool[8];
+        private bool[] _coinAccept2 = new bool[8];
 
         // Payout Münzen (reduziert – ungenutzte Felder entfernt)
         private decimal _geplanteMuenzAuszahlung = 0m;
@@ -592,6 +597,175 @@ namespace TaMi_Einzahlautomat
                 _tmrBusyUnlock = new Timer { Interval = 1000 };
                 _tmrBusyUnlock.Tick += (s, e) => BusyUnlockWatchdog();
                 _tmrBusyUnlock.Start();
+            }
+            catch { }
+        }
+
+        private void ReloadCoinAcceptFromIni()
+        {
+            try
+            {
+                string ini = null;
+                try { ini = AppSettings.IniPath; } catch { ini = null; }
+                if (string.IsNullOrWhiteSpace(ini)) return;
+
+                string[] keys = { "Accept1Cent", "Accept2Cent", "Accept5Cent", "Accept10Cent", "Accept20Cent", "Accept50Cent", "Accept1Euro", "Accept2Euro" };
+
+                for (int i = 0; i < 8; i++)
+                {
+                    bool a1 = true;
+                    bool a2 = true;
+                    try
+                    {
+                        var v1 = IniHelper.ReadValue("SmartCoin/1", keys[i], ini);
+                        if (!string.IsNullOrWhiteSpace(v1))
+                        {
+                            v1 = v1.Trim();
+                            if (v1 == "0") a1 = false;
+                            else if (v1 == "1") a1 = true;
+                            else if (bool.TryParse(v1, out var bb1)) a1 = bb1;
+                        }
+                    }
+                    catch { }
+                    try
+                    {
+                        var v2 = IniHelper.ReadValue("SmartCoin/2", keys[i], ini);
+                        if (!string.IsNullOrWhiteSpace(v2))
+                        {
+                            v2 = v2.Trim();
+                            if (v2 == "0") a2 = false;
+                            else if (v2 == "1") a2 = true;
+                            else if (bool.TryParse(v2, out var bb2)) a2 = bb2;
+                        }
+                    }
+                    catch { }
+
+                    _coinAccept1[i] = a1;
+                    _coinAccept2[i] = a2;
+                }
+            }
+            catch { }
+        }
+
+        private bool ShouldHideCoinRow(int idx)
+        {
+            try
+            {
+                if (idx < 0 || idx >= 8) return false;
+
+                // If both devices have this denomination disabled in INI (or if only one device exists: that one disabled)
+                bool haveSecond = false;
+                try { haveSecond = _coin2 != null; } catch { haveSecond = false; }
+
+                bool disabled1 = false;
+                bool disabled2 = false;
+                try { disabled1 = !_coinAccept1[idx]; } catch { disabled1 = false; }
+                try { disabled2 = !_coinAccept2[idx]; } catch { disabled2 = false; }
+
+                bool bothDisabled = haveSecond ? (disabled1 && disabled2) : disabled1;
+                if (!bothDisabled) return false;
+
+                // Only hide when availability is known and exactly 0.
+                int avail = GetCombinedCoinAvail(idx);
+                if (avail < 0) return false;
+                return avail == 0;
+            }
+            catch { return false; }
+        }
+
+        private void UpdateCoinRowVisibility()
+        {
+            try
+            {
+                ReloadCoinAcceptFromIni();
+
+                try { UpdateCoinAcceptIndicators(); } catch { }
+
+                for (int i = 0; i < 8; i++)
+                {
+                    bool hide = ShouldHideCoinRow(i);
+                    bool vis = !hide;
+
+                    try { if (picMuenzen != null && i < picMuenzen.Length && picMuenzen[i] != null) picMuenzen[i].Visible = vis; } catch { }
+                    try { if (lblAnnahmeMuenzen != null && i < lblAnnahmeMuenzen.Length && lblAnnahmeMuenzen[i] != null) lblAnnahmeMuenzen[i].Visible = vis; } catch { }
+                    try { if (btnMinusMuenzen != null && i < btnMinusMuenzen.Length && btnMinusMuenzen[i] != null) btnMinusMuenzen[i].Visible = vis; } catch { }
+                    try { if (lblAnzahlMuenzen != null && i < lblAnzahlMuenzen.Length && lblAnzahlMuenzen[i] != null) lblAnzahlMuenzen[i].Visible = vis; } catch { }
+                    try { if (btnPlusMuenzen != null && i < btnPlusMuenzen.Length && btnPlusMuenzen[i] != null) btnPlusMuenzen[i].Visible = vis; } catch { }
+                    try { if (lblVerfuegbarMuenzen != null && i < lblVerfuegbarMuenzen.Length && lblVerfuegbarMuenzen[i] != null) lblVerfuegbarMuenzen[i].Visible = vis; } catch { }
+                }
+
+                // Safety: re-apply indicator text/colors after visibility update
+                try { UpdateCoinAcceptIndicators(); } catch { }
+
+                // keep button state consistent
+                try { UpdatePlusMinusEnabled(); } catch { }
+                try { UpdateSummeAuszahlung(); } catch { }
+            }
+            catch { }
+        }
+
+        private void UpdateCoinAcceptIndicators()
+        {
+            try
+            {
+                bool haveSecond = false;
+                try { haveSecond = _coin2 != null; } catch { haveSecond = false; }
+
+                void ApplyAccVisual(Label lbl, string t, Color c)
+                {
+                    if (lbl == null) return;
+                    lbl.Text = t;
+                    // Only X should be red. Links/Rechts should be neutral (black).
+                    if (t == "Links" || t == "Rechts") lbl.ForeColor = Color.Black;
+                    else lbl.ForeColor = c;
+                    try
+                    {
+                        float baseSize = 20f;
+                        try { baseSize = lbl.Font != null ? lbl.Font.Size : 20f; } catch { baseSize = 20f; }
+                        float target = (t == "Links" || t == "Rechts") ? 14f : 20f;
+                        if (Math.Abs(baseSize - target) > 0.2f)
+                            lbl.Font = new Font("Segoe UI Variable", target, FontStyle.Bold);
+                    }
+                    catch { }
+                }
+
+                for (int i = 0; i < 8; i++)
+                {
+                    var lbl = (lblAnnahmeMuenzen != null && i < lblAnnahmeMuenzen.Length) ? lblAnnahmeMuenzen[i] : null;
+                    if (lbl == null) continue;
+
+                    bool a1 = true;
+                    bool a2 = true;
+                    try { a1 = _coinAccept1[i]; } catch { }
+                    try { a2 = _coinAccept2[i]; } catch { }
+
+                    if (!haveSecond)
+                    {
+                        // only device 1 exists -> treat as overall state
+                        ApplyAccVisual(lbl, a1 ? "✓" : "X", a1 ? Color.FromArgb(0, 128, 0) : Color.FromArgb(183, 28, 28));
+                    }
+                    else
+                    {
+                        if (a1 && a2)
+                        {
+                            ApplyAccVisual(lbl, "✓", Color.FromArgb(0, 128, 0));
+                        }
+                        else if (!a1 && !a2)
+                        {
+                            ApplyAccVisual(lbl, "X", Color.FromArgb(183, 28, 28));
+                        }
+                        else if (!a1 && a2)
+                        {
+                            // only device 2 is enabled -> route to device 2 (right)
+                            ApplyAccVisual(lbl, "Rechts", Color.FromArgb(183, 28, 28));
+                        }
+                        else
+                        {
+                            // only device 1 is enabled -> route to device 1 (left)
+                            ApplyAccVisual(lbl, "Links", Color.FromArgb(183, 28, 28));
+                        }
+                    }
+                }
             }
             catch { }
         }
@@ -2960,10 +3134,14 @@ namespace TaMi_Einzahlautomat
             void AddHeaderRow(Panel card)
             {
                 var y = 68;
-                var h1 = new Label { Text = "Wert", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(18, y), Size = new Size(120, 32), BackColor = Color.Transparent };
-                var h2 = new Label { Text = "Anzahl", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(170, y), Size = new Size(160, 32), BackColor = Color.Transparent };
-                var h3 = new Label { Text = "Vorrätig", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(card.Width - 170, y), Size = new Size(150, 32), TextAlign = ContentAlignment.MiddleRight, BackColor = Color.Transparent };
+                var h1 = new Label { Text = "Wert", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(18, y), Size = new Size(110, 32), BackColor = Color.Transparent };
+                // keep Annahme compact and further left so the word is not clipped
+                var hAcc = new Label { Text = "Annahme", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(122, y), Size = new Size(125, 32), BackColor = Color.Transparent };
+                // center "Anzahl" over the - / count / + block (250..419)
+                var h2 = new Label { Text = "Anzahl", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(250, y), Size = new Size(170, 32), TextAlign = ContentAlignment.MiddleCenter, BackColor = Color.Transparent };
+                var h3 = new Label { Text = "Vorrätig", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(card.Width - 150, y), Size = new Size(150, 32), TextAlign = ContentAlignment.MiddleRight, BackColor = Color.Transparent };
                 card.Controls.Add(h1);
+                card.Controls.Add(hAcc);
                 card.Controls.Add(h2);
                 card.Controls.Add(h3);
             }
@@ -2991,21 +3169,36 @@ namespace TaMi_Einzahlautomat
                 cardCoins.Controls.Add(pb);
                 picMuenzen[i] = pb;
 
+                var lAcc = new Label
+                {
+                    Text = "-",
+                    AutoSize = false,
+                    // move the indicator further left to align with header and free space
+                    Location = new Point(132, rowY + 10),
+                    Size = new Size(80, 44),
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    ForeColor = Color.FromArgb(0, 128, 0),
+                    Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
+                    BackColor = Color.Transparent
+                };
+                cardCoins.Controls.Add(lAcc);
+                lblAnnahmeMuenzen[i] = lAcc;
+
                 var bMinus = MakeIconButton("–", danger, Color.White);
                 bMinus.Tag = i;
-                bMinus.Location = new Point(170, rowY + 9);
+                bMinus.Location = new Point(250, rowY + 9);
                 bMinus.Click += BtnMinusMuenzen_Click;
                 cardCoins.Controls.Add(bMinus);
                 btnMinusMuenzen[i] = bMinus;
 
                 var lbl = MakeCountLabel();
-                lbl.Location = new Point(220, rowY + 9);
+                lbl.Location = new Point(300, rowY + 9);
                 cardCoins.Controls.Add(lbl);
                 lblAnzahlMuenzen[i] = lbl;
 
                 var bPlus = MakeIconButton("+", primary, Color.White);
                 bPlus.Tag = i;
-                bPlus.Location = new Point(296, rowY + 9);
+                bPlus.Location = new Point(376, rowY + 9);
                 bPlus.Click += BtnPlusMuenzen_Click;
                 cardCoins.Controls.Add(bPlus);
                 btnPlusMuenzen[i] = bPlus;
@@ -3053,21 +3246,38 @@ namespace TaMi_Einzahlautomat
                 cardNotes.Controls.Add(pb);
                 picScheine[i] = pb;
 
+                // Annahme-Indikator (wie bei Münzen): ✓ / L / R / X
+                var lAcc = new Label
+                {
+                    Text = "-",
+                    AutoSize = false,
+                    Location = new Point(132, rowY + 10),
+                    Size = new Size(80, 44),
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    ForeColor = Color.FromArgb(0, 128, 0),
+                    Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
+                    BackColor = Color.Transparent
+                };
+                cardNotes.Controls.Add(lAcc);
+                // Notiz: eigenes Array benötigen wir nicht; Zugriff erfolgt über Tag.
+                try { lAcc.Tag = i; } catch { }
+
                 var bMinus = MakeIconButton("–", danger, Color.White);
                 bMinus.Tag = i;
-                bMinus.Location = new Point(170, rowY + 9);
+                // Align under header "Anzahl" (same x as coins)
+                bMinus.Location = new Point(250, rowY + 9);
                 bMinus.Click += BtnMinus_Click;
                 cardNotes.Controls.Add(bMinus);
                 btnMinus[i] = bMinus;
 
                 var lbl = MakeCountLabel();
-                lbl.Location = new Point(220, rowY + 9);
+                lbl.Location = new Point(300, rowY + 9);
                 cardNotes.Controls.Add(lbl);
                 lblAnzahl[i] = lbl;
 
                 var bPlus = MakeIconButton("+", primary, Color.White);
                 bPlus.Tag = i;
-                bPlus.Location = new Point(296, rowY + 9);
+                bPlus.Location = new Point(376, rowY + 9);
                 bPlus.Click += BtnPlus_Click;
                 cardNotes.Controls.Add(bPlus);
                 btnPlus[i] = bPlus;
@@ -3089,6 +3299,7 @@ namespace TaMi_Einzahlautomat
                 if (scheinWerte[i] >= 100)
                 {
                     pb.Visible = false;
+                    lAcc.Visible = false;
                     bMinus.Visible = false;
                     lbl.Visible = false;
                     bPlus.Visible = false;
@@ -3296,6 +3507,204 @@ namespace TaMi_Einzahlautomat
             SafeRefreshAvailability();
             UpdateSummeAuszahlung();
             UpdateMaxVerfuegbar();
+
+            try { UpdateCoinRowVisibility(); } catch { }
+        }
+
+        private void UpdateNoteAcceptIndicators()
+        {
+            try
+            {
+                if (tabWechseln == null) return;
+
+                // locate the notes card and its acceptance labels (we stored the index in Tag)
+                Panel cardNotes = null;
+                try
+                {
+                    var host = (Control)(_wechselnSurface ?? tabWechseln);
+                    foreach (Control c in host.Controls)
+                    {
+                        if (c is Panel p)
+                        {
+                            // heuristics: the notes card contains the note picture boxes and plus/minus arrays
+                            if (p.Controls.OfType<PictureBox>().Any(pb => pb != null && pb.Size.Width >= 100))
+                            {
+                                cardNotes = p;
+                            }
+                        }
+                    }
+                }
+                catch { cardNotes = null; }
+                if (cardNotes == null) return;
+
+                var ssp1 = _ssp;
+                var ssp2 = Program.NV2002Instance;
+
+                bool err1 = false;
+                bool err2 = false;
+                try { err1 = ssp1 != null && ssp1.LastResponseNotOkUtc != DateTime.MinValue && (DateTime.UtcNow - ssp1.LastResponseNotOkUtc).TotalSeconds >= 1; } catch { err1 = false; }
+                try { err2 = ssp2 != null && ssp2.LastResponseNotOkUtc != DateTime.MinValue && (DateTime.UtcNow - ssp2.LastResponseNotOkUtc).TotalSeconds >= 1; } catch { err2 = false; }
+
+                foreach (var lbl in cardNotes.Controls.OfType<Label>())
+                {
+                    int idx;
+                    try { idx = lbl.Tag is int ii ? ii : -1; } catch { idx = -1; }
+                    if (idx < 0 || idx >= scheinWerte.Length) continue;
+
+                    // our acceptance labels are at x=132 and size 80x44
+                    if (lbl.Width != 80 || lbl.Height != 44 || lbl.Left != 132) continue;
+
+                    void ApplyAccVisual(string t, Color c)
+                    {
+                        lbl.Text = t;
+                        // Only X should be red. Links/Rechts should be neutral (black).
+                        if (t == "Links" || t == "Rechts") lbl.ForeColor = Color.Black;
+                        else lbl.ForeColor = c;
+                        try
+                        {
+                            float baseSize = 20f;
+                            try { baseSize = lbl.Font != null ? lbl.Font.Size : 20f; } catch { baseSize = 20f; }
+                            float target = (t == "Links" || t == "Rechts") ? 14f : 20f;
+                            if (Math.Abs(baseSize - target) > 0.2f)
+                                lbl.Font = new Font("Segoe UI Variable", target, FontStyle.Bold);
+                        }
+                        catch { }
+                    }
+
+                    string txt = "✓";
+                    Color col = Color.FromArgb(0, 128, 0);
+
+                    if (err1 && err2)
+                    {
+                        txt = "X";
+                        col = Color.FromArgb(183, 28, 28);
+                    }
+                    else if (err1)
+                    {
+                        // NV200/1 error -> only NV200/2 usable -> route right
+                        txt = "Rechts";
+                        col = Color.FromArgb(183, 28, 28);
+                    }
+                    else if (err2)
+                    {
+                        // NV200/2 error -> only NV200/1 usable -> route left
+                        txt = "Links";
+                        col = Color.FromArgb(183, 28, 28);
+                    }
+                    else
+                    {
+                        // Payout-bestand vs Stückelung
+                        int a1 = 0;
+                        int a2 = 0;
+                        try
+                        {
+                            if (ssp1 != null)
+                            {
+                                switch (scheinWerte[idx])
+                                {
+                                    case 5: a1 = Math.Max(0, ssp1.Payout_5_euro); break;
+                                    case 10: a1 = Math.Max(0, ssp1.Payout_10_euro); break;
+                                    case 20: a1 = Math.Max(0, ssp1.Payout_20_euro); break;
+                                    case 50: a1 = Math.Max(0, ssp1.Payout_50_euro); break;
+                                    case 100: a1 = Math.Max(0, ssp1.Payout_100_euro); break;
+                                    case 200: a1 = Math.Max(0, ssp1.Payout_200_euro); break;
+                                    case 500: a1 = Math.Max(0, ssp1.Payout_500_euro); break;
+                                }
+                            }
+                        }
+                        catch { a1 = 0; }
+                        try
+                        {
+                            if (ssp2 != null)
+                            {
+                                switch (scheinWerte[idx])
+                                {
+                                    case 5: a2 = Math.Max(0, ssp2.Payout_5_euro); break;
+                                    case 10: a2 = Math.Max(0, ssp2.Payout_10_euro); break;
+                                    case 20: a2 = Math.Max(0, ssp2.Payout_20_euro); break;
+                                    case 50: a2 = Math.Max(0, ssp2.Payout_50_euro); break;
+                                    case 100: a2 = Math.Max(0, ssp2.Payout_100_euro); break;
+                                    case 200: a2 = Math.Max(0, ssp2.Payout_200_euro); break;
+                                    case 500: a2 = Math.Max(0, ssp2.Payout_500_euro); break;
+                                }
+                            }
+                        }
+                        catch { a2 = 0; }
+
+                        int stueck = 0;
+                        try
+                        {
+                            if (ssp1 != null)
+                            {
+                                switch (scheinWerte[idx])
+                                {
+                                    case 5: stueck = ssp1.MAX_PayoutCount_of_5Euro; break;
+                                    case 10: stueck = ssp1.MAX_PayoutCount_of_10Euro; break;
+                                    case 20: stueck = ssp1.MAX_PayoutCount_of_20Euro; break;
+                                    case 50: stueck = ssp1.MAX_PayoutCount_of_50Euro; break;
+                                    case 100: stueck = ssp1.MAX_PayoutCount_of_100Euro; break;
+                                    case 200: stueck = ssp1.MAX_PayoutCount_of_200Euro; break;
+                                    case 500: stueck = ssp1.MAX_PayoutCount_of_500Euro; break;
+                                }
+                            }
+                        }
+                        catch { stueck = 0; }
+                        if (stueck < 0) stueck = 0;
+
+                        // If no threshold is configured (0), we treat the note as generally acceptable.
+                        // Reason: routing to cashbox is fine; the indicator should be green in this case.
+                        bool thresholdConfigured = stueck > 0;
+                        bool ok1 = ssp1 != null && (!thresholdConfigured || a1 >= stueck);
+                        bool ok2 = ssp2 != null && (!thresholdConfigured || a2 >= stueck);
+
+                        if (ssp1 == null && ssp2 == null)
+                        {
+                            txt = "X";
+                            col = Color.FromArgb(183, 28, 28);
+                        }
+                        else if (ssp2 == null)
+                        {
+                            // only NV200/1 exists
+                            txt = ok1 ? "✓" : "X";
+                            col = ok1 ? Color.FromArgb(0, 128, 0) : Color.FromArgb(183, 28, 28);
+                        }
+                        else if (ssp1 == null)
+                        {
+                            // only NV200/2 exists
+                            txt = ok2 ? "✓" : "X";
+                            col = ok2 ? Color.FromArgb(0, 128, 0) : Color.FromArgb(183, 28, 28);
+                        }
+                        else
+                        {
+                            if (ok1 && ok2)
+                            {
+                                txt = "✓";
+                                col = Color.FromArgb(0, 128, 0);
+                            }
+                            else if (ok1 && !ok2)
+                            {
+                                // NV200/1 reached threshold (payout >= max) but NV200/2 has space -> better insert on the other (right)
+                                txt = "Rechts";
+                                col = Color.FromArgb(183, 28, 28);
+                            }
+                            else if (!ok1 && ok2)
+                            {
+                                // NV200/2 reached threshold but NV200/1 has space -> better insert on the other (left)
+                                txt = "Links";
+                                col = Color.FromArgb(183, 28, 28);
+                            }
+                            else
+                            {
+                                txt = "X";
+                                col = Color.FromArgb(183, 28, 28);
+                            }
+                        }
+                    }
+
+                    ApplyAccVisual(txt, col);
+                }
+            }
+            catch { }
         }
 
         private Image GetCoinImageByIndex(int i)
@@ -4435,6 +4844,7 @@ namespace TaMi_Einzahlautomat
             try { var ssp2 = Program.NV2002Instance; ssp2?.Payout_angleichen(); } catch { }
             int[] avail = GetCurrentAvailability(); for (int i = 0; i < 7; i++) if (lblVerfuegbar[i] != null) lblVerfuegbar[i].Text = $"{avail[i]}";
             UpdateCoinAvailabilityLabels(); UpdatePlusMinusEnabled(); UpdateBusyUI();
+            try { UpdateNoteAcceptIndicators(); } catch { }
         }
 
         private int[] GetCurrentAvailability()
@@ -4756,7 +5166,21 @@ namespace TaMi_Einzahlautomat
         }
 
                 private void UpdateMaxVerfuegbar() { if (lblMaxVerfuegbar != null) lblMaxVerfuegbar.Text = $"{(_personalGuthaben + _eingezahltSession):C2}"; }
-                private void UpdateCoinAvailabilityLabels() { for (int i = 0; i < 8; i++) { if (lblVerfuegbarMuenzen[i] == null) continue; int a = _coinAvail[i] >= 0 ? _coinAvail[i] : 0; int b = _coin2Avail[i] >= 0 ? _coin2Avail[i] : 0; bool known = false; int total = 0; if (a > 0) { total += a; known = true; } if (b > 0) { total += b; known = true; } lblVerfuegbarMuenzen[i].Text = known ? $"{total}" : "-"; } }
+                private void UpdateCoinAvailabilityLabels()
+                {
+                    for (int i = 0; i < 8; i++)
+                    {
+                        if (lblVerfuegbarMuenzen[i] == null) continue;
+                        int a = _coinAvail[i] >= 0 ? _coinAvail[i] : 0;
+                        int b = _coin2Avail[i] >= 0 ? _coin2Avail[i] : 0;
+                        bool known = false;
+                        int total = 0;
+                        if (a >= 0) { total += a; known = true; }
+                        if (b >= 0) { total += b; known = true; }
+                        lblVerfuegbarMuenzen[i].Text = known ? $"{Math.Max(0, total)}" : "-";
+                    }
+                    try { UpdateCoinRowVisibility(); } catch { }
+                }
                 private int GetCombinedCoinAvail(int idx) { try { int a = (idx >= 0 && idx < _coinAvail.Length) ? _coinAvail[idx] : -1; int b = (idx >= 0 && idx < _coin2Avail.Length) ? _coin2Avail[idx] : -1; if (a < 0 && b < 0) return -1; int sum = 0; if (a > 0) sum += a; if (b > 0) sum += b; return sum; } catch { return -1; } }
                 private void OnCoinDispensedDelta(int cent)
                 {
