@@ -269,6 +269,9 @@ namespace TaMi_Einzahlautomat
 
            
 
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
             AppSettings.AutomatenName = AppSettings.LoadAutomatenNameFromIni();
             AppSettings.DeviceId = AppSettings.LoadDeviceIdFromIni(); // NEU
             if (AppSettings.DeviceId <= 0)
@@ -328,6 +331,9 @@ namespace TaMi_Einzahlautomat
             // Check for available update on startup (non-blocking)
             try { Task.Run(() => PromptUpdateIfAvailable()); } catch { }
 
+            // Daily background update check (configurable time in INI: [App] DailyUpdateCheckTime, default 12:00)
+            try { StartDailyUpdateCheck(); } catch { }
+
             try { CoinFeederCoordinator.Start(); } catch { }
 
             try
@@ -367,9 +373,6 @@ namespace TaMi_Einzahlautomat
             KioskModeEnabled = ReadKioskFlagFromIni();
 
             Application.ApplicationExit += (s, e) => { ShutdownLoggerSafe("ApplicationExit"); };
-
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
 
             _background = new BackgroundForm(KioskModeEnabled);
             _background.StartPosition = FormStartPosition.Manual;
@@ -655,6 +658,33 @@ namespace TaMi_Einzahlautomat
 
         private const string AppIniSection = "App";
         private const string LastSeenVersionKey = "LastSeenVersion";
+        private const string LastUpdateAlertVersionKey = "LastUpdateAlertVersion";
+        private const string DailyUpdateCheckTimeKey = "DailyUpdateCheckTime";
+        private static System.Windows.Forms.Timer _dailyUpdateCheckTimer;
+
+        private static (int hh, int mm) ReadDailyUpdateCheckTime()
+        {
+            int hh = 12;
+            int mm = 0;
+            try
+            {
+                var t = IniHelper.ReadValue(AppIniSection, DailyUpdateCheckTimeKey, AppSettings.IniPath);
+                if (!string.IsNullOrWhiteSpace(t))
+                {
+                    var parts = t.Trim().Split(':');
+                    if (parts.Length >= 2)
+                    {
+                        int.TryParse(parts[0], out hh);
+                        int.TryParse(parts[1], out mm);
+                    }
+                }
+            }
+            catch { hh = 12; mm = 0; }
+
+            if (hh < 0 || hh > 23) hh = 12;
+            if (mm < 0 || mm > 59) mm = 0;
+            return (hh, mm);
+        }
 
         public static void ShowUpdateHints(Form owner)
         {
@@ -681,6 +711,103 @@ namespace TaMi_Einzahlautomat
                 return Version.TryParse(s.Trim(), out v) ? v : null;
             }
             catch { return null; }
+        }
+
+        private static Version ReadLastUpdateAlertVersion()
+        {
+            try
+            {
+                var s = IniHelper.ReadValue(AppIniSection, LastUpdateAlertVersionKey, AppSettings.IniPath);
+                if (string.IsNullOrWhiteSpace(s)) return null;
+                Version v;
+                return Version.TryParse(s.Trim(), out v) ? v : null;
+            }
+            catch { return null; }
+        }
+
+        private static void WriteLastUpdateAlertVersion(Version v)
+        {
+            if (v == null) return;
+            try { IniHelper.WriteValue(AppIniSection, LastUpdateAlertVersionKey, v.ToString(), AppSettings.IniPath); } catch { }
+        }
+
+        private static void StartDailyUpdateCheck()
+        {
+            try
+            {
+                if (_dailyUpdateCheckTimer != null) return;
+
+                var (hh, mm) = ReadDailyUpdateCheckTime();
+                var now = DateTime.Now;
+                var next = new DateTime(now.Year, now.Month, now.Day, hh, mm, 0);
+                if (next <= now) next = next.AddDays(1);
+                var dueMs = Math.Max(1000, (int)Math.Min(int.MaxValue, (next - now).TotalMilliseconds));
+
+                _dailyUpdateCheckTimer = new System.Windows.Forms.Timer();
+                _dailyUpdateCheckTimer.Interval = dueMs;
+                _dailyUpdateCheckTimer.Tick += (s, e) =>
+                {
+                    try
+                    {
+                        // After the first tick, run every 24h
+                        try { _dailyUpdateCheckTimer.Interval = 24 * 60 * 60 * 1000; } catch { }
+                        try { Task.Run(() => CheckForUpdateAndAlertAsync()); } catch { }
+                    }
+                    catch { }
+                };
+                _dailyUpdateCheckTimer.Start();
+            }
+            catch { }
+        }
+
+        private static async Task CheckForUpdateAndAlertAsync()
+        {
+            try
+            {
+                // Download MSI to temp to read ProductVersion
+                string tempMsi = Path.Combine(Path.GetTempPath(), "Einzahlautomat_Setup.msi");
+                try
+                {
+                    using (var wc = new WebClient())
+                    {
+                        wc.Proxy = WebRequest.DefaultWebProxy;
+                        await wc.DownloadFileTaskAsync(UpdateMsiUrl, tempMsi).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SafeLog("Daily update check: MSI download failed: " + ex.Message);
+                    return;
+                }
+
+                Version localVer;
+                if (!Version.TryParse(Application.ProductVersion, out localVer)) localVer = new Version(0, 0, 0, 0);
+                Version remoteVer = GetMsiProductVersion(tempMsi) ?? new Version(0, 0, 0, 0);
+                if (remoteVer <= localVer) return;
+
+                // Alert only once per remote version
+                var lastAlert = ReadLastUpdateAlertVersion();
+                if (lastAlert != null && remoteVer <= lastAlert) return;
+
+                string device = (AppSettings.AutomatenName ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(device)) device = "Automat";
+                string msg = "Es ist ein Update verfügbar.\r\n" +
+                             "Installierte Version: " + localVer + "\r\n" +
+                             "Verfügbare Version: " + remoteVer + "\r\n" +
+                             "Download: " + UpdateMsiUrl + "\r\n" +
+                             "Zeitpunkt: " + DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
+
+                try
+                {
+                    EmailReceiptService.SendAlertOnly("Update verfügbar (" + remoteVer + ")", msg);
+                    WriteLastUpdateAlertVersion(remoteVer);
+                }
+                catch { }
+            }
+            catch (Exception ex)
+            {
+                SafeLog("Daily update check failed: " + ex.Message);
+            }
         }
 
         private static void WriteLastSeenVersion(Version v)

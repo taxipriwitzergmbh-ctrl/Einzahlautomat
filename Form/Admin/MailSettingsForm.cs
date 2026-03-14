@@ -27,6 +27,7 @@ namespace TaMi_Einzahlautomat
         private Button btnTest;
         private TextBox txtAlertEmail;
         private CheckBox chkDisableSupport; // nur sichtbar bei Entwickler-Admin (mpr)
+        private DateTimePicker dtpUpdateCheckTime;
 
         // Zwischenspeicher geladener Dienstkonten
         private List<DatabaseHelper.DienstkontoInfo> _konten;
@@ -95,6 +96,11 @@ namespace TaMi_Einzahlautomat
             txtAlertEmail = new TextBox { Location = new Point(xField, y), Size = new Size(wField, h) };
             y += h + gap;
 
+            var lblUpdTime = new Label { Text = "Update-Prüfung täglich um", Location = new Point(xLabel, y), Size = new Size(220, h) };
+            dtpUpdateCheckTime = new DateTimePicker { Location = new Point(xField, y), Size = new Size(120, h), Format = DateTimePickerFormat.Time, ShowUpDown = true };
+            try { dtpUpdateCheckTime.CustomFormat = "HH:mm"; dtpUpdateCheckTime.Format = DateTimePickerFormat.Custom; } catch { }
+            y += h + gap;
+
             chkDisableSupport = new CheckBox { Text = "Mailversand an Support unterbinden", Location = new Point(xLabel, y), Size = new Size(470, h) };
             y += h + gap + 8;
 
@@ -106,7 +112,7 @@ namespace TaMi_Einzahlautomat
             btnSave.Click += (s, e) => SaveSettings();
             btnCancel.Click += (s, e) => Close();
 
-            Controls.AddRange(new Control[] { lblAccount, cboAccount, lblFromName1, txtFromName1, lblAccount2, cboAccount2, lblFromName2, txtFromName2, lblAlert, txtAlertEmail, chkDisableSupport, btnTest, btnSave, btnCancel });
+            Controls.AddRange(new Control[] { lblAccount, cboAccount, lblFromName1, txtFromName1, lblAccount2, cboAccount2, lblFromName2, txtFromName2, lblAlert, txtAlertEmail, lblUpdTime, dtpUpdateCheckTime, chkDisableSupport, btnTest, btnSave, btnCancel });
 
             LoadSettingsAsync();
 
@@ -165,6 +171,17 @@ namespace TaMi_Einzahlautomat
                 txtAlertEmail.Text = IniHelper.ReadValue("Mail", "AlertEmail", ini) ?? string.Empty;
                 bool disableSupport;
                 chkDisableSupport.Checked = bool.TryParse(IniHelper.ReadValue("Mail", "DisableSupportMail", ini), out disableSupport) ? disableSupport : false;
+
+                try
+                {
+                    var t = IniHelper.ReadValue("App", "DailyUpdateCheckTime", ini);
+                    DateTime dt;
+                    if (!string.IsNullOrWhiteSpace(t) && DateTime.TryParseExact(t.Trim(), "HH:mm", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out dt))
+                        dtpUpdateCheckTime.Value = DateTime.Today.AddHours(dt.Hour).AddMinutes(dt.Minute);
+                    else
+                        dtpUpdateCheckTime.Value = DateTime.Today.AddHours(12);
+                }
+                catch { try { dtpUpdateCheckTime.Value = DateTime.Today.AddHours(12); } catch { } }
             }
             catch { }
         }
@@ -185,6 +202,13 @@ namespace TaMi_Einzahlautomat
                 IniHelper.WriteValue("Mail", "AlertEmail", txtAlertEmail.Text?.Trim() ?? string.Empty, ini);
                 if (chkDisableSupport.Visible)
                     IniHelper.WriteValue("Mail", "DisableSupportMail", chkDisableSupport.Checked ? "True" : "False", ini);
+
+                try
+                {
+                    var hhmm = dtpUpdateCheckTime != null ? dtpUpdateCheckTime.Value.ToString("HH:mm") : "12:00";
+                    IniHelper.WriteValue("App", "DailyUpdateCheckTime", hhmm, ini);
+                }
+                catch { }
                 MessageBox.Show(this, "Maileinstellungen gespeichert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Close();
             }
