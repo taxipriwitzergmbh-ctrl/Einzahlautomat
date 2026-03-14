@@ -791,11 +791,25 @@ namespace TaMi_Einzahlautomat
 
                 string device = (AppSettings.AutomatenName ?? string.Empty).Trim();
                 if (string.IsNullOrWhiteSpace(device)) device = "Automat";
+                string notesAppend = null;
+                try
+                {
+                    var allNotes = await TryDownloadReleaseNotesAsync().ConfigureAwait(false);
+                    notesAppend = ExtractRelevantReleaseNotes(allNotes, localVer);
+                }
+                catch { notesAppend = null; }
+
                 string msg = "Es ist ein Update verfügbar.\r\n" +
                              "Installierte Version: " + localVer + "\r\n" +
                              "Verfügbare Version: " + remoteVer + "\r\n" +
-                             "Download: " + UpdateMsiUrl + "\r\n" +
+                             "Bitte installiere die neu Version zeitnah.\r\n" +
+                             "Gehe hierfür in die Admin-Einstellungen unter den Punkt 'Update prüfen' oder starte die Software neu.\r\n" +
                              "Zeitpunkt: " + DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
+
+                if (!string.IsNullOrWhiteSpace(notesAppend))
+                {
+                    msg += "\r\n\r\n--- Release Notes ---\r\n" + notesAppend;
+                }
 
                 try
                 {
@@ -808,6 +822,55 @@ namespace TaMi_Einzahlautomat
             {
                 SafeLog("Daily update check failed: " + ex.Message);
             }
+        }
+
+        private static string ExtractRelevantReleaseNotes(string allNotes, Version installedVersion)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(allNotes)) return null;
+                if (installedVersion == null) installedVersion = new Version(0, 0, 0, 0);
+
+                // Split into lines and keep blocks beginning with "Version x.y.z" where x.y.z > installedVersion
+                var lines = allNotes.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
+                var selected = new List<string>();
+                bool inWantedBlock = false;
+
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    var raw = lines[i] ?? string.Empty;
+                    var line = raw.Trim();
+
+                    if (line.StartsWith("Version", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Parse version after keyword
+                        var rest = line.Substring("Version".Length).Trim();
+                        Version v;
+                        if (Version.TryParse(rest, out v))
+                        {
+                            inWantedBlock = v > installedVersion;
+                        }
+                        else
+                        {
+                            inWantedBlock = false;
+                        }
+                    }
+
+                    if (inWantedBlock)
+                    {
+                        selected.Add(raw);
+                    }
+                }
+
+                var txt = string.Join("\r\n", selected).Trim();
+                if (string.IsNullOrWhiteSpace(txt)) return null;
+
+                // prevent very large mails
+                const int maxChars = 6000;
+                if (txt.Length > maxChars) txt = txt.Substring(0, maxChars) + "\r\n...";
+                return txt;
+            }
+            catch { return null; }
         }
 
         private static void WriteLastSeenVersion(Version v)
