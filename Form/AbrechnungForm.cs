@@ -4348,10 +4348,9 @@ namespace TaMi_Einzahlautomat
                 {
                     if (lblNotizenInfo != null)
                     {
-                        lblNotizenInfo.Visible = true;
-                        try { lblNotizenInfo.Tag = "Fehler beim Laden der Notizen: " + ex.Message; lblNotizenInfo.Text = string.Empty; } catch { }
-                        try { _notesScrollLastTextHash = 0; _notesScrollOffsetPx = 0; if (_notesScrollTimer != null) _notesScrollTimer.Start(); } catch { }
-                        lblNotizenInfo.Invalidate();
+                        lblNotizenInfo.Visible = false;
+                        try { lblNotizenInfo.Tag = string.Empty; lblNotizenInfo.Text = string.Empty; } catch { }
+                        try { _notesScrollLastTextHash = 0; _notesScrollOffsetPx = 0; if (_notesScrollTimer != null) _notesScrollTimer.Stop(); } catch { }
                     }
                 }
                 catch { }
