@@ -549,6 +549,26 @@ namespace TaMi_Einzahlautomat
         private const float BackgroundImageOpacity = 1.0f;
         private bool _lastAbmeldenEnabled = true;
 
+        private int _autoLogoffTimeoutSec = 0;
+        private int _autoLogoffRemainingSec = 0;
+        private Timer _tmrAutoLogoff;
+        private string _btnAbmeldenBaseText = "Abmelden";
+        private bool _autoLogoffHandlersHooked = false;
+        private DateTime _lastAutoLogoffResetUtc = DateTime.MinValue;
+        private const int AutoLogoffResetDebounceMs = 800;
+
+        private string GetAbmeldenBaseText()
+        {
+            try
+            {
+                var t = btnAbmelden != null ? (btnAbmelden.Text ?? "Abmelden") : "Abmelden";
+                int p = t.IndexOf(" (", StringComparison.Ordinal);
+                if (p > 0) t = t.Substring(0, p);
+                return string.IsNullOrWhiteSpace(t) ? "Abmelden" : t;
+            }
+            catch { return "Abmelden"; }
+        }
+
         public AbrechnungForm(PersonalInfo personal, ShiftDetails details, NV200_SSP ssp) : this(personal, details, ssp, false) { }
 
         public AbrechnungForm(PersonalInfo personal, ShiftDetails details, NV200_SSP ssp, bool isAdmin)
@@ -559,6 +579,24 @@ namespace TaMi_Einzahlautomat
             _coin = CoinManager.Instance;
             _isAdmin = isAdmin;
             try { CurrentPersonalId = _personal?.PID ?? 0; } catch { CurrentPersonalId = 0; }
+
+            // UI-relevante INI-Werte vor dem Layout lesen, damit Auto-Logoff korrekt initialisiert werden kann
+            try
+            {
+                var bu = IniHelper.ReadValue("UI", "BusyUnlockTimeoutSec", AppSettings.IniPath);
+                if (!string.IsNullOrWhiteSpace(bu)) int.TryParse(bu, out _busyUnlockTimeoutSec);
+                if (_busyUnlockTimeoutSec < 0) _busyUnlockTimeoutSec = 0;
+            }
+            catch { _busyUnlockTimeoutSec = 0; }
+
+            try
+            {
+                var al = IniHelper.ReadValue("UI", "AutoLogoffTimeoutSec", AppSettings.IniPath);
+                if (!string.IsNullOrWhiteSpace(al)) int.TryParse(al, out _autoLogoffTimeoutSec);
+                if (_autoLogoffTimeoutSec < 0) _autoLogoffTimeoutSec = 0;
+            }
+            catch { _autoLogoffTimeoutSec = 0; }
+
             KeyPreview = true;
             try { this.KeyDown += AbrechnungForm_KeyDown; } catch { }
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
@@ -586,17 +624,183 @@ namespace TaMi_Einzahlautomat
 
             try
             {
-                var bu = IniHelper.ReadValue("UI", "BusyUnlockTimeoutSec", AppSettings.IniPath);
-                if (!string.IsNullOrWhiteSpace(bu)) int.TryParse(bu, out _busyUnlockTimeoutSec);
-                if (_busyUnlockTimeoutSec < 0) _busyUnlockTimeoutSec = 0;
-            }
-            catch { _busyUnlockTimeoutSec = 0; }
-
-            try
-            {
                 _tmrBusyUnlock = new Timer { Interval = 1000 };
                 _tmrBusyUnlock.Tick += (s, e) => BusyUnlockWatchdog();
                 _tmrBusyUnlock.Start();
+            }
+            catch { }
+        }
+
+        private void InitAutoLogoff()
+        {
+            if (_autoLogoffTimeoutSec <= 0) return;
+
+            try { _btnAbmeldenBaseText = GetAbmeldenBaseText(); } catch { _btnAbmeldenBaseText = "Abmelden"; }
+            // Wichtig: NICHT bei jedem Init zurücksetzen. Init kann mehrfach ausgelöst werden
+            // (Busy-UI, Re-enable, etc.) und würde sonst den Countdown "festnageln".
+            if (_autoLogoffRemainingSec <= 0 || _autoLogoffRemainingSec > _autoLogoffTimeoutSec)
+                _autoLogoffRemainingSec = _autoLogoffTimeoutSec;
+
+            if (_tmrAutoLogoff == null)
+            {
+                _tmrAutoLogoff = new Timer { Interval = 1000 };
+                _tmrAutoLogoff.Tick += async (s, e) =>
+                {
+                    try
+                    {
+                        if (_autoLogoffTimeoutSec <= 0 || btnAbmelden == null)
+                        {
+                            ResetAutoLogoffUi(force: true);
+                            return;
+                        }
+
+                        // Nur zählen, wenn diese Form wirklich im Vordergrund ist.
+                        // Wenn z.B. Admin-, Documents- oder Auth-Dialoge geöffnet sind, pausieren.
+                        try
+                        {
+                            if (!Focused && Form.ActiveForm != this)
+                            {
+                                try { _tmrAutoLogoff.Stop(); } catch { }
+                                return;
+                            }
+                        }
+                        catch { }
+
+                        if (!btnAbmelden.Enabled)
+                        {
+                            // Timer pausieren, aber Text nicht ständig zurücksetzen (sonst wirkt es wie „steht“)
+                            try { _tmrAutoLogoff.Stop(); } catch { }
+                            return;
+                        }
+
+                        if (_autoLogoffRemainingSec > 0) _autoLogoffRemainingSec--;
+                        UpdateAbmeldenCountdownText();
+
+                        if (_autoLogoffRemainingSec <= 0)
+                        {
+                            _tmrAutoLogoff.Stop();
+                            // Auto-Logout wie Button-Klick, aber ohne AdminMode-Blocker
+                            try { await AbmeldenCoreAsync(true); } catch { }
+                        }
+                    }
+                    catch { }
+                };
+            }
+
+            if (!_autoLogoffHandlersHooked)
+            {
+                _autoLogoffHandlersHooked = true;
+                HookActivityResetHandlers();
+            }
+            // Initial anzeigen + Timer starten (nur wenn Abmelden aktiv)
+            ResetAutoLogoffCountdown();
+
+            // Safety: Start wirklich erzwingen, wenn Button enabled ist
+            try
+            {
+                if (btnAbmelden != null && btnAbmelden.Enabled)
+                {
+                    if (_tmrAutoLogoff != null)
+                    {
+                        if (!_tmrAutoLogoff.Enabled) _tmrAutoLogoff.Start();
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void HookActivityResetHandlers()
+        {
+            try
+            {
+                // capture almost all touch/mouse/keyboard interactions inside the form
+                foreach (Control c in GetAllControls(this))
+                {
+                    // Nur echte User-Aktionen. MouseMove/TextChanged feuern zu oft und setzen
+                    // dadurch den Countdown ständig zurück.
+                    try { c.MouseDown += AnyUserActivity; } catch { }
+                    try { c.KeyDown += AnyUserActivity; } catch { }
+                    try { c.Click += AnyUserActivity; } catch { }
+                }
+            }
+            catch { }
+        }
+
+        private IEnumerable<Control> GetAllControls(Control root)
+        {
+            if (root == null) yield break;
+            foreach (Control c in root.Controls)
+            {
+                yield return c;
+                foreach (var cc in GetAllControls(c)) yield return cc;
+            }
+        }
+
+        private void AnyUserActivity(object sender, EventArgs e)
+        {
+            try
+            {
+                if (_autoLogoffTimeoutSec <= 0) return;
+                if (btnAbmelden == null || !btnAbmelden.Enabled) return;
+
+                // Debounce: viele Controls feuern Click/Enter/Validated in kurzer Folge
+                // (z.B. programmatische Focus-Wechsel / Repaint). Das soll den Counter nicht permanent resetten.
+                var now = DateTime.UtcNow;
+                if (_lastAutoLogoffResetUtc != DateTime.MinValue && (now - _lastAutoLogoffResetUtc).TotalMilliseconds < AutoLogoffResetDebounceMs)
+                    return;
+                _lastAutoLogoffResetUtc = now;
+
+                ResetAutoLogoffCountdown();
+            }
+            catch { }
+        }
+
+        private void ResetAutoLogoffCountdown()
+        {
+            try
+            {
+                if (_autoLogoffTimeoutSec <= 0) return;
+                if (btnAbmelden == null) return;
+
+                if (!btnAbmelden.Enabled)
+                {
+                    // Pausieren, aber Text beibehalten
+                    try { if (_tmrAutoLogoff != null) _tmrAutoLogoff.Stop(); } catch { }
+                    return;
+                }
+
+                _autoLogoffRemainingSec = _autoLogoffTimeoutSec;
+                UpdateAbmeldenCountdownText();
+                try { if (_tmrAutoLogoff != null && !_tmrAutoLogoff.Enabled) _tmrAutoLogoff.Start(); } catch { }
+            }
+            catch { }
+        }
+
+        private void ResetAutoLogoffUi(bool force)
+        {
+            try
+            {
+                if (_autoLogoffTimeoutSec <= 0) return;
+                _autoLogoffRemainingSec = _autoLogoffTimeoutSec;
+                try { if (_tmrAutoLogoff != null) _tmrAutoLogoff.Stop(); } catch { }
+                if (force) UpdateAbmeldenCountdownText(showCountdown: false);
+            }
+            catch { }
+        }
+
+        private void UpdateAbmeldenCountdownText(bool showCountdown = true)
+        {
+            try
+            {
+                if (btnAbmelden == null) return;
+                if (!showCountdown || !btnAbmelden.Enabled || _autoLogoffTimeoutSec <= 0)
+                {
+                    btnAbmelden.Text = _btnAbmeldenBaseText;
+                    return;
+                }
+
+                int sec = Math.Max(0, _autoLogoffRemainingSec);
+                btnAbmelden.Text = _btnAbmeldenBaseText + " (" + sec.ToString() + "s)";
             }
             catch { }
         }
@@ -931,6 +1135,9 @@ namespace TaMi_Einzahlautomat
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             try { _bgImage?.Dispose(); } catch { }
+            try { _tmrAutoLogoff?.Stop(); } catch { }
+            try { _tmrAutoLogoff?.Dispose(); } catch { }
+            _tmrAutoLogoff = null;
             try
             {
                 if (_tmrAvail != null)
@@ -1037,8 +1244,8 @@ namespace TaMi_Einzahlautomat
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(229, 57, 53),
                 FlatStyle = FlatStyle.Flat,
-                Size = new Size(140, 44),
-                Location = new Point(ClientSize.Width - 160, 8),
+                Size = new Size(175, 44),
+                Location = new Point(ClientSize.Width - 195, 8),
                 TabStop = false
             };
             btnAbmelden.FlatAppearance.BorderSize = 0;
@@ -1046,6 +1253,18 @@ namespace TaMi_Einzahlautomat
             try { btnAbmelden.Region = System.Drawing.Region.FromHrgn(CreateRoundRectRgn(0, 0, btnAbmelden.Width, btnAbmelden.Height, 14, 14)); } catch { }
             btnAbmelden.Click += btnAbmelden_Click;
             headerPanel.Controls.Add(btnAbmelden);
+
+            // Auto-Logoff: Basistex merken und ggf. Countdown initial anzeigen
+            try
+            {
+                _btnAbmeldenBaseText = GetAbmeldenBaseText();
+                if (_autoLogoffTimeoutSec > 0)
+                {
+                    _autoLogoffRemainingSec = _autoLogoffTimeoutSec;
+                    UpdateAbmeldenCountdownText(showCountdown: btnAbmelden.Enabled);
+                }
+            }
+            catch { }
 
             btnAdmin = new Button
             {
@@ -2785,8 +3004,20 @@ namespace TaMi_Einzahlautomat
                     {
                         try { BusyAnimationManager.End("abmelden enabled"); } catch { }
                         try { if (BusyAnimationManager.IsActive) BusyAnimationManager.EndForce(); } catch { }
+
+                        // Timer nach kurzer Busy-Phase sicher wieder aktivieren
+                        try { InitAutoLogoff(); } catch { }
                     }
                     _lastAbmeldenEnabled = newEnabled;
+
+                    try
+                    {
+                        // Wichtig: nicht bei jedem UpdateBusyUI() resetten (wird zyklisch aufgerufen).
+                        // Nur bei Zustandswechsel reagieren.
+                        if (!newEnabled && prevEnabled) ResetAutoLogoffUi(force: true);
+                        else if (newEnabled && !prevEnabled) ResetAutoLogoffCountdown();
+                    }
+                    catch { }
                 }
                 if (btnSchichtAuswahl != null) btnSchichtAuswahl.Enabled = !userLocked;
                 UpdatePlusMinusEnabled();
@@ -4263,6 +4494,27 @@ namespace TaMi_Einzahlautomat
         protected override async void OnShown(EventArgs e)
         {
             base.OnShown(e);
+
+            // Auto-Logoff zuverlässig erst starten, wenn Form + Controls komplett angezeigt sind.
+            // (Sonst kann der Timer zwar Text setzen, aber durch spätere Layout/Style-Phasen optisch „stehen bleiben“.)
+            try
+            {
+                // leicht verzögert starten, damit nachfolgende Initialisierungen (Busy-UI/Device-Enable)
+                // den Timer nicht direkt wieder stoppen
+                BeginInvoke((Action)(() =>
+                {
+                    try { InitAutoLogoff(); } catch { }
+                }));
+            }
+            catch { }
+
+            // Countdown nur laufen lassen, wenn AbrechnungForm aktiv ist.
+            try
+            {
+                this.Activated += (s, ev) => { try { ResetAutoLogoffCountdown(); } catch { } };
+                this.Deactivate += (s, ev) => { try { if (_tmrAutoLogoff != null) _tmrAutoLogoff.Stop(); } catch { } };
+            }
+            catch { }
             try { EnableAllDevicesOnOpen(); } catch { }
             try
             {

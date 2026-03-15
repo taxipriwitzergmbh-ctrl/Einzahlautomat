@@ -26,6 +26,9 @@ namespace TaMi_Einzahlautomat
         private Label _lblBusyUnlock;
         private TextBox _txtBusyUnlock;
 
+        private Label _lblAutoLogoff;
+        private TextBox _txtAutoLogoff;
+
         private CheckBox _chkReceiptPromptEnabled;
         private CheckBox _chkQrCodeEnabled;
         private CheckBox _chkDocumentsEnabled;
@@ -183,6 +186,11 @@ namespace TaMi_Einzahlautomat
             content.Controls.Add(_lblBusyUnlock); content.Controls.Add(_txtBusyUnlock);
             y += 24 + 24 + 12;
 
+            _lblAutoLogoff = new Label { Text = "Auto-Logoff nach (Sek.)", AutoSize = true, Location = new Point(left + 26, y), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
+            _txtAutoLogoff = new TextBox { Location = new Point(left + 26, y + 24), Width = 150, Font = new Font("Segoe UI", 11F) };
+            content.Controls.Add(_lblAutoLogoff); content.Controls.Add(_txtAutoLogoff);
+            y += 24 + 24 + 12;
+
             var lblMaint = new Label { Text = "Wartungscode (Maintenance)", AutoSize = true, Location = new Point(left + 26, y), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
             content.Controls.Add(lblMaint);
             y += 26;
@@ -252,6 +260,7 @@ namespace TaMi_Einzahlautomat
             try { var hideRemote = IniHelper.ReadValue("UI", "HideRemoteButton", ini); _chkHideRemote.Checked = !string.IsNullOrWhiteSpace(hideRemote) && (hideRemote.Equals("true", StringComparison.OrdinalIgnoreCase) || hideRemote.Equals("1") || hideRemote.Equals("yes", StringComparison.OrdinalIgnoreCase) || hideRemote.Equals("on", StringComparison.OrdinalIgnoreCase)); } catch { }
             try { var devIdRaw = IniHelper.ReadValue("Device", "ID", ini); if (!string.IsNullOrWhiteSpace(devIdRaw)) _txtDeviceId.Text = devIdRaw.Trim(); else _txtDeviceId.Text = AppSettings.DeviceId > 0 ? AppSettings.DeviceId.ToString() : "1"; } catch { _txtDeviceId.Text = "1"; }
             try { var bu = IniHelper.ReadValue("UI", "BusyUnlockTimeoutSec", ini); _txtBusyUnlock.Text = string.IsNullOrWhiteSpace(bu) ? "0" : bu.Trim(); } catch { _txtBusyUnlock.Text = "0"; }
+            try { var al = IniHelper.ReadValue("UI", "AutoLogoffTimeoutSec", ini); _txtAutoLogoff.Text = string.IsNullOrWhiteSpace(al) ? "0" : al.Trim(); } catch { _txtAutoLogoff.Text = "0"; }
             try { var maint = IniHelper.ReadValue("Security", "MaintenancePassword", ini); var dec = DecryptSecret(maint ?? string.Empty); if (!string.IsNullOrEmpty(dec)) { _txtMaintPwd.Text = dec; _txtMaintPwd2.Text = dec; } else if (!string.IsNullOrEmpty(maint)) { _txtMaintPwd.Text = new string('•', 8); _txtMaintPwd2.Text = new string('•', 8); _txtMaintPwd.Tag = PlaceholderTag; _txtMaintPwd2.Tag = PlaceholderTag; } } catch { }
             try { var adm = IniHelper.ReadValue("Security", "AdminNumericBackdoor", ini); var dec = DecryptSecret(adm ?? string.Empty); if (!string.IsNullOrEmpty(dec)) { _txtAdminBackdoor.Text = dec; _txtAdminBackdoor2.Text = dec; } else if (!string.IsNullOrEmpty(adm)) { _txtAdminBackdoor.Text = new string('•', 8); _txtAdminBackdoor2.Text = new string('•', 8); _txtAdminBackdoor.Tag = PlaceholderTag; _txtAdminBackdoor2.Tag = PlaceholderTag; } } catch { }
             try { var prompt = IniHelper.ReadValue("ReceiptPrinter", "AskUser", ini); _chkReceiptPromptEnabled.Checked = string.IsNullOrWhiteSpace(prompt) ? true : (prompt.Equals("true", StringComparison.OrdinalIgnoreCase) || prompt.Equals("1") || prompt.Equals("yes", StringComparison.OrdinalIgnoreCase) || prompt.Equals("on", StringComparison.OrdinalIgnoreCase)); } catch { _chkReceiptPromptEnabled.Checked = true; }
@@ -276,6 +285,7 @@ namespace TaMi_Einzahlautomat
             try { IniHelper.WriteValue("UI", "HideRemoteButton", _chkHideRemote.Checked ? "True" : "False", ini); } catch { }
             try { IniHelper.WriteValue("Device", "ID", newDevId.ToString(), ini); } catch { }
             try { var raw = (_txtBusyUnlock.Text ?? string.Empty).Trim(); int sec = 0; if (!string.IsNullOrEmpty(raw)) int.TryParse(raw, out sec); if (sec < 0) sec = 0; IniHelper.WriteValue("UI", "BusyUnlockTimeoutSec", sec.ToString(), ini); } catch { }
+            try { var raw = (_txtAutoLogoff.Text ?? string.Empty).Trim(); int sec = 0; if (!string.IsNullOrEmpty(raw)) int.TryParse(raw, out sec); if (sec < 0) sec = 0; IniHelper.WriteValue("UI", "AutoLogoffTimeoutSec", sec.ToString(), ini); } catch { }
             try { IniHelper.WriteValue("Security", "MaintenancePassword", EncryptSecret((_txtMaintPwd.Text ?? string.Empty).Trim()), ini); } catch { }
             try { IniHelper.WriteValue("Security", "AdminNumericBackdoor", EncryptSecret((_txtAdminBackdoor.Text ?? string.Empty).Trim()), ini); } catch { }
             try { IniHelper.WriteValue("ReceiptPrinter", "AskUser", _chkReceiptPromptEnabled.Checked ? "True" : "False", ini); } catch { }
