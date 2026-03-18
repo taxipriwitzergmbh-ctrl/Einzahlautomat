@@ -35,6 +35,7 @@ namespace TaMi_Einzahlautomat
                             btnManuellAdd.Visible = vis;
                             try { UpdateBuchenEnabled(); } catch { }
                         }
+
                     }
                     catch { }
                     return true;
@@ -108,7 +109,10 @@ namespace TaMi_Einzahlautomat
             {
                 b.FlatStyle = FlatStyle.Flat;
                 b.FlatAppearance.BorderSize = 0;
-                b.BackColor = Color.Transparent;
+                // WinForms Buttons do not reliably support true transparency.
+                // Using Transparent here can throw "Control does not support transparent back color".
+                // The button is owner-painted (ModernButton_Paint), so use the parent's background color.
+                try { b.BackColor = b.Parent != null ? b.Parent.BackColor : SystemColors.Control; } catch { b.BackColor = SystemColors.Control; }
                 b.UseVisualStyleBackColor = false;
                 b.ForeColor = Color.White;
                 b.Paint -= ModernButton_Paint;
@@ -495,6 +499,8 @@ namespace TaMi_Einzahlautomat
         private readonly PersonalInfo _personal;
 
         private Button btnSchichtAuswahl;
+        private bool _notizenConfirmAutoShown;
+        private bool _notizenConfirmDialogOpen;
         private decimal _personalGuthaben = 0m;
 
         // Laufender Auszahlstatus (reduziert – ungenutzte Felder entfernt)
@@ -1623,6 +1629,8 @@ namespace TaMi_Einzahlautomat
                             btnSchichtAuswahl.Location = new Point(Math.Max(20, right - btnSchichtAuswahl.Width), y);
                             right = btnSchichtAuswahl.Left - gap;
                         }
+
+                        // Notiz-Bestätigung Button entfernt (Auto-Popup beim Öffnen)
                     }
                     catch { }
                 };
@@ -1759,8 +1767,17 @@ namespace TaMi_Einzahlautomat
             btnSchichtAuswahl.Click += BtnSchichtAuswahl_Click;
             headerPanel.Controls.Add(btnSchichtAuswahl);
 
+            // Notiz-Bestätigung Button entfernt (Auto-Popup beim Öffnen)
+
             // initial einordnen
-            try { headerPanel.PerformLayout(); } catch { }
+            try
+            {
+                // Layout-Delegate wurde oben im BuildModernLayout erstellt. Ein simples PerformLayout triggert das nicht zuverlässig.
+                // Deshalb: SizeChanged/Layout explizit auslösen.
+                try { headerPanel.PerformLayout(); } catch { }
+                try { OnSizeChanged(EventArgs.Empty); } catch { }
+            }
+            catch { }
 
             tabControl.SelectedIndexChanged += (s, e) =>
             {
@@ -4522,6 +4539,108 @@ namespace TaMi_Einzahlautomat
         {
             base.OnShown(e);
 
+            async Task TryAutoShowNotizenConfirmAsync()
+            {
+                try
+                {
+                    if (_notizenConfirmAutoShown) return;
+                    if (_notizenConfirmDialogOpen) return;
+                    if (!Visible) return;
+                    if (AdminMode.IsOpen) return;
+                    // Nicht auf Fokus/ActiveForm angewiesen: Dialog darf auch dann erscheinen,
+                    // wenn die Form zwar sichtbar ist, aber Windows den Fokus noch nicht vergeben hat.
+
+                    // kleiner Delay, damit UI fertig ist
+                    try { await Task.Delay(250); } catch { }
+                    if (!Visible) return;
+
+                    List<NotizenDbDto> open;
+                    using (var db = new DatabaseHelper())
+                    {
+                        open = await db.GetNotizenToConfirmAsync(_personal != null ? _personal.PID : 0);
+                    }
+
+                    bool anyOpen = open != null && open.Count > 0;
+                    if (!anyOpen) return;
+
+                    // ab hier gilt: wir zeigen automatisch (nur einmal)
+                    _notizenConfirmAutoShown = true;
+                    _notizenConfirmDialogOpen = true;
+
+                    var items = open
+                        .Select(x => new NotizenConfirmForm.NoteItem
+                        {
+                            AutoId = x.NotizId,
+                            Text = x.Text,
+                            GueltigBis = x.GueltigBis,
+                            RelId = x.RelId,
+                            Flags = x.Flags
+                        })
+                        .ToList();
+
+                    Func<int, int, Task> setFlags = async (id, flags) =>
+                    {
+                        try
+                        {
+                            using (var db = new DatabaseHelper())
+                            {
+                                await db.SetNotizFlagsAsync(id, flags);
+                            }
+                        }
+                        catch { }
+                    };
+
+                    using (var dlg = new NotizenConfirmForm(items, setFlags))
+                    {
+                        dlg.StartPosition = FormStartPosition.CenterParent;
+                        if (Program.KioskModeEnabled)
+                        {
+                            bool prevTopMost = TopMost;
+                            try { TopMost = false; } catch { }
+                            dlg.TopMost = true;
+                            dlg.FormClosed += (s3, e3) => { try { TopMost = prevTopMost; Activate(); BringToFront(); } catch { } };
+                        }
+                        try { dlg.ShowDialog(this); } catch { dlg.ShowDialog(); }
+                    }
+
+                    _notizenConfirmDialogOpen = false;
+
+                    // Button nach dem Bestätigen aktualisieren
+                    try
+                    {
+                        using (var db2 = new DatabaseHelper())
+                        {
+                            await db2.GetNotizenToConfirmAsync(_personal != null ? _personal.PID : 0);
+                        }
+                    }
+                    catch { }
+                finally
+                {
+                    // safety: never keep the flag true if we exited early due to exception
+                    try { _notizenConfirmDialogOpen = false; } catch { }
+                }
+                }
+                catch { }
+            }
+
+            // Robust: falls beim OnShown noch ein anderer Dialog / Fokus aktiv ist, beim Activated erneut versuchen.
+            try
+            {
+                EventHandler onAct = null;
+                onAct = async (s, ev) =>
+                {
+                    try
+                    {
+                        if (_notizenConfirmAutoShown) { try { Activated -= onAct; } catch { } return; }
+                        await TryAutoShowNotizenConfirmAsync();
+                        if (_notizenConfirmAutoShown) { try { Activated -= onAct; } catch { } }
+                    }
+                    catch { }
+                };
+                Activated += onAct;
+            }
+            catch { }
+
             // Auto-Logoff zuverlässig erst starten, wenn Form + Controls komplett angezeigt sind.
             // (Sonst kann der Timer zwar Text setzen, aber durch spätere Layout/Style-Phasen optisch „stehen bleiben“.)
             try
@@ -4562,9 +4681,27 @@ namespace TaMi_Einzahlautomat
                 if (oldestSchicht != null) LadeSchicht(oldestSchicht.Schicht); else if (oldestAuszahlung != null) LadeAuszahlung(oldestAuszahlung.Auszahlung);
             }
             catch (Exception ex) { MessageBox.Show(this, $"NV200: Verbindung beim Öffnen fehlgeschlagen:\r\n{ex.Message}", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+
+            // Kein direkter zweiter Aufruf hier: wir starten über BeginInvoke + Activated-Retry, sonst flackert es/doppelt.
+            // ABER: Ein initialer *geplanter* Aufruf am Ende sorgt dafür, dass es auch ohne Klick funktioniert,
+            // nachdem alle initialen awaits (DB/Device) durch sind.
+            try
             {
-                using (var db = new DatabaseHelper()) { _personalGuthaben = await db.GetLastPersonalGuthabenSaldoAsync(_personal.PID); }
+                BeginInvoke((Action)(async () =>
+                {
+                    try { await TryAutoShowNotizenConfirmAsync(); } catch { }
+                }));
             }
+            catch { }
+
+            try
+            {
+                using (var db = new DatabaseHelper())
+                {
+                    _personalGuthaben = await db.GetLastPersonalGuthabenSaldoAsync(_personal.PID);
+                }
+            }
+            catch { }
             try { lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}"; } catch { }
             UpdateAbrechnenSummaries();
             try { if (btnCreatePayment != null) btnCreatePayment.Visible = PaymentSettingsStore.IsEnabled(); } catch { }

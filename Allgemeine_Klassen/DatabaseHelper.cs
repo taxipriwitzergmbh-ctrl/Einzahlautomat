@@ -157,6 +157,61 @@ ORDER BY Datum DESC, NotizID DESC;";
         public async Task<bool> PersonalIdExistsAsync(int pid)
         { await EnsureOpenAsync().ConfigureAwait(false); using (var cmd = _connection.CreateCommand()) { cmd.CommandText = "SELECT TOP 1 1 FROM TPersonal WITH (NOLOCK) WHERE PID = @PID"; cmd.Parameters.AddWithValue("@PID", pid); var r = await cmd.ExecuteScalarAsync().ConfigureAwait(false); return r != null && r != DBNull.Value; } }
 
+        public async System.Threading.Tasks.Task<System.Collections.Generic.List<NotizenDbDto>> GetNotizenToConfirmAsync(int pid)
+        {
+            var list = new System.Collections.Generic.List<NotizenDbDto>();
+            if (pid <= 0) return list;
+
+            await EnsureOpenAsync().ConfigureAwait(false);
+            using (var cmd = _connection.CreateCommand())
+            {
+                // RelTyp=12: Mitarbeiter-Notizen
+                // Nur Notizen, die explizit für diesen Mitarbeiter sind (RelID=PID), nicht bestätigt (Flags=0)
+                // und "unbegrenzt" gültig (GueltigBis=1900-01-01/NULL)
+                cmd.CommandText = @"
+SELECT NotizID, [Text], TRY_CONVERT(int, RelID) AS RelID, ISNULL(Flags,0) AS Flags, GueltigBis
+FROM TNotizen WITH (NOLOCK)
+WHERE RelTyp = 12
+  AND TRY_CONVERT(int, RelID) = @PID
+  AND ISNULL(Flags,0) = 0
+  AND (GueltigBis IS NULL OR GueltigBis <= '19000101')
+ORDER BY Datum DESC, NotizID DESC;";
+                cmd.Parameters.AddWithValue("@PID", pid);
+
+                using (var rdr = await cmd.ExecuteReaderAsync().ConfigureAwait(false))
+                {
+                    while (await rdr.ReadAsync().ConfigureAwait(false))
+                    {
+                        try
+                        {
+                            var it = new NotizenDbDto();
+                            try { it.NotizId = rdr.IsDBNull(0) ? 0 : Convert.ToInt32(rdr[0]); } catch { it.NotizId = 0; }
+                            try { it.Text = rdr.IsDBNull(1) ? string.Empty : Convert.ToString(rdr[1]); } catch { it.Text = string.Empty; }
+                            try { it.RelId = rdr.IsDBNull(2) ? 0 : Convert.ToInt32(rdr[2]); } catch { it.RelId = 0; }
+                            try { it.Flags = rdr.IsDBNull(3) ? 0 : Convert.ToInt32(rdr[3]); } catch { it.Flags = 0; }
+                            try { it.GueltigBis = rdr.IsDBNull(4) ? (DateTime?)null : Convert.ToDateTime(rdr[4]); } catch { it.GueltigBis = null; }
+                            if (it.NotizId > 0) list.Add(it);
+                        }
+                        catch { }
+                    }
+                }
+            }
+            return list;
+        }
+
+        public async System.Threading.Tasks.Task SetNotizFlagsAsync(int notizId, int flags)
+        {
+            if (notizId <= 0) return;
+            await EnsureOpenAsync().ConfigureAwait(false);
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = "UPDATE TNotizen SET Flags=@Flags WHERE NotizID=@Id";
+                cmd.Parameters.AddWithValue("@Flags", flags);
+                cmd.Parameters.AddWithValue("@Id", notizId);
+                await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+            }
+        }
+
         // Kombinierte Meta-Abfrage für Login (Existenz + Status + Fahrercode) – reduziert Roundtrips
         public async Task<(bool exists, PersonalStatus status, string fahrercode)> GetPersonalLoginMetaAsync(int pid)
         {
