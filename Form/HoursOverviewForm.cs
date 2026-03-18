@@ -166,6 +166,13 @@ namespace TaMi_Einzahlautomat
         }
 
         private ModernHeaderPanel _header;
+
+        private Timer _tmrAutoClose;
+        private int _autoCloseRemainingSec;
+        private int _autoCloseConfiguredSec;
+        private Label _lblHeaderCountdown;
+        private DateTime _lastAutoCloseResetUtc = DateTime.MinValue;
+        private const int AutoCloseResetDebounceMs = 400;
         private ComboBox _cbMonth;
         private ComboBox _cbYear;
         private ModernGradientButton _btnPrev;
@@ -185,6 +192,17 @@ namespace TaMi_Einzahlautomat
         public HoursOverviewForm(PersonalInfo personal)
         {
             _personal = personal ?? throw new ArgumentNullException(nameof(personal));
+
+            try
+            {
+                int sec = 0;
+                var raw = IniHelper.ReadValue("UI", "AutoCloseDocsHoursSec", AppSettings.IniPath);
+                if (!string.IsNullOrWhiteSpace(raw)) int.TryParse(raw.Trim(), out sec);
+                if (sec < 0) sec = 0;
+                _autoCloseConfiguredSec = sec;
+                _autoCloseRemainingSec = sec;
+            }
+            catch { _autoCloseRemainingSec = 0; }
             try
             {
                 var flags = (SuE.TaMi.PersonalFlags)_personal.Flags;
@@ -203,6 +221,108 @@ namespace TaMi_Einzahlautomat
             BuildUi();
             try { AppLogger.Log($"Zeiterfassung geöffnet: PID={_personal.PID}, Name={_personal.Vorname} {_personal.Name}"); } catch { }
             LoadCurrentMonth();
+
+            try
+            {
+                this.Shown += (s, e) => StartAutoCloseIfEnabled();
+                this.Activated += (s, e) => StartAutoCloseIfEnabled();
+                this.Deactivate += (s, e) => { try { _tmrAutoClose?.Stop(); } catch { } };
+                this.FormClosed += (s, e) => { try { _tmrAutoClose?.Stop(); _tmrAutoClose?.Dispose(); _tmrAutoClose = null; } catch { } };
+            }
+            catch { }
+
+            try { HookAutoCloseActivityReset(); } catch { }
+        }
+
+        private void HookAutoCloseActivityReset()
+        {
+            try
+            {
+                foreach (Control c in GetAllControls(this))
+                {
+                    try { c.MouseDown += AnyUserActivityAutoClose; } catch { }
+                    try { c.Click += AnyUserActivityAutoClose; } catch { }
+                    try { c.KeyDown += AnyUserActivityAutoClose; } catch { }
+                }
+            }
+            catch { }
+        }
+
+        private System.Collections.Generic.IEnumerable<Control> GetAllControls(Control root)
+        {
+            if (root == null) yield break;
+            foreach (Control c in root.Controls)
+            {
+                yield return c;
+                foreach (var cc in GetAllControls(c)) yield return cc;
+            }
+        }
+
+        private void AnyUserActivityAutoClose(object sender, EventArgs e)
+        {
+            try
+            {
+                if (_autoCloseConfiguredSec <= 0) return;
+                var now = DateTime.UtcNow;
+                if (_lastAutoCloseResetUtc != DateTime.MinValue && (now - _lastAutoCloseResetUtc).TotalMilliseconds < AutoCloseResetDebounceMs)
+                    return;
+                _lastAutoCloseResetUtc = now;
+                ResetAutoCloseCountdown();
+            }
+            catch { }
+        }
+
+        private void ResetAutoCloseCountdown()
+        {
+            try
+            {
+                if (_autoCloseConfiguredSec <= 0) return;
+                _autoCloseRemainingSec = _autoCloseConfiguredSec;
+                try { if (_lblHeaderCountdown != null && _lblHeaderCountdown.Visible) _lblHeaderCountdown.Text = _autoCloseRemainingSec.ToString() + "s"; } catch { }
+                try { if (_tmrAutoClose != null && !_tmrAutoClose.Enabled && (Focused || Form.ActiveForm == this)) _tmrAutoClose.Start(); } catch { }
+            }
+            catch { }
+        }
+
+        private void StartAutoCloseIfEnabled()
+        {
+            try
+            {
+                if (_autoCloseConfiguredSec <= 0) return;
+                if (_autoCloseRemainingSec <= 0 || _autoCloseRemainingSec > _autoCloseConfiguredSec)
+                    _autoCloseRemainingSec = _autoCloseConfiguredSec;
+
+                try
+                {
+                    if (_lblHeaderCountdown != null)
+                    {
+                        _lblHeaderCountdown.Visible = true;
+                        _lblHeaderCountdown.Text = _autoCloseRemainingSec.ToString() + "s";
+                    }
+                }
+                catch { }
+                if (_tmrAutoClose == null)
+                {
+                    _tmrAutoClose = new Timer { Interval = 1000 };
+                    _tmrAutoClose.Tick += (s, e) =>
+                    {
+                        try
+                        {
+                            if (!Focused && Form.ActiveForm != this) { _tmrAutoClose.Stop(); return; }
+                            if (_autoCloseRemainingSec > 0) _autoCloseRemainingSec--;
+                            try { if (_lblHeaderCountdown != null && _lblHeaderCountdown.Visible) _lblHeaderCountdown.Text = Math.Max(0, _autoCloseRemainingSec).ToString() + "s"; } catch { }
+                            if (_autoCloseRemainingSec <= 0)
+                            {
+                                _tmrAutoClose.Stop();
+                                try { Close(); } catch { }
+                            }
+                        }
+                        catch { }
+                    };
+                }
+                if (!_tmrAutoClose.Enabled) _tmrAutoClose.Start();
+            }
+            catch { }
         }
 
         private void BuildUi()
@@ -221,6 +341,41 @@ namespace TaMi_Einzahlautomat
             _header.CloseClicked += () => { try { Close(); } catch { } };
             _header.MinimizeClicked += () => { try { WindowState = FormWindowState.Minimized; } catch { } };
             Controls.Add(_header);
+
+            // Countdown links neben dem X
+            try
+            {
+                _lblHeaderCountdown = new Label
+                {
+                    AutoSize = false,
+                    Size = new Size(86, _header.Height),
+                    TextAlign = ContentAlignment.MiddleRight,
+                    Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    BackColor = Color.Transparent,
+                    Visible = false
+                };
+                _header.Controls.Add(_lblHeaderCountdown);
+                _header.Controls.SetChildIndex(_lblHeaderCountdown, 0);
+                _header.Resize += (s, e) =>
+                {
+                    try
+                    {
+                        int rightPad = 70; // mehr Platz, damit das 's' nicht vom X überdeckt wird
+                        _lblHeaderCountdown.Location = new Point(Math.Max(0, _header.Width - rightPad - _lblHeaderCountdown.Width - 10), 0);
+                        _lblHeaderCountdown.Height = _header.Height;
+                    }
+                    catch { }
+                };
+                try
+                {
+                    int rightPad = 70;
+                    _lblHeaderCountdown.Location = new Point(Math.Max(0, _header.Width - rightPad - _lblHeaderCountdown.Width - 10), 0);
+                    _lblHeaderCountdown.Height = _header.Height;
+                }
+                catch { }
+            }
+            catch { }
 
             // Apply rounded corners to the borderless form
             try

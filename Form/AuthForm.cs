@@ -30,6 +30,11 @@ namespace TaMi_Einzahlautomat
         private const int NfcIdleTimeoutMs = 800;
         private bool _nfcCollectMode = false; // collect full token (letters+digits)
 
+        private Timer _tmrAutoClose;
+        private int _autoCloseRemainingSec;
+        private int _autoCloseConfiguredSec;
+        private Label _lblHeaderCountdown;
+
         public AuthForm(int pid, PersonalInfo personal, NV200_SSP ssp, Action<PersonalInfo> onSuccessOpenTarget)
         {
             _pid = pid;
@@ -37,6 +42,16 @@ namespace TaMi_Einzahlautomat
             _ssp = ssp;
             _onSuccessOpenTarget = onSuccessOpenTarget;
             DetermineAuthMode();
+            try
+            {
+                int sec = 0;
+                var raw = IniHelper.ReadValue("UI", "AutoCloseDocsHoursSec", AppSettings.IniPath);
+                if (!string.IsNullOrWhiteSpace(raw)) int.TryParse(raw.Trim(), out sec);
+                if (sec < 0) sec = 0;
+                _autoCloseConfiguredSec = sec;
+                _autoCloseRemainingSec = sec;
+            }
+            catch { _autoCloseRemainingSec = 0; }
             BuildUi();
         }
 
@@ -67,6 +82,41 @@ namespace TaMi_Einzahlautomat
             _header = new ModernHeaderPanel { Title = titleText, ShowMinimize = false };
             _header.CloseClicked += () => { try { Close(); } catch { } };
             Controls.Add(_header);
+
+            // Countdown links neben dem X
+            try
+            {
+                _lblHeaderCountdown = new Label
+                {
+                    AutoSize = false,
+                    Size = new Size(86, _header.Height),
+                    TextAlign = ContentAlignment.MiddleRight,
+                    Font = new Font("Segoe UI Variable", 10F, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    BackColor = Color.Transparent,
+                    Visible = false
+                };
+                _header.Controls.Add(_lblHeaderCountdown);
+                _header.Controls.SetChildIndex(_lblHeaderCountdown, 0);
+                _header.Resize += (s, e) =>
+                {
+                    try
+                    {
+                        int rightPad = 74; // mehr Platz, damit Text nicht vom X überdeckt wird
+                        _lblHeaderCountdown.Location = new Point(Math.Max(0, _header.Width - rightPad - _lblHeaderCountdown.Width - 10), 0);
+                        _lblHeaderCountdown.Height = _header.Height;
+                    }
+                    catch { }
+                };
+                try
+                {
+                    int rightPad = 74;
+                    _lblHeaderCountdown.Location = new Point(Math.Max(0, _header.Width - rightPad - _lblHeaderCountdown.Width - 10), 0);
+                    _lblHeaderCountdown.Height = _header.Height;
+                }
+                catch { }
+            }
+            catch { }
 
             try
             {
@@ -207,6 +257,69 @@ namespace TaMi_Einzahlautomat
             _nfcIdleTimer.Tick += (s, e) => { _nfcIdleTimer.Stop(); _nfcBuffer = string.Empty; _nfcCollectMode = false; };
 
             try { if (Program.CoinFeeder != null) Program.CoinFeeder.NfcReceived += OnCoinFeederNfc; } catch { }
+
+            try
+            {
+                this.Shown += (s, e) => StartAutoCloseIfEnabled();
+                this.Activated += (s, e) => StartAutoCloseIfEnabled();
+                this.Deactivate += (s, e) => { try { _tmrAutoClose?.Stop(); } catch { } };
+                this.FormClosed += (s, e) => { try { _tmrAutoClose?.Stop(); _tmrAutoClose?.Dispose(); _tmrAutoClose = null; } catch { } };
+            }
+            catch { }
+        }
+
+        private void StartAutoCloseIfEnabled()
+        {
+            try
+            {
+                if (_autoCloseConfiguredSec <= 0) return;
+                if (_autoCloseRemainingSec <= 0 || _autoCloseRemainingSec > _autoCloseConfiguredSec)
+                    _autoCloseRemainingSec = _autoCloseConfiguredSec;
+
+                try
+                {
+                    if (_lblHeaderCountdown != null)
+                    {
+                        _lblHeaderCountdown.Visible = true;
+                        _lblHeaderCountdown.Text = _autoCloseRemainingSec.ToString() + "s";
+                    }
+                }
+                catch { }
+
+                if (_tmrAutoClose == null)
+                {
+                    _tmrAutoClose = new Timer { Interval = 1000 };
+                    _tmrAutoClose.Tick += (s, e) =>
+                    {
+                        try
+                        {
+                            if (!Focused && Form.ActiveForm != this) { _tmrAutoClose.Stop(); return; }
+                            if (_autoCloseRemainingSec > 0) _autoCloseRemainingSec--;
+                            try { if (_lblHeaderCountdown != null && _lblHeaderCountdown.Visible) _lblHeaderCountdown.Text = Math.Max(0, _autoCloseRemainingSec).ToString() + "s"; } catch { }
+                            if (_autoCloseRemainingSec <= 0)
+                            {
+                                _tmrAutoClose.Stop();
+                                try { Close(); } catch { }
+                            }
+                        }
+                        catch { }
+                    };
+                }
+                if (!_tmrAutoClose.Enabled) _tmrAutoClose.Start();
+            }
+            catch { }
+        }
+
+        private void ResetAutoCloseCountdown()
+        {
+            try
+            {
+                if (_autoCloseConfiguredSec <= 0) return;
+                _autoCloseRemainingSec = _autoCloseConfiguredSec;
+                try { if (_lblHeaderCountdown != null && _lblHeaderCountdown.Visible) _lblHeaderCountdown.Text = _autoCloseRemainingSec.ToString() + "s"; } catch { }
+                try { StartAutoCloseIfEnabled(); } catch { }
+            }
+            catch { }
         }
 
         protected override void OnShown(EventArgs e)
@@ -384,6 +497,7 @@ namespace TaMi_Einzahlautomat
         {
             if (!(_requireNfc || !_allowCode)) return;
             if (string.IsNullOrWhiteSpace(token)) return;
+            try { ResetAutoCloseCountdown(); } catch { }
             try { if (InvokeRequired) { BeginInvoke((Action)(async () => await TryCompleteAsyncByNfc(token))); return; } await TryCompleteAsyncByNfc(token); } catch { }
         }
 
@@ -440,6 +554,7 @@ namespace TaMi_Einzahlautomat
 
         private void AuthForm_KeyDown(object sender, KeyEventArgs e)
         {
+            try { ResetAutoCloseCountdown(); } catch { }
             if ((_requireNfc || !_allowCode) && e.Control && e.KeyCode == Keys.V)
             {
                 try { var clip = Clipboard.GetText(); if (!string.IsNullOrWhiteSpace(clip)) { _nfcBuffer = clip.Trim(); _nfcCollectMode = true; _nfcIdleTimer.Stop(); } } catch { }
@@ -507,6 +622,7 @@ namespace TaMi_Einzahlautomat
 
         private void AuthForm_KeyPress(object sender, KeyPressEventArgs e)
         {
+            try { ResetAutoCloseCountdown(); } catch { }
             // Letters or digits begin/continue NFC buffer and enable collect mode
             if (char.IsLetterOrDigit(e.KeyChar))
             {

@@ -1851,7 +1851,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:Einzahlautomat Setup"
         "ProductCode" = "8:{4B0297FC-0E63-4D39-B17F-8A9471147BB6}"
-        "PackageCode" = "8:{CDE1CC4D-2C74-475A-9C31-9BB6E8F7214A}"
+        "PackageCode" = "8:{BC60CD50-621D-46B8-926D-1D9ABE9A3AC0}"
         "UpgradeCode" = "8:{8CAACCC8-FD0C-4D2D-A1EE-B351D81D9E7A}"
         "AspNetVersion" = "8:2.0.50727.0"
         "RestartWWWService" = "11:FALSE"
