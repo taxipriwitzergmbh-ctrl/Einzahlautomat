@@ -1764,13 +1764,40 @@ namespace TaMi_Einzahlautomat
 
             tabControl.SelectedIndexChanged += (s, e) =>
             {
-                if (tabControl.SelectedTab == tabWechseln)
+                try
                 {
-                    try { tabWechseln.SuspendLayout(); } catch { }
-                    SafeRefreshAvailability();
-                    UpdateCoinAvailabilityLabels();
-                    UpdateMaxVerfuegbar();
-                    try { tabWechseln.ResumeLayout(true); tabWechseln.Invalidate(true); } catch { }
+                    // Notizen-Laufschrift: auf Wechseln pausieren (CPU sparen), beim Zurückkommen wieder starten
+                    if (tabControl.SelectedTab == tabWechseln)
+                    {
+                        try { if (_notesScrollTimer != null) _notesScrollTimer.Stop(); } catch { }
+
+                        try { tabWechseln.SuspendLayout(); } catch { }
+                        SafeRefreshAvailability();
+                        UpdateCoinAvailabilityLabels();
+                        UpdateMaxVerfuegbar();
+                        try { tabWechseln.ResumeLayout(true); tabWechseln.Invalidate(true); } catch { }
+                        return;
+                    }
+
+                    if (tabControl.SelectedTab == tabAbrechnen)
+                    {
+                        try
+                        {
+                            if (lblNotizenInfo != null && lblNotizenInfo.Visible && _notesScrollTimer != null)
+                            {
+                                // Falls während Tab-Wechsel etwas invalidiert wurde: Scroll sauber weiterlaufen lassen
+                                _notesScrollPauseRemainingMs = _notesScrollPauseMs;
+                                _notesScrollLineOffsetPx = 0;
+                                if (!_notesScrollTimer.Enabled) _notesScrollTimer.Start();
+                                try { lblNotizenInfo.Invalidate(); } catch { }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+                catch
+                {
+                    // nothing
                 }
             };
         }
