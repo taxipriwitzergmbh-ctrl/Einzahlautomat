@@ -38,3 +38,4 @@ packages/
 # /obj/Release
 # /packages/Microsoft.Extensions.DependencyInjection.Abstractions.8.0.2/buildTransitive/netcoreapp2.0/Microsoft.Extensions.DependencyInjection.Abstractions.targets
 /packages/Microsoft.Extensions.DependencyInjection.Abstractions.8.0.2/buildTransitive/netcoreapp2.0/Microsoft.Extensions.DependencyInjection.Abstractions.targets
+/Form/Admin/GeneralSettingsForm.cs
