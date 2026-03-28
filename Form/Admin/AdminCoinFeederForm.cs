@@ -43,6 +43,8 @@ namespace TaMi_Einzahlautomat
 
         private readonly Dictionary<string, DateTime> _lastSendTimes = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         private readonly TimeSpan _sendDebounce = TimeSpan.FromSeconds(2);
+        private DateTime _lastAutoRecoverUtc = DateTime.MinValue;
+        private readonly TimeSpan _autoRecoverDebounce = TimeSpan.FromSeconds(30);
         private Point _mouseDown;
 
         public AdminCoinFeederForm(string iniPath)
@@ -437,7 +439,13 @@ namespace TaMi_Einzahlautomat
         {
             try
             {
-                if (IsNfcMode()) { UpdateUiState(); return; } // Keine Auto-LED-Logik im NFC-Modus
+                if (IsNfcMode())
+                {
+                    // NFC V2: Auto-Recover wenn Port nicht mehr offen ist (tritt nach Tagen sporadisch auf)
+                    TryAutoRecoverNfc();
+                    UpdateUiState();
+                    return;
+                } // Keine Auto-LED-Logik im NFC-Modus
                 var nv1 = Program.NV200Instance; // default channel
                 var nv2 = Program.NV2002Instance; // channel 'a'
                 string s1 = nv1?.states ?? string.Empty;
@@ -497,6 +505,33 @@ namespace TaMi_Einzahlautomat
             catch (Exception ex) { AppendLog("StateTimerTick Fehler: " + ex.Message); }
         }
 
+        private void TryAutoRecoverNfc()
+        {
+            try
+            {
+                if (_feeder == null) return;
+
+                // Nur wenn wirklich "down" und nicht zu oft spammen
+                if (_feeder.IsOpen) return;
+                var now = DateTime.UtcNow;
+                if (_lastAutoRecoverUtc != DateTime.MinValue && (now - _lastAutoRecoverUtc) < _autoRecoverDebounce)
+                    return;
+                _lastAutoRecoverUtc = now;
+
+                AppendLog("Auto-Recover: NFC V2 Port ist geschlossen -> Reopen");
+                try
+                {
+                    // bevorzugt den aktuell selektierten Port
+                    ReopenCurrentPort();
+                }
+                catch (Exception ex)
+                {
+                    AppendLog("Auto-Recover Fehler: " + ex.Message);
+                }
+            }
+            catch { }
+        }
+
         private void EnsureFeederOpen()
         {
             if (_feeder == null)
@@ -518,7 +553,29 @@ namespace TaMi_Einzahlautomat
                 }
 
                 AppendLog($"Opening CoinFeeder auf {sel}...");
-                _feeder.Open();
+                try
+                {
+                    _feeder.Open();
+                }
+                catch
+                {
+                    // Im NFC V2 Modus sporadisch nach Tagen: einmal automatisches Reopen versuchen (debounced)
+                    if (IsNfcMode())
+                    {
+                        var now = DateTime.UtcNow;
+                        if (_lastAutoRecoverUtc == DateTime.MinValue || (now - _lastAutoRecoverUtc) >= _autoRecoverDebounce)
+                        {
+                            _lastAutoRecoverUtc = now;
+                            try
+                            {
+                                AppendLog("Auto-Recover: Open() fehlgeschlagen -> Reopen");
+                                ReopenCurrentPort();
+                            }
+                            catch { }
+                        }
+                    }
+                    throw;
+                }
                 AppendLog($"IsOpen={_feeder.IsOpen}");
             }
         }
