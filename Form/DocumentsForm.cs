@@ -685,34 +685,110 @@ namespace TaMi_Einzahlautomat
                 if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
                 string employeeMail = null;
                 try { employeeMail = _personal?.EMail; } catch { employeeMail = null; }
-                var mailCfg = MailSettings.Load();
                 if (string.IsNullOrWhiteSpace(employeeMail)) { MessageBox.Show(this, "Keine Mitarbeiter-E-Mail hinterlegt.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
-                if (mailCfg == null || !mailCfg.IsConfigured) { MessageBox.Show(this, "Maileinstellungen sind nicht konfiguriert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                 if (!ShowMailConsentDialog(employeeMail)) return;
 
                 try { AppLogger.Log($"Dokumente: E-Mail-Versand gestartet - Datei='{Path.GetFileName(path)}' an '{employeeMail}'"); } catch { }
                 Cursor prev = Cursor.Current; Cursor.Current = Cursors.WaitCursor;
                 try
                 {
-                    using (var msg = new System.Net.Mail.MailMessage())
-                    {
-                        var from = new System.Net.Mail.MailAddress(mailCfg.FromAddress, mailCfg.FromDisplayName);
-                        msg.From = from;
-                        msg.To.Add(new System.Net.Mail.MailAddress(employeeMail));
-                        msg.Subject = "Dokument vom Geldautomat";
-                        msg.Body = "Sie erhalten das angeforderte Dokument als Anhang. Bitte gehen Sie sorgsam mit personenbezogenen Daten um.";
-                        msg.IsBodyHtml = false;
-                        var att = new System.Net.Mail.Attachment(path);
-                        msg.Attachments.Add(att);
+                    bool sentViaDk2 = false;
 
-                        using (var client = new System.Net.Mail.SmtpClient(mailCfg.SmtpHost, mailCfg.SmtpPort))
+                    // 1) Prefer Dienstkonto2 (same as HoursOverviewForm)
+                    try
+                    {
+                        int dkId = 0;
+                        int.TryParse(IniHelper.ReadValue("Mail", "Dienstkonto2ID", AppSettings.IniPath), out dkId);
+                        if (dkId > 0)
                         {
-                            client.EnableSsl = mailCfg.EnableSsl;
-                            if (!string.IsNullOrWhiteSpace(mailCfg.Username)) client.Credentials = new System.Net.NetworkCredential(mailCfg.Username, mailCfg.Password);
-                            else client.UseDefaultCredentials = true;
-                            client.Send(msg);
+                            DatabaseHelper.DienstkontoInfo sel = null;
+                            using (var db = new DatabaseHelper())
+                            {
+                                var list = db.GetDienstkontenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                                if (list != null) sel = list.Find(x => x.ID == dkId);
+                            }
+                            if (sel != null)
+                            {
+                                string decryptedPwd = EmailReceiptService.TinyDecrypt(sel.Passwort ?? string.Empty);
+                                int configuredPort = 25;
+                                if (!string.IsNullOrWhiteSpace(sel.Port)) int.TryParse(sel.Port, out configuredPort);
+                                string fromName = IniHelper.ReadValue("Mail", "Dienstkonto2FromName", AppSettings.IniPath);
+                                if (string.IsNullOrWhiteSpace(fromName)) fromName = sel.Name;
+
+                                string loginAddr = string.IsNullOrWhiteSpace(sel.Benutzername) ? (sel.Absender ?? string.Empty) : sel.Benutzername;
+                                if (string.IsNullOrWhiteSpace(loginAddr)) loginAddr = sel.Absender ?? string.Empty;
+
+                                using (var msg = new System.Net.Mail.MailMessage())
+                                {
+                                    msg.From = new System.Net.Mail.MailAddress(loginAddr, fromName);
+                                    msg.To.Add(new System.Net.Mail.MailAddress(employeeMail));
+                                    msg.Subject = "Dokument vom Geldautomat";
+                                    msg.Body = "Sie erhalten das angeforderte Dokument als Anhang. Bitte gehen Sie sorgsam mit personenbezogenen Daten um.";
+                                    msg.IsBodyHtml = false;
+                                    var att = new System.Net.Mail.Attachment(path);
+                                    msg.Attachments.Add(att);
+
+                                    Exception lastError = null;
+                                    int[] portsToTry = new int[] { 587, 465, configuredPort };
+                                    foreach (var p in portsToTry.Distinct())
+                                    {
+                                        try
+                                        {
+                                            using (var client = new System.Net.Mail.SmtpClient(sel.Host, p))
+                                            {
+                                                client.EnableSsl = (p == 465 || p == 587);
+                                                client.UseDefaultCredentials = false;
+                                                if (!string.IsNullOrWhiteSpace(sel.Benutzername)) client.Credentials = new System.Net.NetworkCredential(sel.Benutzername, decryptedPwd);
+                                                client.Send(msg);
+                                                sentViaDk2 = true;
+                                                lastError = null;
+                                                break;
+                                            }
+                                        }
+                                        catch (Exception exSend) { lastError = exSend; }
+                                    }
+                                    if (!sentViaDk2 && lastError != null)
+                                    {
+                                        try { AppLogger.Log("Dokumente: DK2-Mailversand fehlgeschlagen: " + lastError.ToString()); } catch { }
+                                    }
+                                }
+                            }
                         }
                     }
+                    catch { sentViaDk2 = false; }
+
+                    if (!sentViaDk2)
+                    {
+                        // 2) Fallback: MailSettings (INI)
+                        var mailCfg = MailSettings.Load();
+                        if (mailCfg == null || !mailCfg.IsConfigured)
+                        {
+                            MessageBox.Show(this, "Maileinstellungen sind nicht konfiguriert.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        using (var msg = new System.Net.Mail.MailMessage())
+                        {
+                            var from = new System.Net.Mail.MailAddress(!string.IsNullOrWhiteSpace(mailCfg.Username) ? mailCfg.Username : mailCfg.FromAddress, mailCfg.FromDisplayName);
+                            msg.From = from;
+                            msg.To.Add(new System.Net.Mail.MailAddress(employeeMail));
+                            msg.Subject = "Dokument vom Geldautomat";
+                            msg.Body = "Sie erhalten das angeforderte Dokument als Anhang. Bitte gehen Sie sorgsam mit personenbezogenen Daten um.";
+                            msg.IsBodyHtml = false;
+                            var att = new System.Net.Mail.Attachment(path);
+                            msg.Attachments.Add(att);
+
+                            using (var client = new System.Net.Mail.SmtpClient(mailCfg.SmtpHost, mailCfg.SmtpPort))
+                            {
+                                client.EnableSsl = mailCfg.EnableSsl;
+                                client.UseDefaultCredentials = false;
+                                if (!string.IsNullOrWhiteSpace(mailCfg.Username))
+                                    client.Credentials = new System.Net.NetworkCredential(mailCfg.Username, mailCfg.Password);
+                                client.Send(msg);
+                            }
+                        }
+                    }
+
                     try { AppLogger.Log($"Dokumente: E-Mail gesendet - Datei='{Path.GetFileName(path)}' an '{employeeMail}'"); } catch { }
                     MessageBox.Show(this, "E-Mail wurde gesendet.", "Mail", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }

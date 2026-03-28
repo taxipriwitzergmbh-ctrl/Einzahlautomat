@@ -334,6 +334,48 @@ ORDER BY Datum DESC, NotizID DESC;";
             }
             var deviceId = CurrentDeviceId;
             var typCode = MapTypStringToCode(entry.Typ); bool isPersonalguthaben = typCode == 5; decimal previousPgSaldo = 0m;
+
+            // Guard: Mehrfachklick/Retry bei Abmeldung darf Personalguthaben (Typ=5) nicht doppelt verbuchen.
+            // Minimal-invasiv: Wenn kurz zuvor ein identischer Eintrag für dieselbe Person/Schicht/ManID/DeviceID
+            // mit gleichem Delta vorhanden ist, verwenden wir diesen und überspringen den Insert.
+            if (isPersonalguthaben)
+            {
+                try
+                {
+                    var deltaPg = entry.BetragGesamt != 0m ? entry.BetragGesamt : (entry.Betrag19 + entry.Betrag7 + entry.Betrag0);
+                    using (var cmdDup = _connection.CreateCommand())
+                    {
+                        cmdDup.CommandText = @"SELECT TOP 1 Belegnummer
+FROM TKassenbuch WITH (HOLDLOCK,UPDLOCK)
+WHERE Typ=5
+  AND DeviceID=@DID
+  AND ManID=@MID
+  AND PersId=@PID
+  AND ISNULL(RevIsOld,0)=0
+  AND ISNULL(SchichtId,0)=@SID
+  AND ISNULL(Betrag19,0)=@B19 AND ISNULL(Betrag7,0)=@B7 AND ISNULL(Betrag0,0)=@B0
+  AND ErfasstAm >= DATEADD(SECOND,-5, SYSDATETIME())
+ORDER BY ErfasstAm DESC, Belegnummer DESC";
+
+                        cmdDup.Parameters.AddWithValue("@DID", deviceId);
+                        cmdDup.Parameters.AddWithValue("@MID", entry.FirmenId);
+                        cmdDup.Parameters.AddWithValue("@PID", entry.PersId);
+                        cmdDup.Parameters.AddWithValue("@SID", entry.SchichtId);
+                        cmdDup.Parameters.AddWithValue("@B19", entry.Betrag19);
+                        cmdDup.Parameters.AddWithValue("@B7", entry.Betrag7);
+                        cmdDup.Parameters.AddWithValue("@B0", entry.Betrag0);
+
+                        var existing = await cmdDup.ExecuteScalarAsync().ConfigureAwait(false);
+                        if (existing != null && existing != DBNull.Value)
+                        {
+                            try { AppLogger.Log($"Personalguthaben-Duplikat verhindert (PID={entry.PersId}, Schicht={entry.SchichtId}, Δ={deltaPg:0.00} €) – Belegnummer {existing}"); } catch { }
+                            return Convert.ToInt32(existing);
+                        }
+                    }
+                }
+                catch { }
+            }
+
             if (isPersonalguthaben && entry.PersId > 0)
             {
                 try { using (var cmdPrev = _connection.CreateCommand()) { cmdPrev.CommandText = "SELECT TOP 1 SaldoPersonalguthaben FROM TKassenbuch WITH (NOLOCK) WHERE PersId=@pid AND Typ=5 AND DeviceID=@DID AND ISNULL(RevIsOld,0)=0 ORDER BY ErfasstAm DESC, Belegnummer DESC"; cmdPrev.Parameters.AddWithValue("@pid", entry.PersId); cmdPrev.Parameters.AddWithValue("@DID", deviceId); var o = await cmdPrev.ExecuteScalarAsync().ConfigureAwait(false); if (o != null && o != DBNull.Value) previousPgSaldo = Convert.ToDecimal(o); } } catch { }

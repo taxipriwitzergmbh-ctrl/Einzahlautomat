@@ -5,14 +5,7 @@ VisualStudioVersion = 18.0.11222.15
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaMi Einzahlautomat", "TaMi Einzahlautomat.csproj", "{E7F871FB-C2EE-457F-8AAE-8501614398F5}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Projektmappenelemente", "Projektmappenelemente", "{84D27F74-D2BA-6C25-2661-968F101900D9}"
-	ProjectSection(SolutionItems) = preProject
-		..\KassesystemPRO\KassesystemPRO.vbproj.user = ..\KassesystemPRO\KassesystemPRO.vbproj.user
-	EndProjectSection
-EndProject
 Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Einzahlautomat Setup", "Einzahlautomat Setup\Einzahlautomat Setup.vdproj", "{808043C5-F847-A40A-EBE5-28CF3B65B180}"
-EndProject
-Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "KassesystemPRO", "..\Alt\Technik Schepers\KassesystemPRO\KassesystemPRO.vbproj", "{C67A94F2-4B0C-4A18-8547-AFF1D8CEE6F0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -38,14 +31,6 @@ Global
 		{808043C5-F847-A40A-EBE5-28CF3B65B180}.Release|Any CPU.Build.0 = Release
 		{808043C5-F847-A40A-EBE5-28CF3B65B180}.Release|x86.ActiveCfg = Release
 		{808043C5-F847-A40A-EBE5-28CF3B65B180}.Release|x86.Build.0 = Release
-		{C67A94F2-4B0C-4A18-8547-AFF1D8CEE6F0}.Debug|Any CPU.ActiveCfg = Debug|x86
-		{C67A94F2-4B0C-4A18-8547-AFF1D8CEE6F0}.Debug|Any CPU.Build.0 = Debug|x86
-		{C67A94F2-4B0C-4A18-8547-AFF1D8CEE6F0}.Debug|x86.ActiveCfg = Debug|x86
-		{C67A94F2-4B0C-4A18-8547-AFF1D8CEE6F0}.Debug|x86.Build.0 = Debug|x86
-		{C67A94F2-4B0C-4A18-8547-AFF1D8CEE6F0}.Release|Any CPU.ActiveCfg = Release|x86
-		{C67A94F2-4B0C-4A18-8547-AFF1D8CEE6F0}.Release|Any CPU.Build.0 = Release|x86
-		{C67A94F2-4B0C-4A18-8547-AFF1D8CEE6F0}.Release|x86.ActiveCfg = Release|x86
-		{C67A94F2-4B0C-4A18-8547-AFF1D8CEE6F0}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

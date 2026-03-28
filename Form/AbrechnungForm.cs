@@ -1258,6 +1258,11 @@ namespace TaMi_Einzahlautomat
             btnAbmelden.FlatAppearance.MouseOverBackColor = Color.FromArgb(211, 47, 47);
             try { btnAbmelden.Region = System.Drawing.Region.FromHrgn(CreateRoundRectRgn(0, 0, btnAbmelden.Width, btnAbmelden.Height, 14, 14)); } catch { }
             btnAbmelden.Click += btnAbmelden_Click;
+            btnAbmelden.Click += (sender, e) =>
+            {
+                btnAbmelden.Enabled = false; // Disable the button immediately
+                btnAbmelden_Click(sender, e); // Call the original click handler
+            };
             headerPanel.Controls.Add(btnAbmelden);
 
             // Auto-Logoff: Basistex merken und ggf. Countdown initial anzeigen
@@ -5091,10 +5096,34 @@ namespace TaMi_Einzahlautomat
             finally { _bookingInProgress = false; UpdateBusyUI(); }
         }
 
-        private async void btnAbmelden_Click(object sender, EventArgs e) { await AbmeldenCoreAsync(false); }
+        private bool _abmeldenInProgress;
+        private async void btnAbmelden_Click(object sender, EventArgs e)
+        {
+            if (_abmeldenInProgress) return;
+            _abmeldenInProgress = true;
+            try { if (btnAbmelden != null) btnAbmelden.Enabled = false; } catch { }
+            try
+            {
+                await AbmeldenCoreAsync(false);
+            }
+            finally
+            {
+                // Falls Abmelden abgebrochen wurde (z.B. offene Schichten -> User klickt "Nein" / AdminMode),
+                // Button wieder freigeben.
+                try
+                {
+                    if (!_abmeldenCompleted && !IsDisposed && Visible && btnAbmelden != null && !btnAbmelden.Enabled)
+                        btnAbmelden.Enabled = true;
+                }
+                catch { }
+                _abmeldenInProgress = false;
+            }
+        }
         public Task ForceAbmeldenFromAdminAsync() => AbmeldenCoreAsync(true);
+        private bool _abmeldenCompleted;
         private async Task AbmeldenCoreAsync(bool ignoreAdminMode)
         {
+            _abmeldenCompleted = false;
             try
             {
                 if (!ignoreAdminMode && _auswahlItems != null && _auswahlItems.Any(ai => ai.Schicht != null))
@@ -5201,6 +5230,7 @@ namespace TaMi_Einzahlautomat
                 try { _coin?.Enable(false); } catch { }
                 try { _coin2?.Enable(false); } catch { }
                 try { AppLogger.Log(""); AppLogger.Log(new string('-', 80)); AppLogger.Log(""); } catch { }
+                _abmeldenCompleted = true;
                 Close();
             }
         }
