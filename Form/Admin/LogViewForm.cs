@@ -65,16 +65,30 @@ namespace TaMi_Einzahlautomat
                 else if (e.Alt && e.KeyCode == Keys.D) { JumpToNextDiff(); e.SuppressKeyPress = true; }
             };
 
+            var layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty,
+                ColumnCount = 1,
+                RowCount = 4
+            };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            Controls.Add(layout);
+
             _header = new ModernHeaderPanel { Title = "Log anzeigen" };
+            _header.Dock = DockStyle.Top;
             _header.CloseClicked += () => { try { Close(); } catch { } };
-            Controls.Add(_header);
-            _header.BringToFront();
+            layout.Controls.Add(_header, 0, 0);
             try { _header.ApplyRoundedRegionToForm(this); } catch { }
 
             // Toolbar: TableLayoutPanel direkt unter dem Header
             var top = new TableLayoutPanel
             {
-                Dock = DockStyle.Top,
                 Height = 52,
                 Padding = new Padding(6),
                 ColumnCount = 7,
@@ -89,22 +103,21 @@ namespace TaMi_Einzahlautomat
             top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));       // Suchen
             top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));       // Weiter
             top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));       // Aa
-            Controls.Add(top);
-            top.BringToFront();
+            top.Dock = DockStyle.Top;
+            layout.Controls.Add(top, 0, 1);
 
             // Unterer Close-Button
             btnClose = new ModernGradientButton
             {
                 Text = "Schließen",
-                Dock = DockStyle.Bottom,
                 Height = 36
             };
             btnClose.Click += (s, e) => Close();
             ((ModernGradientButton)btnClose).GradientStart = UiTheme.SecondaryStart;
             ((ModernGradientButton)btnClose).GradientEnd = UiTheme.SecondaryEnd;
-            Controls.Add(btnClose);
+            btnClose.Dock = DockStyle.Top;
+            layout.Controls.Add(btnClose, 0, 3);
 
-            // Log-Textbox füllt den Restbereich zwischen Toolbar und Close-Button
             txtLog = new TextBox
             {
                 Multiline = true,
@@ -116,7 +129,7 @@ namespace TaMi_Einzahlautomat
                 HideSelection = false,
                 BackColor = System.Drawing.SystemColors.Window
             };
-            Controls.Add(txtLog);
+            layout.Controls.Add(txtLog, 0, 2);
 
             _cmbFiles = new ComboBox
             {
