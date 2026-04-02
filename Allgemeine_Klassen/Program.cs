@@ -116,7 +116,9 @@ namespace TaMi_Einzahlautomat
                 {
                     try { AppLogger.Log($"[Fallback] Münz-Commit ausgelöst ({reason}) – Summe: {euro:C2}"); } catch { }
                 }
-                try { AppLogger.Log($"Münzauszahlung Summe: {euro:C2}"); } catch { }
+                // Auszahlungssummen werden im UI (AbrechnungForm) inkl. Coin/1, Coin/2 und Gesamt (PG) geloggt.
+                // Hier kein zusätzliches Summen-Logging mehr, um doppelte Logs zu vermeiden.
+                // try { AppLogger.Log($"Münzauszahlung Summe: {euro:C2}"); } catch { }
                 // Hinweis: Hier könnte die PG-Reduktion als eine Buchung erfolgen.
                 // Beispiel (Pseudo): DatabaseHelper.ApplyPgDelta(-euro);
             }

@@ -545,6 +545,11 @@ namespace TaMi_Einzahlautomat
 
         private int _notesDispensedCent = 0;
         private int _coinsDispensedCentTotal = 0;
+        private bool _coinPayoutSumLogged = false;
+        private int _coinsDispensedCentCoin1 = 0;
+        private int _coinsDispensedCentCoin2 = 0;
+        private bool _coin1SumLogged = false;
+        private bool _coin2SumLogged = false;
         private decimal _consumedGuthabenNotes = 0m;
         private decimal _consumedGuthabenCoins = 0m;
 
@@ -4783,7 +4788,10 @@ namespace TaMi_Einzahlautomat
             if (_coinEventsAttached) return;
             if (_coin is SmartCoinV1 sc1)
             {
-                sc1.CoinLevelsUpdated += OnCoinLevelsUpdated; sc1.CoinAccepted += CoinOnAccepted; sc1.EventLog += CoinOnLog; sc1.CoinDispensedDeltaCent += OnCoinDispensedDelta; sc1.CoinDispenseComplete += OnCoinDispenseComplete; try { sc1.CoinPayoutError += OnCoinPayoutError; } catch { }
+                sc1.CoinLevelsUpdated += OnCoinLevelsUpdated; sc1.CoinAccepted += CoinOnAccepted; sc1.EventLog += CoinOnLog;
+                sc1.CoinDispensedDeltaCent += OnCoin1DispensedDelta;
+                sc1.CoinDispenseComplete += OnCoin1DispenseComplete;
+                try { sc1.CoinPayoutError += OnCoinPayoutError; } catch { }
                 _coinEventsAttached = true;
                 try { RequestCoinLevels(); } catch { }
             }
@@ -4818,7 +4826,10 @@ namespace TaMi_Einzahlautomat
             if (!_coinEventsAttached) return;
             if (_coin is SmartCoinV1 sc1)
             {
-                sc1.CoinLevelsUpdated -= OnCoinLevelsUpdated; sc1.CoinAccepted -= CoinOnAccepted; sc1.EventLog -= CoinOnLog; sc1.CoinDispensedDeltaCent -= OnCoinDispensedDelta; sc1.CoinDispenseComplete -= OnCoinDispenseComplete; try { sc1.CoinPayoutError -= OnCoinPayoutError; } catch { }
+                sc1.CoinLevelsUpdated -= OnCoinLevelsUpdated; sc1.CoinAccepted -= CoinOnAccepted; sc1.EventLog -= CoinOnLog;
+                sc1.CoinDispensedDeltaCent -= OnCoin1DispensedDelta;
+                sc1.CoinDispenseComplete -= OnCoin1DispenseComplete;
+                try { sc1.CoinPayoutError -= OnCoinPayoutError; } catch { }
             }
             else if (_coin is Rm5CctalkValidator rm5)
             {
@@ -4889,8 +4900,9 @@ namespace TaMi_Einzahlautomat
             {
                 if (_coin2 is SmartCoinV1 sc1)
                 {
-                    sc1.CoinAccepted += Coin2OnAccepted; sc1.EventLog += Coin2OnLog; sc1.CoinLevelsUpdated += OnCoin2LevelsUpdated; try { sc1.CoinDispensedDeltaCent += OnCoinDispensedDelta; } catch { }
-                    try { sc1.CoinDispenseComplete += OnCoinDispenseComplete; } catch { }
+                    sc1.CoinAccepted += Coin2OnAccepted; sc1.EventLog += Coin2OnLog; sc1.CoinLevelsUpdated += OnCoin2LevelsUpdated;
+                    try { sc1.CoinDispensedDeltaCent += OnCoin2DispensedDelta; } catch { }
+                    try { sc1.CoinDispenseComplete += OnCoin2DispenseComplete; } catch { }
                     try { sc1.CoinPayoutError += OnCoinPayoutError; } catch { }
                 }
                 _coin2EventsAttached = true;
@@ -4905,13 +4917,55 @@ namespace TaMi_Einzahlautomat
             {
                 if (_coin2 is SmartCoinV1 sc1)
                 {
-                    sc1.CoinAccepted -= Coin2OnAccepted; sc1.EventLog -= Coin2OnLog; sc1.CoinLevelsUpdated -= OnCoin2LevelsUpdated; try { sc1.CoinDispensedDeltaCent -= OnCoinDispensedDelta; } catch { }
-                    try { sc1.CoinDispenseComplete -= OnCoinDispenseComplete; } catch { }
+                    sc1.CoinAccepted -= Coin2OnAccepted; sc1.EventLog -= Coin2OnLog; sc1.CoinLevelsUpdated -= OnCoin2LevelsUpdated; try { sc1.CoinDispensedDeltaCent -= OnCoin2DispensedDelta; } catch { }
+                    try { sc1.CoinDispenseComplete -= OnCoin2DispenseComplete; } catch { }
                     try { sc1.CoinPayoutError -= OnCoinPayoutError; } catch { }
                 }
             }
             catch { }
             _coin2EventsAttached = false;
+        }
+
+        private void OnCoin1DispensedDelta(int cent)
+        {
+            try { _coinsDispensedCentCoin1 += Math.Max(0, cent); } catch { }
+            OnCoinDispensedDelta(cent);
+        }
+
+        private void OnCoin2DispensedDelta(int cent)
+        {
+            try { _coinsDispensedCentCoin2 += Math.Max(0, cent); } catch { }
+            OnCoinDispensedDelta(cent);
+        }
+
+        private void OnCoin1DispenseComplete()
+        {
+            try
+            {
+                if (!_coin1SumLogged)
+                {
+                    _coin1SumLogged = true;
+                    decimal v = Math.Round(_coinsDispensedCentCoin1 / 100m, 2);
+                    if (v > 0m) AppLogger.Log($"Münzauszahlung Summe (Coin/1): {v:0.00} €");
+                }
+            }
+            catch { }
+            OnCoinDispenseComplete();
+        }
+
+        private void OnCoin2DispenseComplete()
+        {
+            try
+            {
+                if (!_coin2SumLogged)
+                {
+                    _coin2SumLogged = true;
+                    decimal v = Math.Round(_coinsDispensedCentCoin2 / 100m, 2);
+                    if (v > 0m) AppLogger.Log($"Münzauszahlung Summe (Coin/2): {v:0.00} €");
+                }
+            }
+            catch { }
+            OnCoinDispenseComplete();
         }
         private void OnCoinPayoutError(string message)
         {
@@ -5358,6 +5412,12 @@ namespace TaMi_Einzahlautomat
                 {
                     bool isRm5 = _coin is Rm5CctalkValidator; var sc1 = _coin as SmartCoinV1; if (sc1 == null && !isRm5) { MessageBox.Show(this, "Gerät unterstützt keine Münzauszahlung.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                     _coin.Enable(true); if (_coin2 != null && !isRm5) { try { _coin2.Enable(true); } catch { } }
+                    _coinPayoutSumLogged = false;
+                    _coinsDispensedCentTotal = 0;
+                    _coinsDispensedCentCoin1 = 0;
+                    _coinsDispensedCentCoin2 = 0;
+                    _coin1SumLogged = false;
+                    _coin2SumLogged = false;
                     _coinsPayoutInProgress = true; UpdateBusyUI();
                     if (isRm5)
                     {
@@ -5409,6 +5469,7 @@ namespace TaMi_Einzahlautomat
 
         private void UpdateSummeAuszahlung()
         {
+            if (_payoutInProgress) return;
             decimal sumScheine = 0m; for (int i = 0; i < scheinWerte.Length; i++) sumScheine += scheinWerte[i] * auswahlAnzahl[i];
             decimal sumMuenzen = 0m; for (int i = 0; i < muenzWerte.Length; i++) sumMuenzen += (muenzWerte[i] * auswahlAnzahlMuenzen[i]) / 100m;
             decimal summe = sumScheine + sumMuenzen; if (lblSummeAuszahlung != null) lblSummeAuszahlung.Text = $"{summe:C2}"; UpdateAuszahlenEnabled();
@@ -5484,10 +5545,19 @@ namespace TaMi_Einzahlautomat
         private async void OnCoinDispenseComplete()
         {
             if (InvokeRequired) { BeginInvoke((Action)(() => OnCoinDispenseComplete())); return; }
+            if (!_coinsPayoutInProgress || _coinPayoutSumLogged) return;
             if (_activeCoinPayoutDevices > 0) _activeCoinPayoutDevices = Math.Max(0, _activeCoinPayoutDevices - 1); if (_activeCoinPayoutDevices > 0) return;
             try
             {
-                decimal coinsTotal = Math.Round(_coinsDispensedCentTotal / 100m, 2); if (coinsTotal > 0m) { AppLogger.Log($"Münzauszahlung Summe: {coinsTotal:0.00} € (PG: {_consumedGuthabenCoins:0.00} €)"); }
+                if (!_coinPayoutSumLogged)
+                {
+                    _coinPayoutSumLogged = true;
+                    decimal coinsTotal = Math.Round(_coinsDispensedCentTotal / 100m, 2);
+                    if (coinsTotal > 0m)
+                    {
+                        AppLogger.Log($"Münzauszahlung Summe: {coinsTotal:0.00} € (PG: {_consumedGuthabenCoins:0.00} €)");
+                    }
+                }
                 for (int i = 0; i < auswahlAnzahlMuenzen.Length; i++) { auswahlAnzahlMuenzen[i] = 0; if (lblAnzahlMuenzen[i] != null) lblAnzahlMuenzen[i].Text = "0"; }
                 _geplanteMuenzAuszahlung = 0m; lblGuthaben.Text = $"Personal-Guthaben: {_personalGuthaben:C2}"; UpdateAbrechnenSummaries(); SafeRefreshAvailability(); UpdateMaxVerfuegbar();
             }

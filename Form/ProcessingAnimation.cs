@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
@@ -23,8 +23,8 @@ namespace TaMi_Einzahlautomat
         private float _shimmerX; // Animationsoffset
         private DateTime _lastFrame = DateTime.UtcNow;
         private const float ShimmerSpeed = 320f; // px / Sekunde
-        private const int TargetHeightMin = 76;
-        private const int TargetHeightMax = 160;
+        private const int TargetHeightMin = 56;
+        private const int TargetHeightMax = 110;
         private static readonly Color Accent = Color.FromArgb(0, 122, 255); // Modernes Blau
         private static readonly Color AccentDim = Color.FromArgb(0, 90, 210);
         private static readonly Color BackgroundTop = Color.FromArgb(235, 18, 22, 30);
@@ -33,14 +33,14 @@ namespace TaMi_Einzahlautomat
 
         private ProcessingAnimation(Form f) { _form = f; }
 
-        public static ProcessingAnimation Show(Form owner, string text = "Bitte warten …")
+        public static ProcessingAnimation Show(Form owner, string text = "Bitte warten ï¿½")
         {
             Rectangle screenBounds;
             try { screenBounds = owner != null ? owner.Bounds : Screen.PrimaryScreen.WorkingArea; } catch { screenBounds = Screen.PrimaryScreen.WorkingArea; }
 
             float dpiY = 96f;
             try { using (var g = Graphics.FromHwnd(IntPtr.Zero)) dpiY = g.DpiY; } catch { }
-            int targetHeight = (int)Math.Round((3.2f / 2.54f) * dpiY); // ~3.2 cm
+            int targetHeight = (int)Math.Round((2.2f / 2.54f) * dpiY); // ~2.2 cm
             if (targetHeight < TargetHeightMin) targetHeight = TargetHeightMin;
             if (targetHeight > TargetHeightMax) targetHeight = TargetHeightMax;
 
@@ -86,7 +86,7 @@ namespace TaMi_Einzahlautomat
             };
             try { anim._textTimer.Start(); } catch { }
 
-            anim._animTimer = new System.Windows.Forms.Timer { Interval = 22 }; // ~45 FPS für smooth aber moderat
+            anim._animTimer = new System.Windows.Forms.Timer { Interval = 22 }; // ~45 FPS fï¿½r smooth aber moderat
             anim._animTimer.Tick += (s, e) => { try { anim.Step(panel); } catch { } };
             try { anim._animTimer.Start(); } catch { }
 
@@ -120,13 +120,13 @@ namespace TaMi_Einzahlautomat
             using (var penTop = new Pen(BorderLine, 1f)) g.DrawLine(penTop, bounds.Left + 8, bounds.Top + 1, bounds.Right - 8, bounds.Top + 1);
 
             // Accent-Linie unter dem Textbereich (statisch) -> baseline
-            int progressBaselineY = bounds.Bottom - 18; // etwas über unterem Rand
+            int progressBaselineY = bounds.Bottom - 18; // etwas ï¿½ber unterem Rand
             using (var penBase = new Pen(Color.FromArgb(60, Accent), 3f))
                 g.DrawLine(penBase, 32, progressBaselineY, bounds.Right - 32, progressBaselineY);
 
             // Shimmer / Indeterminate Segment (ein breiter softer sweep)
             float sweepWidth = Math.Max(140f, bounds.Width * 0.18f);
-            float x = (_shimmerX % (bounds.Width + sweepWidth)) - sweepWidth; // kann negativ sein beim Übergang
+            float x = (_shimmerX % (bounds.Width + sweepWidth)) - sweepWidth; // kann negativ sein beim ï¿½bergang
             var shimmerRect = new RectangleF(x, progressBaselineY - 4, sweepWidth, 8);
 
             if (shimmerRect.Right > 32 && shimmerRect.Left < bounds.Right - 32)
@@ -154,13 +154,13 @@ namespace TaMi_Einzahlautomat
                 }
             }
 
-            // Dezenter Glow über Baseline (leichtes Highlight unter Text – nur falls Platz)
+            // Dezenter Glow ï¿½ber Baseline (leichtes Highlight unter Text ï¿½ nur falls Platz)
             var glowRect = new RectangleF(32, progressBaselineY - 10, bounds.Width - 64, 20);
             using (var lgGlow = new LinearGradientBrush(glowRect, Color.FromArgb(28, Accent), Color.FromArgb(0, Accent), LinearGradientMode.Vertical))
             { g.FillRectangle(lgGlow, glowRect); }
 
-            // Optional rechter Statusplatzhalter (kann später genutzt werden)
-            // (absichtlich leer gelassen – reserved area)
+            // Optional rechter Statusplatzhalter (kann spï¿½ter genutzt werden)
+            // (absichtlich leer gelassen ï¿½ reserved area)
         }
 
         public void Dispose()

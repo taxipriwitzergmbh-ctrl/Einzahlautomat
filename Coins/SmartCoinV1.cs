@@ -52,6 +52,13 @@ namespace TaMi_Einzahlautomat.Coins
         private double _lastDispensedCount = 0;
         private int _toPay_1 = 0, _toPay_2 = 0, _toPay_5 = 0, _toPay_10 = 0, _toPay_20 = 0, _toPay_50 = 0, _toPay_100 = 0, _toPay_200 = 0;
 
+        // Payout-Fallback: Live-Deltas weiter feuern, am Ende gegen Bestandsänderung plausibilisieren
+        private volatile bool _payoutReconcileActive = false;
+        private int[] _payoutLevelsBefore;
+        private int _payoutDeltaSumCent = 0;
+        private DateTime _payoutStartUtc = DateTime.MinValue;
+        private readonly object _payoutReconcileLock = new object();
+
         // Enable-Puffer, damit Enable nach Handshake automatisch angewandt wird
         private volatile bool _wantEnabled = false;
 
@@ -779,6 +786,7 @@ namespace TaMi_Einzahlautomat.Coins
                                 _toPay_1 = _toPay_2 = _toPay_5 = _toPay_10 = _toPay_20 = _toPay_50 = _toPay_100 = _toPay_200 = 0;
                                 Enable(true);
                                 SetStatus("Bereit");
+                                try { TryFinalizePayoutReconcile("DISPENSED"); } catch { }
                                 try { CoinDispenseComplete?.Invoke(); } catch { }
                                 try { BusyAnimationManager.End("Coins fertig"); } catch { }
                             }
@@ -802,6 +810,18 @@ namespace TaMi_Einzahlautomat.Coins
                                 }
                                 Log("Fehlercode: " + errName);
                                 SetStatus("Störung: " + errName);
+                                // Auszahlung abgebrochen -> Reconcile beenden ohne Backup-Buchung
+                                try
+                                {
+                                    lock (_payoutReconcileLock)
+                                    {
+                                        _payoutReconcileActive = false;
+                                        _payoutLevelsBefore = null;
+                                        _payoutDeltaSumCent = 0;
+                                        _payoutStartUtc = DateTime.MinValue;
+                                    }
+                                }
+                                catch { }
                                 _smartEmptyInProgress = false; _suspendLevelRequests = false; _smartEmptyRetryCount = 0; _smartEmptyInitialLevelSum = -1; _toPay_1 = _toPay_2 = _toPay_5 = _toPay_10 = _toPay_20 = _toPay_50 = _toPay_100 = _toPay_200 = 0;
                                 // Animation VOR MessageBox schließen
                                 try { BusyAnimationManager.End("Coins Fehler"); } catch { }
@@ -1012,7 +1032,21 @@ namespace TaMi_Einzahlautomat.Coins
             if (diff <= 0) return false;
             int before = diff;
 
-            Action<int> raise = (val) => { try { CoinDispensedDeltaCent?.Invoke(val); } catch { } };
+            Action<int> raise = (val) =>
+            {
+                try { CoinDispensedDeltaCent?.Invoke(val); } catch { }
+                if (_payoutReconcileActive)
+                {
+                    try
+                    {
+                        lock (_payoutReconcileLock)
+                        {
+                            _payoutDeltaSumCent += val;
+                        }
+                    }
+                    catch { }
+                }
+            };
 
             // Hilfs-Lokalfunktion: solange möglich von einem Nominalwert abziehen
             void Consume(ref int remaining, ref int counter, int value)
@@ -1048,6 +1082,97 @@ namespace TaMi_Einzahlautomat.Coins
 
             // Am Ende sollte diff == 0 sein
             return before != 0;
+        }
+
+        private int ComputeLevelDeltaCent(int[] before, int[] after)
+        {
+            try
+            {
+                if (before == null || after == null) return 0;
+                int len = Math.Min(before.Length, after.Length);
+                int[] cents = new[] { 1, 2, 5, 10, 20, 50, 100, 200 };
+                int sum = 0;
+                for (int i = 0; i < len && i < cents.Length; i++)
+                {
+                    int b = before[i];
+                    int a = after[i];
+                    if (b < 0 || a < 0) continue; // unbekannt
+                    int d = b - a;
+                    if (d != 0) sum += d * cents[i];
+                }
+                return sum;
+            }
+            catch { return 0; }
+        }
+
+        private string FormatCentEuro(int cent)
+        {
+            try { return string.Format(System.Globalization.CultureInfo.GetCultureInfo("de-DE"), "{0:C2}", cent / 100m); }
+            catch { return (cent / 100m).ToString("0.00") + " €"; }
+        }
+
+        private void TryFinalizePayoutReconcile(string reason)
+        {
+            if (!_payoutReconcileActive) return;
+
+            int[] beforeLevels;
+            int eventSum;
+            DateTime startUtc;
+
+            lock (_payoutReconcileLock)
+            {
+                beforeLevels = _payoutLevelsBefore;
+                eventSum = _payoutDeltaSumCent;
+                startUtc = _payoutStartUtc;
+            }
+
+            try
+            {
+                var afterLevels = GetCoinAvailability();
+                int expected = ComputeLevelDeltaCent(beforeLevels, afterLevels);
+
+                // Wenn wir keinen sauberen Delta aus Levels berechnen können: still beenden, aber nichts buchen.
+                if (expected <= 0) return;
+
+                int diff = expected - eventSum;
+                if (diff == 0) return;
+
+                // Positive Differenz => wir haben zu wenig Deltas gemeldet -> Backup buchen.
+                if (diff > 0 && (diff % 50) == 0 && diff <= 2000)
+                {
+                    string prefix;
+                    try
+                    {
+                        var sec = GetIniSectionName();
+                        if (sec == "SmartCoin/1") prefix = "(Coin/1) ---> ";
+                        else if (sec == "SmartCoin/2") prefix = "(Coin/2) ---> ";
+                        else prefix = "(Coin) ---> ";
+                    }
+                    catch { prefix = "(Coin) ---> "; }
+
+                    Log(prefix + $"Backup_Buchung: {FormatCentEuro(diff)}");
+                    try { CoinDispensedDeltaCent?.Invoke(diff); } catch { }
+                    lock (_payoutReconcileLock) { _payoutDeltaSumCent += diff; }
+                }
+                else
+                {
+                    Log($"WARN Payout-DeltaMismatch (Reason={reason}) expected={FormatCentEuro(expected)} events={FormatCentEuro(eventSum)} diff={FormatCentEuro(diff)} (keine Auto-Backup-Buchung)");
+                }
+            }
+            catch (Exception ex)
+            {
+                try { Log("Payout reconcile failed: " + ex.Message); } catch { }
+            }
+            finally
+            {
+                lock (_payoutReconcileLock)
+                {
+                    _payoutReconcileActive = false;
+                    _payoutLevelsBefore = null;
+                    _payoutDeltaSumCent = 0;
+                    _payoutStartUtc = DateTime.MinValue;
+                }
+            }
         }
 
         // Reihenfolge: zuerst Global Inhibit, dann ENABLE/DISABLE
@@ -1168,6 +1293,19 @@ namespace TaMi_Einzahlautomat.Coins
                 return;
             }
             try { BusyAnimationManager.Begin("Münzauszahlung läuft"); } catch { }
+
+            // Snapshot für spätere Plausibilisierung (Fallback-Buchung)
+            try
+            {
+                lock (_payoutReconcileLock)
+                {
+                    _payoutLevelsBefore = GetCoinAvailability();
+                    _payoutDeltaSumCent = 0;
+                    _payoutStartUtc = DateTime.UtcNow;
+                    _payoutReconcileActive = true;
+                }
+            }
+            catch { }
 
             int[] valOrder = new[] { 1, 2, 5, 10, 20, 50, 100, 200 };
 

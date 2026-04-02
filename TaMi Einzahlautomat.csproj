@@ -343,6 +343,7 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
     </EmbeddedResource>
+    <None Include=".github\copilot-instructions.md" />
     <None Include="Beispiel-Fix für AppConfigItem %28analog zu ConfigItem%29" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
