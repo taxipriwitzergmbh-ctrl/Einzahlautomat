@@ -592,12 +592,6 @@
         "Entry"
         {
         "MsmKey" = "8:_UNDEFINED"
-        "OwnerKey" = "8:_6849A1CA55FBDD69432267651D95AD88"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_UNDEFINED"
         "OwnerKey" = "8:_E77617AB83657AF0F8CEDACC170506A8"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -725,6 +719,12 @@
         {
         "MsmKey" = "8:_UNDEFINED"
         "OwnerKey" = "8:_2875BC8EAF0393828113DCE27F06FF06"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_UNDEFINED"
+        "OwnerKey" = "8:_6849A1CA55FBDD69432267651D95AD88"
         "MsmSig" = "8:_UNDEFINED"
         }
     }
@@ -1850,15 +1850,15 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:Einzahlautomat Setup"
-        "ProductCode" = "8:{CBB92868-3FF0-449F-B035-BEE6354D3672}"
-        "PackageCode" = "8:{8A70E3C2-4EB2-48D6-A945-37DEBB8897B0}"
+        "ProductCode" = "8:{1A6C41F8-B9CC-409B-8DE0-99669D4489F7}"
+        "PackageCode" = "8:{86FB4EB2-D67F-4202-AA06-234241E66801}"
         "UpgradeCode" = "8:{8CAACCC8-FD0C-4D2D-A1EE-B351D81D9E7A}"
         "AspNetVersion" = "8:2.0.50727.0"
         "RestartWWWService" = "11:FALSE"
         "RemovePreviousVersions" = "11:FALSE"
         "DetectNewerInstalledVersion" = "11:TRUE"
         "InstallAllUsers" = "11:FALSE"
-        "ProductVersion" = "8:2.0.4"
+        "ProductVersion" = "8:2.0.6"
         "Manufacturer" = "8:HP Inc."
         "ARPHELPTELEPHONE" = "8:"
         "ARPHELPLINK" = "8:"

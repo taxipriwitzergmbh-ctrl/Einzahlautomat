@@ -4444,12 +4444,18 @@ namespace TaMi_Einzahlautomat
                     btnMail.Enabled = mailAvailable;
                     if (!mailAvailable)
                     {
-                        btnMail.BackColor = Color.LightGray;
+                        // Ensure disabled visual state is visible even though the button is owner-painted
+                        // by ModernButton_Paint. We set the gradient colors via Tag and also disable
+                        // interactions.
+                        btnMail.Tag = new Tuple<Color, Color>(Color.FromArgb(170, 170, 170), Color.FromArgb(130, 130, 130));
+                        btnMail.BackColor = Color.FromArgb(170, 170, 170);
                         btnMail.ForeColor = Color.WhiteSmoke;
-                        btnMail.FlatAppearance.MouseOverBackColor = Color.LightGray;
+                        btnMail.FlatAppearance.MouseOverBackColor = Color.FromArgb(170, 170, 170);
+                        btnMail.FlatAppearance.MouseDownBackColor = Color.FromArgb(170, 170, 170);
                         btnMail.Cursor = Cursors.No;
                         string reason = !hasEmployeeMail ? "Keine Mitarbeiter-E-Mail hinterlegt." : "Maileinstellungen unvollständig.";
                         try { new ToolTip().SetToolTip(btnMail, reason); } catch { }
+                        try { btnMail.Invalidate(); } catch { }
                     }
                 }
                 catch { }
@@ -4462,11 +4468,14 @@ namespace TaMi_Einzahlautomat
                     btnPrint.Enabled = printEnabled;
                     if (!printEnabled)
                     {
-                        btnPrint.BackColor = Color.LightGray;
+                        btnPrint.Tag = new Tuple<Color, Color>(Color.FromArgb(170, 170, 170), Color.FromArgb(130, 130, 130));
+                        btnPrint.BackColor = Color.FromArgb(170, 170, 170);
                         btnPrint.ForeColor = Color.WhiteSmoke;
-                        btnPrint.FlatAppearance.MouseOverBackColor = Color.LightGray;
+                        btnPrint.FlatAppearance.MouseOverBackColor = Color.FromArgb(170, 170, 170);
+                        btnPrint.FlatAppearance.MouseDownBackColor = Color.FromArgb(170, 170, 170);
                         btnPrint.Cursor = Cursors.No;
                         try { new ToolTip().SetToolTip(btnPrint, "Drucken ist deaktiviert."); } catch { }
+                        try { btnPrint.Invalidate(); } catch { }
                     }
                 }
                 catch { }
@@ -4480,11 +4489,14 @@ namespace TaMi_Einzahlautomat
                     btnQr.Enabled = qrEnabled;
                     if (!qrEnabled)
                     {
-                        btnQr.BackColor = Color.LightGray;
+                        btnQr.Tag = new Tuple<Color, Color>(Color.FromArgb(170, 170, 170), Color.FromArgb(130, 130, 130));
+                        btnQr.BackColor = Color.FromArgb(170, 170, 170);
                         btnQr.ForeColor = Color.WhiteSmoke;
-                        btnQr.FlatAppearance.MouseOverBackColor = Color.LightGray;
+                        btnQr.FlatAppearance.MouseOverBackColor = Color.FromArgb(170, 170, 170);
+                        btnQr.FlatAppearance.MouseDownBackColor = Color.FromArgb(170, 170, 170);
                         btnQr.Cursor = Cursors.No;
                         try { new ToolTip().SetToolTip(btnQr, "QR-Code ist deaktiviert."); } catch { }
+                        try { btnQr.Invalidate(); } catch { }
                       }
                 }
                 catch { }
