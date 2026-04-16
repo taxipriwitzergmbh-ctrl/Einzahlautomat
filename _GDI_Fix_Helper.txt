@@ -1,0 +1,91 @@
+GDI+ Memory Leak Fix - Anleitung
+=================================
+
+PROBLEM:
+--------
+Der Fehler "System.Runtime.InteropServices.ExternalException (0x80004005): Allgemeiner Fehler in GDI+."
+tritt auf, weil CreateRoundRectRgn() GDI-Handles (HRGN) erstellt, die nie freigegeben werden.
+
+Nach mehrmaligem Öffnen/Schließen von Forms sind die GDI-Ressourcen erschöpft.
+
+LÖSUNG:
+-------
+1. DeleteObject DllImport hinzufügen
+2. Nach Region.FromHrgn() das HRGN-Handle mit DeleteObject() freigeben
+
+BETROFFENE DATEIEN:
+-------------------
+- Form\CreatePaymentForm.cs (Zeile 93, 768-769)
+- Form\AbrechnungForm.cs (mehrere Stellen, Zeile 4558)
+- Form\AbrechnungForm_alt.cs (Zeile 445, 681, 1241)
+
+SCHRITT 1: DeleteObject Import hinzufügen
+------------------------------------------
+In jeder Datei, die CreateRoundRectRgn verwendet, füge nach dem Import hinzu:
+
+[DllImport("gdi32.dll", SetLastError = true)]
+private static extern bool DeleteObject(IntPtr hObject);
+
+SCHRITT 2: Region-Erstellung korrigieren
+-----------------------------------------
+VORHER (FALSCH - Memory Leak):
+try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24)); } catch { }
+
+NACHHER (RICHTIG):
+try 
+{ 
+    IntPtr hRgn = CreateRoundRectRgn(0, 0, Width, Height, 24, 24);
+    Region = Region.FromHrgn(hRgn);
+    DeleteObject(hRgn);  // <-- WICHTIG: Handle freigeben!
+} 
+catch { }
+
+ALTERNATIVE SCHREIBWEISE (bei mehreren Verwendungen):
+------------------------------------------------------
+private static void SetRoundedRegion(Control control, int radius)
+{
+    if (control == null) return;
+    try
+    {
+        IntPtr hRgn = CreateRoundRectRgn(0, 0, control.Width, control.Height, radius, radius);
+        if (hRgn != IntPtr.Zero)
+        {
+            control.Region = Region.FromHrgn(hRgn);
+            DeleteObject(hRgn);
+        }
+    }
+    catch { }
+}
+
+Verwendung:
+SetRoundedRegion(this, 24);
+SetRoundedRegion(btnManuellAdd, 12);
+SetRoundedRegion(_cardAbrechnen, 18);
+
+ALLE ZU FIXENDEN ZEILEN IN CreatePaymentForm.cs:
+-------------------------------------------------
+Zeile 93:
+try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24)); } catch { }
+
+ALLE ZU FIXENDEN ZEILEN IN AbrechnungForm.cs:
+----------------------------------------------
+Zeile 2169:  var rgn = Region.FromHrgn(CreateRoundRectRgn(0, 0, _cardAbrechnen.Width, _cardAbrechnen.Height, 18, 18));
+Zeile 2184:  var rgn = Region.FromHrgn(CreateRoundRectRgn(0, 0, _cardAbrechnen.Width, _cardAbrechnen.Height, 18, 18));
+Zeile 2194:  var irgn = Region.FromHrgn(CreateRoundRectRgn(0, 0, _abrechnenInnerPanel.Width, _abrechnenInnerPanel.Height, ...
+Zeile 2245:  var irgn = Region.FromHrgn(CreateRoundRectRgn(0, 0, _abrechnenInnerPanel.Width, _abrechnenInnerPanel.Height, 16, 16));
+Zeile 2538:  lblNotizenInfo.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, lblNotizenInfo.Width, lblNotizenInfo.Height...
+Zeile 2615:  lblNotizenInfo.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, lblNotizenInfo.Width, lblNotizenInfo.Height...
+Zeile 2991:  btnManuellAdd.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, btnManuellAdd.Width, btnManuellAdd.Height, 12, 12));
+Zeile 3348:  glassLayer.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, glassLayer.Width, glassLayer.Height, 18, 18));
+Zeile 3362:  glassLayer.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, glassLayer.Width, glassLayer.Height, 18, 18));
+Zeile 3387:  return Region.FromHrgn(CreateRoundRectRgn(x, y, x + w, y + h, r1, r2));
+Zeile 4291:  dlg.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, dlg.Width, dlg.Height, 16, 16));
+Zeile 4420:  b.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, b.Width, b.Height, 12, 12));
+
+PRIORITÄT:
+----------
+1. CreatePaymentForm.cs (Zeile 93) - HÖCHSTE PRIORITÄT
+2. AbrechnungForm.cs (alle Stellen)
+3. AbrechnungForm_alt.cs (wenn noch verwendet)
+
+Nach dem Fix sollte der GDI+-Fehler nicht mehr auftreten.

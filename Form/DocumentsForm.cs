@@ -1100,8 +1100,40 @@ namespace TaMi_Einzahlautomat
                 if (pid <= 0) return false;
                 var name = Path.GetFileNameWithoutExtension(filePath) ?? string.Empty;
 
-                // Robust: letzte Ziffernfolge im Namen als PID interpretieren
-                // Beispiele: "Allgemein_1", "Lohnsteuer..._20251_1", "Allgemein_0001", "Allgemein_1 (1)"
+                // Konfigurierbar: von rechts gezähltes numerisches Token als Personalnummer verwenden.
+                // Default = 1 (letztes Token). Beispiel DATEV:
+                // LOBN_202603_0707237_10320_10001_00000
+                // - TokenFromRight=1 => 00000
+                // - TokenFromRight=2 => 10001 (gewünscht)
+                int tokenFromRight = 1;
+                try
+                {
+                    var raw = IniHelper.ReadValue("UI", "DocumentsPidTokenFromRight", AppSettings.IniPath);
+                    int v;
+                    if (!string.IsNullOrWhiteSpace(raw) && int.TryParse(raw.Trim(), out v))
+                        tokenFromRight = Math.Max(1, Math.Min(20, v));
+                }
+                catch { tokenFromRight = 1; }
+
+                try
+                {
+                    var parts = name.Split(new[] { '_' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length >= tokenFromRight)
+                    {
+                        var token = parts[parts.Length - tokenFromRight];
+                        if (!string.IsNullOrWhiteSpace(token))
+                        {
+                            var normalized = token.Trim().TrimStart('0');
+                            if (normalized.Length == 0) normalized = "0";
+                            int tokenPid;
+                            if (int.TryParse(normalized, out tokenPid))
+                                return tokenPid == pid;
+                        }
+                    }
+                }
+                catch { }
+
+                // Fallback: letzte Ziffernfolge im Namen als PID interpretieren
                 var m = Regex.Match(name, @"(\d+)\D*$");
                 if (!m.Success) return false;
 

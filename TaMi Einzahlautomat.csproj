@@ -397,6 +397,7 @@
     <Content Include="Ressourcen\Hintergrund.png" />
     <Content Include="Ressourcen\Hintergrund_Abrechnen.png" />
     <Content Include="Ressourcen\NFC.png" />
+    <Content Include="_GDI_Fix_Helper.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

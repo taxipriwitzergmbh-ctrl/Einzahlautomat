@@ -32,6 +32,9 @@ namespace TaMi_Einzahlautomat
         private Label _lblAutoCloseDocsHours;
         private TextBox _txtAutoCloseDocsHours;
 
+        private Label _lblDocsPidToken;
+        private TextBox _txtDocsPidToken;
+
         private CheckBox _chkReceiptPromptEnabled;
         private CheckBox _chkQrCodeEnabled;
         private CheckBox _chkDocumentsEnabled;
@@ -199,6 +202,12 @@ namespace TaMi_Einzahlautomat
             content.Controls.Add(_lblAutoCloseDocsHours); content.Controls.Add(_txtAutoCloseDocsHours);
             y += 24 + 24 + 12;
 
+            _lblDocsPidToken = new Label { Text = "Dokumente: Personalnummer-Token von rechts (1=letztes, 2=vorletztes)", AutoSize = true, Location = new Point(left + 26, y), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
+            _txtDocsPidToken = new TextBox { Location = new Point(left + 26, y + 24), Width = 150, Font = new Font("Segoe UI", 11F) };
+            var lblDocsPidHint = new Label { Text = "Beispiel: LOBN_..._10001_00000 => Wert=2", AutoSize = true, Location = new Point(left + 190, y + 26), Font = new Font("Segoe UI", 9F, FontStyle.Italic), ForeColor = Color.FromArgb(140, 140, 140) };
+            content.Controls.Add(_lblDocsPidToken); content.Controls.Add(_txtDocsPidToken); content.Controls.Add(lblDocsPidHint);
+            y += 24 + 24 + 12;
+
             var lblMaint = new Label { Text = "Wartungscode (Maintenance)", AutoSize = true, Location = new Point(left + 26, y), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
             content.Controls.Add(lblMaint);
             y += 26;
@@ -270,6 +279,7 @@ namespace TaMi_Einzahlautomat
             try { var bu = IniHelper.ReadValue("UI", "BusyUnlockTimeoutSec", ini); _txtBusyUnlock.Text = string.IsNullOrWhiteSpace(bu) ? "0" : bu.Trim(); } catch { _txtBusyUnlock.Text = "0"; }
             try { var al = IniHelper.ReadValue("UI", "AutoLogoffTimeoutSec", ini); _txtAutoLogoff.Text = string.IsNullOrWhiteSpace(al) ? "0" : al.Trim(); } catch { _txtAutoLogoff.Text = "0"; }
             try { var ac = IniHelper.ReadValue("UI", "AutoCloseDocsHoursSec", ini); _txtAutoCloseDocsHours.Text = string.IsNullOrWhiteSpace(ac) ? "0" : ac.Trim(); } catch { try { _txtAutoCloseDocsHours.Text = "0"; } catch { } }
+            try { var raw = IniHelper.ReadValue("UI", "DocumentsPidTokenFromRight", ini); _txtDocsPidToken.Text = string.IsNullOrWhiteSpace(raw) ? "1" : raw.Trim(); } catch { try { _txtDocsPidToken.Text = "1"; } catch { } }
             try { var maint = IniHelper.ReadValue("Security", "MaintenancePassword", ini); var dec = DecryptSecret(maint ?? string.Empty); if (!string.IsNullOrEmpty(dec)) { _txtMaintPwd.Text = dec; _txtMaintPwd2.Text = dec; } else if (!string.IsNullOrEmpty(maint)) { _txtMaintPwd.Text = new string('•', 8); _txtMaintPwd2.Text = new string('•', 8); _txtMaintPwd.Tag = PlaceholderTag; _txtMaintPwd2.Tag = PlaceholderTag; } } catch { }
             try { var adm = IniHelper.ReadValue("Security", "AdminNumericBackdoor", ini); var dec = DecryptSecret(adm ?? string.Empty); if (!string.IsNullOrEmpty(dec)) { _txtAdminBackdoor.Text = dec; _txtAdminBackdoor2.Text = dec; } else if (!string.IsNullOrEmpty(adm)) { _txtAdminBackdoor.Text = new string('•', 8); _txtAdminBackdoor2.Text = new string('•', 8); _txtAdminBackdoor.Tag = PlaceholderTag; _txtAdminBackdoor2.Tag = PlaceholderTag; } } catch { }
             try { var prompt = IniHelper.ReadValue("ReceiptPrinter", "AskUser", ini); _chkReceiptPromptEnabled.Checked = string.IsNullOrWhiteSpace(prompt) ? true : (prompt.Equals("true", StringComparison.OrdinalIgnoreCase) || prompt.Equals("1") || prompt.Equals("yes", StringComparison.OrdinalIgnoreCase) || prompt.Equals("on", StringComparison.OrdinalIgnoreCase)); } catch { _chkReceiptPromptEnabled.Checked = true; }
@@ -296,6 +306,7 @@ namespace TaMi_Einzahlautomat
             try { var raw = (_txtBusyUnlock.Text ?? string.Empty).Trim(); int sec = 0; if (!string.IsNullOrEmpty(raw)) int.TryParse(raw, out sec); if (sec < 0) sec = 0; IniHelper.WriteValue("UI", "BusyUnlockTimeoutSec", sec.ToString(), ini); } catch { }
             try { var raw = (_txtAutoLogoff.Text ?? string.Empty).Trim(); int sec = 0; if (!string.IsNullOrEmpty(raw)) int.TryParse(raw, out sec); if (sec < 0) sec = 0; IniHelper.WriteValue("UI", "AutoLogoffTimeoutSec", sec.ToString(), ini); } catch { }
             try { var raw = (_txtAutoCloseDocsHours.Text ?? string.Empty).Trim(); int sec = 0; if (!string.IsNullOrEmpty(raw)) int.TryParse(raw, out sec); if (sec < 0) sec = 0; IniHelper.WriteValue("UI", "AutoCloseDocsHoursSec", sec.ToString(), ini); } catch { }
+            try { var raw = (_txtDocsPidToken.Text ?? string.Empty).Trim(); int v = 1; if (!string.IsNullOrEmpty(raw)) int.TryParse(raw, out v); if (v < 1) v = 1; if (v > 20) v = 20; IniHelper.WriteValue("UI", "DocumentsPidTokenFromRight", v.ToString(), ini); } catch { }
             try { IniHelper.WriteValue("Security", "MaintenancePassword", EncryptSecret((_txtMaintPwd.Text ?? string.Empty).Trim()), ini); } catch { }
             try { IniHelper.WriteValue("Security", "AdminNumericBackdoor", EncryptSecret((_txtAdminBackdoor.Text ?? string.Empty).Trim()), ini); } catch { }
             try { IniHelper.WriteValue("ReceiptPrinter", "AskUser", _chkReceiptPromptEnabled.Checked ? "True" : "False", ini); } catch { }
