@@ -1084,6 +1084,45 @@ namespace TaMi_Einzahlautomat.Coins
             return before != 0;
         }
 
+        private string LevelsToString(int[] lv)
+        {
+            try
+            {
+                if (lv == null) return "<null>";
+                int[] cents = new[] { 1, 2, 5, 10, 20, 50, 100, 200 };
+                int len = Math.Min(lv.Length, cents.Length);
+                var parts = new List<string>();
+                for (int i = 0; i < len; i++)
+                {
+                    parts.Add(cents[i] + "ct=" + lv[i]);
+                }
+                return string.Join(",", parts);
+            }
+            catch { return "<err>"; }
+        }
+
+        private string LevelsDiffToString(int[] before, int[] after)
+        {
+            try
+            {
+                if (before == null || after == null) return "<null>";
+                int[] cents = new[] { 1, 2, 5, 10, 20, 50, 100, 200 };
+                int len = Math.Min(Math.Min(before.Length, after.Length), cents.Length);
+                var parts = new List<string>();
+                for (int i = 0; i < len; i++)
+                {
+                    int b = before[i];
+                    int a = after[i];
+                    if (b < 0 || a < 0) continue;
+                    int d = b - a;
+                    if (d == 0) continue;
+                    parts.Add(cents[i] + "ct:" + b + "->" + a + " (d=" + d + ")");
+                }
+                return parts.Count == 0 ? "<no-diff>" : string.Join(", ", parts);
+            }
+            catch { return "<err>"; }
+        }
+
         private int ComputeLevelDeltaCent(int[] before, int[] after)
         {
             try
@@ -1130,6 +1169,16 @@ namespace TaMi_Einzahlautomat.Coins
             {
                 var afterLevels = GetCoinAvailability();
                 int expected = ComputeLevelDeltaCent(beforeLevels, afterLevels);
+
+                try
+                {
+                    var durMs = (int)Math.Max(0, (DateTime.UtcNow - startUtc).TotalMilliseconds);
+                    Log("PAYOUT_RECONCILE finalize reason=" + (reason ?? "") + " durationMs=" + durMs +
+                        " expected=" + FormatCentEuro(expected) + " events=" + FormatCentEuro(eventSum) +
+                        " delta=" + FormatCentEuro(expected - eventSum) +
+                        " levelsDiff=" + LevelsDiffToString(beforeLevels, afterLevels));
+                }
+                catch { }
 
                 // Wenn wir keinen sauberen Delta aus Levels berechnen können: still beenden, aber nichts buchen.
                 if (expected <= 0) return;
@@ -1304,6 +1353,13 @@ namespace TaMi_Einzahlautomat.Coins
                     _payoutStartUtc = DateTime.UtcNow;
                     _payoutReconcileActive = true;
                 }
+
+                try
+                {
+                    var before = GetCoinAvailability();
+                    Log("PAYOUT_RECONCILE start beforeLevels=" + LevelsToString(before));
+                }
+                catch { }
             }
             catch { }
 

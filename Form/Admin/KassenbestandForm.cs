@@ -55,7 +55,8 @@ namespace TaMi_Einzahlautomat
         {
             try
             {
-                var t = IniHelper.ReadValue("SmartCoin", "Typ", AppSettings.IniPath)?.Trim() ?? string.Empty;
+                // Gleiche Quelle wie AdminCoinForm: dort wird Typ in [SmartCoin/1] gespeichert.
+                var t = IniHelper.ReadValue("SmartCoin/1", "Typ", AppSettings.IniPath)?.Trim() ?? string.Empty;
                 return t.Equals("RM5", StringComparison.OrdinalIgnoreCase);
             }
             catch { return false; }
@@ -544,7 +545,7 @@ namespace TaMi_Einzahlautomat
         {
             if (rm5)
             {
-                _itemRm5 = new ListViewItem("RM5 M�nzenbestand");
+                _itemRm5 = new ListViewItem("RM5 Münzenbestand");
                 _itemRm5.SubItems.Add("-");
                 _itemRm5.SubItems.Add("");
                 _itemRm5.SubItems.Add(autoName);
