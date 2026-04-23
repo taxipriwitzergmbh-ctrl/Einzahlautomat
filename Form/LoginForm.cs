@@ -1349,6 +1349,26 @@ namespace TaMi_Einzahlautomat
         {
             try
             {
+                // LIZENZPRÜFUNG vor jedem Login
+                if (!LicenseManager.IsLicenseValid)
+                {
+                    lblError.Text = "Lizenz ungültig oder abgelaufen.";
+                    ShowTitleTemporary("⚠ Lizenz ungültig", 5000);
+                    string errDetails = LicenseManager.LastError;
+                    if (!string.IsNullOrEmpty(errDetails))
+                    {
+                        AppLogger.Log($"Login verweigert – Lizenzfehler: {errDetails}");
+                    }
+                    MessageBox.Show(this, 
+                        $"Die Lizenz für diesen Automaten ist ungültig oder abgelaufen.\n\n" +
+                        $"Fehler: {errDetails}\n\n" +
+                        $"Bitte kontaktieren Sie den Support.",
+                        "Lizenz ungültig", 
+                        MessageBoxButtons.OK, 
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+
                 // Wartungsmodus: Nur Personalnummer erforderlich, direkter Login ohne Passwort
                 if (_maintenanceMode)
                 {
@@ -1481,6 +1501,16 @@ namespace TaMi_Einzahlautomat
             {
                 if (string.IsNullOrWhiteSpace(token)) return;
                 // Entfernt: IsIgnoredNfcToken(token) – zentrale Filterung im CoinFeeder
+
+                // LIZENZPRÜFUNG vor NFC-Login (außer Admin-Backdoor)
+                if (!IsAdminBackdoor(token) && !LicenseManager.IsLicenseValid)
+                {
+                    lblError.Text = "Lizenz ungültig - Login nicht möglich.";
+                    ShowTitleTemporary("⚠ Lizenz ungültig", 5000);
+                    string errDetails = LicenseManager.LastError;
+                    AppLogger.Log($"NFC-Login verweigert – Lizenzfehler: {errDetails}");
+                    return;
+                }
 
                 // Admin-Backdoor
                 if (IsAdminBackdoor(token))

@@ -149,6 +149,7 @@
     <Compile Include="Allgemeine_Klassen\BusyAnimationManager.cs" />
     <Compile Include="Allgemeine_Klassen\DeviceLogger.cs" />
     <Compile Include="Allgemeine_Klassen\EmailReceiptService.cs" />
+    <Compile Include="Allgemeine_Klassen\LicenseManager.cs" />
     <Compile Include="Allgemeine_Klassen\NotizenDbDto.cs" />
     <Compile Include="Allgemeine_Klassen\PaymentSettingsStore.cs" />
     <Compile Include="Allgemeine_Klassen\ReceiptPublisher.cs" />
@@ -345,6 +346,7 @@
     </EmbeddedResource>
     <None Include=".github\copilot-instructions.md" />
     <None Include="Beispiel-Fix für AppConfigItem %28analog zu ConfigItem%29" />
+    <None Include="LIZENZ_SYSTEM.md" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

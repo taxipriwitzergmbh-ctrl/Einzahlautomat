@@ -330,6 +330,9 @@ namespace TaMi_Einzahlautomat
             try { AppLogger.LogStartBanner(); } catch { }
             SafeLog("Programmstart");
 
+            // Lizenzprüfung initialisieren (prüft alle 3 Stunden)
+            try { LicenseManager.Initialize(); } catch (Exception ex) { SafeLog("LicenseManager Init Fehler: " + ex.Message); }
+
             // Check for available update on startup (non-blocking)
             try { Task.Run(() => PromptUpdateIfAvailable()); } catch { }
 
@@ -510,6 +513,7 @@ namespace TaMi_Einzahlautomat
                     try { await Task.Delay(5000); } catch { }
                     SafeLog("Beenden jetzt.");
                     try { AppLogger.LogEndBanner(); } catch { }
+                    try { LicenseManager.Shutdown(); } catch { }
                     ShutdownLoggerSafe("DelayedShutdown");
                     try { ShowTaskbar(); } catch { }
                     try { Environment.Exit(0); } catch { }
