@@ -283,6 +283,9 @@ namespace TaMi_Einzahlautomat
             try
             {
                 bool rm5 = IsRm5Active();
+
+                var devState = GetDeviceState();
+
                 if (string.IsNullOrWhiteSpace(AppSettings.AutomatenName))
                 {
                     AppSettings.AutomatenName = AppSettings.LoadAutomatenNameFromIni() ?? "";
@@ -320,7 +323,11 @@ namespace TaMi_Einzahlautomat
                 lvKassenbestand.BeginUpdate();
                 lvKassenbestand.Items.Clear();
                 _itemAutomatSum = null; _itemKassenSum = null; _itemRm5 = null;
-                AppendHardwareRows(autoName, rm5);
+                _itemSmartCoin = null; _itemSmartCoin2 = null;
+                _itemNv200 = null; _itemNv200Cashbox = null;
+                _itemNv2002 = null; _itemNv2002Cashbox = null;
+
+                AppendHardwareRows(autoName, rm5, devState);
                 foreach (var item in newKassenItems) lvKassenbestand.Items.Add(item);
                 lvKassenbestand.EndUpdate();
 
@@ -388,6 +395,8 @@ namespace TaMi_Einzahlautomat
         { UpdateHardwareRowValues(autoName, IsRm5Active()); }
         private void UpdateHardwareRowValues(string autoName, bool rm5)
         {
+            var st = GetDeviceState();
+
             // INI-Ports lesen
             string nv1Port = IniHelper.ReadValue("NV200/1", "ComPort", _iniPath);
             string nv2Port = IniHelper.ReadValue("NV200/2", "ComPort", _iniPath);
@@ -426,12 +435,14 @@ namespace TaMi_Einzahlautomat
                 {
                     var coin1 = CoinManager.Instance;
                     var coin2 = Coin2Manager.Instance;
-                    SetValue(_itemSmartCoin, "-");
-                    SetValue(_itemSmartCoin2, "-");
+
+                    if (st == null || !st.SmartCoin1Disabled) SetValue(_itemSmartCoin, "-");
+                    if (st == null || !st.SmartCoin2Disabled) SetValue(_itemSmartCoin2, "-");
+
                     decimal sum1 = 0m, sum2 = 0m;
                     int[] lv1 = null, lv2 = null;
-                    if (coin1 is SmartCoinV1 sc1) { lv1 = sc1.GetCoinAvailability(); }
-                    if (coin2 is SmartCoinV1 sc2v1) { lv2 = sc2v1.GetCoinAvailability(); }
+                    if ((st == null || !st.SmartCoin1Disabled) && coin1 is SmartCoinV1 sc1) { lv1 = sc1.GetCoinAvailability(); }
+                    if ((st == null || !st.SmartCoin2Disabled) && coin2 is SmartCoinV1 sc2v1) { lv2 = sc2v1.GetCoinAvailability(); }
                     if (lv1 != null) sum1 = SumSmartCoinEuro(lv1);
                     if (lv2 != null) sum2 = SumSmartCoinEuro(lv2);
                     if (lv1 != null) { SetValue(_itemSmartCoin, sum1.ToString("C2")); sumAutomat += sum1; }
@@ -439,20 +450,23 @@ namespace TaMi_Einzahlautomat
                 }
                 catch
                 {
-                    SetValue(_itemSmartCoin, "-");
-                    SetValue(_itemSmartCoin2, "-");
+                    if (st == null || !st.SmartCoin1Disabled) SetValue(_itemSmartCoin, "-");
+                    if (st == null || !st.SmartCoin2Disabled) SetValue(_itemSmartCoin2, "-");
                 }
             }
 
-            // NV200 Ger�te unver�ndert (immer ber�cksichtigen)
+            // NV200
             try
             {
-                SetValue(_itemNv200, "-"); SetValue(_itemNv2002, "-"); SetValue(_itemNv200Cashbox, "-"); SetValue(_itemNv2002Cashbox, "-");
+                if (st == null || !st.Nv2001Disabled) { SetValue(_itemNv200, "-"); SetValue(_itemNv200Cashbox, "-"); }
+                if (st == null || !st.Nv2002Disabled) { SetValue(_itemNv2002, "-"); SetValue(_itemNv2002Cashbox, "-"); }
+
                 void FillNv(NV200_SSP dev, string expectedPort, ListViewItem payoutItem, ListViewItem cashboxItem)
                 {
                     try
                     {
                         if (dev == null || string.IsNullOrWhiteSpace(expectedPort)) return;
+                        if (payoutItem == null || cashboxItem == null) return;
                         if (!string.Equals(dev.ComPort, expectedPort, StringComparison.OrdinalIgnoreCase)) return;
                         decimal nvSum = 5m * dev.Payout_5_euro + 10m * dev.Payout_10_euro + 20m * dev.Payout_20_euro + 50m * dev.Payout_50_euro + 100m * dev.Payout_100_euro + 200m * dev.Payout_200_euro + 500m * dev.Payout_500_euro;
                         decimal cashboxEuro = dev.GetCashboxSumCent() / 100m;
@@ -462,8 +476,12 @@ namespace TaMi_Einzahlautomat
                     }
                     catch { }
                 }
-                FillNv(Program.NV200Instance, nv1Port, _itemNv200, _itemNv200Cashbox);
-                FillNv(Program.NV2002Instance, nv2Port, _itemNv2002, _itemNv2002Cashbox);
+
+                if (st == null || !st.Nv2001Disabled)
+                    FillNv(Program.NV200Instance, nv1Port, _itemNv200, _itemNv200Cashbox);
+
+                if (st == null || !st.Nv2002Disabled)
+                    FillNv(Program.NV2002Instance, nv2Port, _itemNv2002, _itemNv2002Cashbox);
             }
             catch { }
             _sumAutomatEuro = sumAutomat;
@@ -538,10 +556,78 @@ namespace TaMi_Einzahlautomat
             try { KassenSummary.Update(_sumAutomatEuro, _sumKassenEuro); } catch { }
         }
 
+        private sealed class DeviceState
+        {
+            public bool SmartCoin1Disabled;
+            public bool SmartCoin2Disabled;
+            public bool Nv2001Disabled;
+            public bool Nv2002Disabled;
+        }
+
+        private DeviceState GetDeviceState()
+        {
+            var st = new DeviceState();
+            try
+            {
+                var dv = IniHelper.ReadValue("SmartCoin/1", "Disabled", _iniPath);
+                if (!string.IsNullOrWhiteSpace(dv)) st.SmartCoin1Disabled = dv.Trim().Equals("1", StringComparison.OrdinalIgnoreCase) || dv.Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
+            }
+            catch { }
+
+            try
+            {
+                st.SmartCoin2Disabled = AdminCoin2Form.DeviceDisabled;
+            }
+            catch { }
+            try
+            {
+                if (!st.SmartCoin2Disabled)
+                {
+                    var dv = IniHelper.ReadValue("SmartCoin/2", "Disabled", _iniPath);
+                    if (!string.IsNullOrWhiteSpace(dv)) st.SmartCoin2Disabled = dv.Trim().Equals("1", StringComparison.OrdinalIgnoreCase) || dv.Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            catch { }
+
+            try
+            {
+                st.Nv2001Disabled = AdminNV200Form.DeviceDisabled;
+            }
+            catch { }
+            try
+            {
+                if (!st.Nv2001Disabled)
+                {
+                    var dv = IniHelper.ReadValue("NV200/1", "Disabled", _iniPath);
+                    if (!string.IsNullOrWhiteSpace(dv)) st.Nv2001Disabled = dv.Trim().Equals("1", StringComparison.OrdinalIgnoreCase) || dv.Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            catch { }
+
+            try
+            {
+                st.Nv2002Disabled = AdminNV200_2Form.DeviceDisabled;
+            }
+            catch { }
+            try
+            {
+                if (!st.Nv2002Disabled)
+                {
+                    var dv = IniHelper.ReadValue("NV200/2", "Disabled", _iniPath);
+                    if (!string.IsNullOrWhiteSpace(dv)) st.Nv2002Disabled = dv.Trim().Equals("1", StringComparison.OrdinalIgnoreCase) || dv.Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            catch { }
+
+            return st;
+        }
+
         // Sechs Zeilen hinzuf�gen und referenzieren
         private void AppendHardwareRows(string autoName)
-        { AppendHardwareRows(autoName, IsRm5Active()); }
+        { AppendHardwareRows(autoName, IsRm5Active(), GetDeviceState()); }
         private void AppendHardwareRows(string autoName, bool rm5)
+        { AppendHardwareRows(autoName, rm5, GetDeviceState()); }
+        private void AppendHardwareRows(string autoName, bool rm5, DeviceState st)
         {
             if (rm5)
             {
@@ -549,34 +635,74 @@ namespace TaMi_Einzahlautomat
                 _itemRm5.SubItems.Add("-");
                 _itemRm5.SubItems.Add("");
                 _itemRm5.SubItems.Add(autoName);
-                _itemRm5.ForeColor = Color.FromArgb(255,143,0);
+                _itemRm5.ForeColor = Color.FromArgb(255, 143, 0);
                 _itemRm5.Group = _grpAutomat;
                 lvKassenbestand.Items.Add(_itemRm5);
             }
             else
             {
-                // SmartCoin 1
-                _itemSmartCoin = new ListViewItem("SmartCoin");
-                _itemSmartCoin.SubItems.Add("-");
-                _itemSmartCoin.SubItems.Add("");
-                _itemSmartCoin.SubItems.Add(autoName);
-                _itemSmartCoin.ForeColor = Color.FromArgb(25, 118, 210);
-                _itemSmartCoin.Group = _grpAutomat;
-                lvKassenbestand.Items.Add(_itemSmartCoin);
-                // SmartCoin 2
-                _itemSmartCoin2 = new ListViewItem("SmartCoin 2");
-                _itemSmartCoin2.SubItems.Add("-");
-                _itemSmartCoin2.SubItems.Add("");
-                _itemSmartCoin2.SubItems.Add(autoName);
-                _itemSmartCoin2.ForeColor = Color.FromArgb(25, 118, 210);
-                _itemSmartCoin2.Group = _grpAutomat;
-                lvKassenbestand.Items.Add(_itemSmartCoin2);
+                if (st == null || !st.SmartCoin1Disabled)
+                {
+                    // SmartCoin 1
+                    _itemSmartCoin = new ListViewItem("SmartCoin");
+                    _itemSmartCoin.SubItems.Add("-");
+                    _itemSmartCoin.SubItems.Add("");
+                    _itemSmartCoin.SubItems.Add(autoName);
+                    _itemSmartCoin.ForeColor = Color.FromArgb(25, 118, 210);
+                    _itemSmartCoin.Group = _grpAutomat;
+                    lvKassenbestand.Items.Add(_itemSmartCoin);
+                }
+
+                if (st == null || !st.SmartCoin2Disabled)
+                {
+                    // SmartCoin 2
+                    _itemSmartCoin2 = new ListViewItem("SmartCoin 2");
+                    _itemSmartCoin2.SubItems.Add("-");
+                    _itemSmartCoin2.SubItems.Add("");
+                    _itemSmartCoin2.SubItems.Add(autoName);
+                    _itemSmartCoin2.ForeColor = Color.FromArgb(25, 118, 210);
+                    _itemSmartCoin2.Group = _grpAutomat;
+                    lvKassenbestand.Items.Add(_itemSmartCoin2);
+                }
             }
-            // NV200 u.a. immer
-            _itemNv200 = new ListViewItem("NV200"); _itemNv200.SubItems.Add("-"); _itemNv200.SubItems.Add(""); _itemNv200.SubItems.Add(autoName); _itemNv200.ForeColor = Color.FromArgb(46,125,50); _itemNv200.Group = _grpAutomat; lvKassenbestand.Items.Add(_itemNv200);
-            _itemNv200Cashbox = new ListViewItem("NV200 Cashbox"); _itemNv200Cashbox.SubItems.Add("-"); _itemNv200Cashbox.SubItems.Add(""); _itemNv200Cashbox.SubItems.Add(autoName); _itemNv200Cashbox.ForeColor = Color.FromArgb(46,125,50); _itemNv200Cashbox.Group = _grpAutomat; lvKassenbestand.Items.Add(_itemNv200Cashbox);
-            _itemNv2002 = new ListViewItem("NV200/2"); _itemNv2002.SubItems.Add("-"); _itemNv2002.SubItems.Add(""); _itemNv2002.SubItems.Add(autoName); _itemNv2002.ForeColor = Color.FromArgb(46,125,50); _itemNv2002.Group = _grpAutomat; lvKassenbestand.Items.Add(_itemNv2002);
-            _itemNv2002Cashbox = new ListViewItem("NV200/2 Cashbox"); _itemNv2002Cashbox.SubItems.Add("-"); _itemNv2002Cashbox.SubItems.Add(""); _itemNv2002Cashbox.SubItems.Add(autoName); _itemNv2002Cashbox.ForeColor = Color.FromArgb(46,125,50); _itemNv2002Cashbox.Group = _grpAutomat; lvKassenbestand.Items.Add(_itemNv2002Cashbox);
+
+            if (st == null || !st.Nv2001Disabled)
+            {
+                _itemNv200 = new ListViewItem("NV200");
+                _itemNv200.SubItems.Add("-");
+                _itemNv200.SubItems.Add("");
+                _itemNv200.SubItems.Add(autoName);
+                _itemNv200.ForeColor = Color.FromArgb(46, 125, 50);
+                _itemNv200.Group = _grpAutomat;
+                lvKassenbestand.Items.Add(_itemNv200);
+
+                _itemNv200Cashbox = new ListViewItem("NV200 Cashbox");
+                _itemNv200Cashbox.SubItems.Add("-");
+                _itemNv200Cashbox.SubItems.Add("");
+                _itemNv200Cashbox.SubItems.Add(autoName);
+                _itemNv200Cashbox.ForeColor = Color.FromArgb(46, 125, 50);
+                _itemNv200Cashbox.Group = _grpAutomat;
+                lvKassenbestand.Items.Add(_itemNv200Cashbox);
+            }
+
+            if (st == null || !st.Nv2002Disabled)
+            {
+                _itemNv2002 = new ListViewItem("NV200/2");
+                _itemNv2002.SubItems.Add("-");
+                _itemNv2002.SubItems.Add("");
+                _itemNv2002.SubItems.Add(autoName);
+                _itemNv2002.ForeColor = Color.FromArgb(46, 125, 50);
+                _itemNv2002.Group = _grpAutomat;
+                lvKassenbestand.Items.Add(_itemNv2002);
+
+                _itemNv2002Cashbox = new ListViewItem("NV200/2 Cashbox");
+                _itemNv2002Cashbox.SubItems.Add("-");
+                _itemNv2002Cashbox.SubItems.Add("");
+                _itemNv2002Cashbox.SubItems.Add(autoName);
+                _itemNv2002Cashbox.ForeColor = Color.FromArgb(46, 125, 50);
+                _itemNv2002Cashbox.Group = _grpAutomat;
+                lvKassenbestand.Items.Add(_itemNv2002Cashbox);
+            }
         }
 
         // M�nzsumme in Euro aus Level-Array
