@@ -18,7 +18,7 @@ namespace TaMi_Einzahlautomat
         private static readonly string LAUS_URL = "https://extern.sue-software.de/laus/";
         private static readonly string SOFTWARE_ID = "EZATM-03D77D5CX005056A0CE43XFA46CEAA";
         private static readonly string CAN_VALUE = "EZATM";
-        private static readonly string CAV_VERSION = "1.0.0";
+        private static readonly string CAV_VERSION = GetApplicationVersion();
 
         private static System.Threading.Timer _licenseCheckTimer;
         private static bool _isLicenseValid = false;
@@ -45,7 +45,23 @@ namespace TaMi_Einzahlautomat
         {
             get { lock (_lock) return _lastCheckTime; }
         }
-        
+
+        /// <summary>
+        /// Liest die aktuelle Anwendungsversion aus der Assembly
+        /// </summary>
+        private static string GetApplicationVersion()
+        {
+            try
+            {
+                var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                return $"{version.Major}.{version.Minor}.{version.Build}";
+            }
+            catch
+            {
+                return "1.0.0"; // Fallback
+            }
+        }
+
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         private static extern bool GetVolumeInformation(
             string rootPathName,
@@ -80,7 +96,19 @@ namespace TaMi_Einzahlautomat
 
                 if (!_isLicenseValid)
                 {
-                    AppLogger.Log($"LicenseManager: WARNUNG - Lizenz ungültig: {_lastError}");
+                    // Bei ungültiger Lizenz auch Kundeninfos anzeigen
+                    string customerPart = !string.IsNullOrEmpty(_customerName) ? $"Kunde:{_customerName}" : string.Empty;
+                    string idPart = !string.IsNullOrEmpty(_customerId) ? $"Knd:{_customerId}" : string.Empty;
+                    string combined = string.Join(", ", new[] { customerPart, idPart }.Where(s => !string.IsNullOrEmpty(s)));
+
+                    if (!string.IsNullOrEmpty(combined))
+                    {
+                        AppLogger.Log($"LicenseManager: WARNUNG - Lizenz ungültig: {_lastError} für {combined} Einzahlautomat");
+                    }
+                    else
+                    {
+                        AppLogger.Log($"LicenseManager: WARNUNG - Lizenz ungültig: {_lastError}");
+                    }
                 }
 
                 // Timer für alle 3 Stunden (3 * 60 * 60 * 1000 ms)
