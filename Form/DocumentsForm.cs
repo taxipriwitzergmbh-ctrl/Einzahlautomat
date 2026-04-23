@@ -1400,20 +1400,23 @@ namespace TaMi_Einzahlautomat
                 };
                 header.Controls.Add(title);
 
-                var body = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
+                var body = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(16, 16, 16, 16) };
                 dlg.Controls.Add(body);
+
+                var panelButtons = new Panel { Dock = DockStyle.Bottom, Height = 84, BackColor = Color.White };
+                body.Controls.Add(panelButtons);
+
+                // Textbereich docked oben, damit er nicht von den Buttons überlappt wird
                 var info = new Label
                 {
                     Text = "Für den direkten PDF-Druck wird SumatraPDF benötigt.\r\nKlicken Sie auf 'Herunterladen', um die offizielle Download-Seite zu öffnen.",
                     AutoSize = false,
-                    Location = new Point(16, 20),
-                    Size = new Size(520, 60),
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.TopLeft,
                     Font = new Font("Segoe UI", 11.5F)
                 };
                 body.Controls.Add(info);
-
-                var panelButtons = new Panel { Dock = DockStyle.Bottom, Height = 84 };
-                body.Controls.Add(panelButtons);
+                body.Controls.SetChildIndex(info, 0);
 
                 var btnDownload = new Button
                 {
@@ -1447,15 +1450,45 @@ namespace TaMi_Einzahlautomat
                 {
                     try
                     {
-                        // Official download page
-                        Process.Start(new ProcessStartInfo
+                        // Auslieferungs-Variante: wir erwarten `SumatraPDF.exe` neben `Geldautomat.exe`.
+                        // Wenn bereits ein Paket in `Ressourcen` mitgeliefert wird, kopieren wir es nach `Application.StartupPath`.
+                        string baseDir = Application.StartupPath;
+                        string source = Path.Combine(baseDir, "Ressourcen", "SumatraPDF.exe");
+                        string target = Path.Combine(baseDir, "SumatraPDF.exe");
+
+                        if (File.Exists(target))
                         {
-                            FileName = "https://www.sumatrapdfreader.org/free-pdf-reader.html",
-                            UseShellExecute = true
-                        });
+                            MessageBox.Show(dlg, "SumatraPDF ist bereits vorhanden.", "PDF-Druck", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            try { dlg.Close(); } catch { }
+                            return;
+                        }
+
+                        if (!File.Exists(source))
+                        {
+                            MessageBox.Show(dlg, "SumatraPDF.exe wurde nicht gefunden. Bitte legen Sie die Datei in 'Ressourcen' ab oder öffnen Sie die Download-Seite.", "PDF-Druck", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            try
+                            {
+                                Process.Start(new ProcessStartInfo
+                                {
+                                    FileName = "https://www.sumatrapdfreader.org/free-pdf-reader.html",
+                                    UseShellExecute = true
+                                });
+                            }
+                            catch { }
+                            return;
+                        }
+
+                        try { File.Copy(source, target, overwrite: false); }
+                        catch (Exception exCopy)
+                        {
+                            MessageBox.Show(dlg, "SumatraPDF konnte nicht installiert werden (Kopieren fehlgeschlagen):\r\n" + exCopy.Message, "PDF-Druck", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+
+                        MessageBox.Show(dlg, "SumatraPDF wurde bereitgestellt. Bitte erneut drucken.", "PDF-Druck", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        try { dlg.Close(); } catch { }
                     }
                     catch { }
-                    try { dlg.Close(); } catch { }
                 };
 
                 var btnClose = new Button
