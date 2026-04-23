@@ -1,11 +1,11 @@
-using System;
+ï»¿using System;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using TaMi_Einzahlautomat.Coins;
-using System.Collections.Concurrent; // NEU für Queue
+using System.Collections.Concurrent; // NEU fï¿½r Queue
 
 namespace TaMi_Einzahlautomat
 {
@@ -20,7 +20,7 @@ namespace TaMi_Einzahlautomat
         private static decimal _baselineEuro = 0m;
         private static bool _baselineSet = false;
 
-        // Kassensturz Unterdrückung: Anzahl geöffneter Kassensturz-Fenster
+        // Kassensturz Unterdrï¿½ckung: Anzahl geï¿½ffneter Kassensturz-Fenster
         private static int _kassensturzOpenCount = 0;
 
         // NEU: Asynchrones Logging
@@ -46,11 +46,11 @@ namespace TaMi_Einzahlautomat
             if (!KassensturzActive) return false;
             if (string.IsNullOrEmpty(msg)) return false;
             string m = msg.ToLowerInvariant();
-            if (m.Contains("<--- münze eingezahlt") ||
+            if (m.Contains("<--- mï¿½nze eingezahlt") ||
                 m.Contains("<--- schein eingezahlt") ||
                 m.Contains("---> schein ausgezahlt") ||
-                m.Contains("münzauszahlung summe") ||
-                m.Contains("münzauszahlung abgeschlossen") ||
+                m.Contains("mï¿½nzauszahlung summe") ||
+                m.Contains("mï¿½nzauszahlung abgeschlossen") ||
                 m.Contains("auszahlung (scheine) abgeschlossen"))
                 return true;
             return false;
@@ -112,7 +112,7 @@ namespace TaMi_Einzahlautomat
                     if (!due && !bulk) return; // noch warten
                 }
 
-                // Day-Rotation prüfen
+                // Day-Rotation prï¿½fen
                 if (DateTime.Today != _currentDay)
                 {
                     _currentDay = DateTime.Today;
@@ -158,8 +158,8 @@ namespace TaMi_Einzahlautomat
         {
             try
             {
-                if (_shuttingDown) return; // nach Shutdown keine neuen Einträge mehr
-                // Filter für Geräteraum / Rauschen
+                if (_shuttingDown) return; // nach Shutdown keine neuen Eintrï¿½ge mehr
+                // Filter fï¿½r Gerï¿½teraum / Rauschen
                 if (message != null)
                 {
                     string msg = message.ToLowerInvariant();
@@ -226,7 +226,7 @@ namespace TaMi_Einzahlautomat
             try
             {
                 if (_shuttingDown) return;
-                // fünf Leerzeilen
+                // fï¿½nf Leerzeilen
                 for (int i = 0; i < 5; i++)
                     _queue.Enqueue(string.Empty);
 
@@ -281,8 +281,8 @@ namespace TaMi_Einzahlautomat
         {
             if (lv == null || lv.Length < 8) return "(keine Daten)";
             string safe(int i) => lv[i] < 0 ? "?" : lv[i].ToString();
-            if (IsRm5Levels(lv)) return $"10c={safe(3)},20c={safe(4)},50c={safe(5)},1€={safe(6)},2€={safe(7)}"; // RM5
-            return $"1c={safe(0)},2c={safe(1)},5c={safe(2)},10c={safe(3)},20c={safe(4)},50c={safe(5)},1€={safe(6)},2€={safe(7)}";
+            if (IsRm5Levels(lv)) return $"10c={safe(3)},20c={safe(4)},50c={safe(5)},1{EuroSign}={safe(6)},2{EuroSign}={safe(7)}"; // RM5
+            return $"1c={safe(0)},2c={safe(1)},5c={safe(2)},10c={safe(3)},20c={safe(4)},50c={safe(5)},1{EuroSign}={safe(6)},2{EuroSign}={safe(7)}";
         }
 
         // Einzel-Snapshot
@@ -309,7 +309,7 @@ namespace TaMi_Einzahlautomat
                 msg.AppendLine($"Coins: {coinsLine}");
                 msg.AppendLine($"Payout: {FormatPayoutCounts(ssp)}");
                 msg.AppendLine($"Cashbox: {FormatCashboxCounts(ssp)}");
-                msg.Append($"Summe: {sum:0.00} €");
+                msg.Append($"Summe: {sum:0.00} ï¿½");
                 Log(msg.ToString());
             }
             catch { }
@@ -341,7 +341,7 @@ namespace TaMi_Einzahlautomat
             if (_baselineSet) return;
             _baselineEuro = Math.Round(euro, 2);
             _baselineSet = true;
-            Log($"Baseline gesetzt: {_baselineEuro:0.00} €{(string.IsNullOrEmpty(reason) ? string.Empty : " (" + reason + ")")}");
+            Log($"Baseline gesetzt: {_baselineEuro:0.00} â‚¬{(string.IsNullOrEmpty(reason) ? string.Empty : " (" + reason + ")")}");
 
         }
 
@@ -363,53 +363,226 @@ namespace TaMi_Einzahlautomat
                 if (_baselineSet)
                 {
                     var diff = Math.Round(now - _baselineEuro, 2);
-                    Log($"Kassendifferenz {label}: {diff:0.00} € (jetzt {now:0.00} €, Basis {_baselineEuro:0.00} €)");
+                    Log($"Kassendifferenz {label}: {diff:0.00} ï¿½ (jetzt {now:0.00} ï¿½, Basis {_baselineEuro:0.00} ï¿½)");
                 }
-                else Log($"Kassendifferenz {label}: Baseline nicht gesetzt (jetzt {now:0.00} €)");
+                else Log($"Kassendifferenz {label}: Baseline nicht gesetzt (jetzt {now:0.00} ï¿½)");
             }
             catch { }
         }
 
         private static string FormatCoinLevels(int[] lv) => FormatCoinsLine(lv);
+        private const string EuroSign = "\u20AC";
+
         private static string FormatPayoutCounts(NV200_SSP s)
-        { return s == null ? "-" : $"5€={s.Payout_5_euro},10€={s.Payout_10_euro},20€={s.Payout_20_euro},50€={s.Payout_50_euro},100€={s.Payout_100_euro},200€={s.Payout_200_euro},500€={s.Payout_500_euro}"; }
+        { return s == null ? "-" : $"5{EuroSign}={s.Payout_5_euro},10{EuroSign}={s.Payout_10_euro},20{EuroSign}={s.Payout_20_euro},50{EuroSign}={s.Payout_50_euro},100{EuroSign}={s.Payout_100_euro},200{EuroSign}={s.Payout_200_euro},500{EuroSign}={s.Payout_500_euro}"; }
         private static string FormatCashboxCounts(NV200_SSP s)
-        { return s == null ? "-" : $"5€={s.Cashbox_5_euro},10€={s.Cashbox_10_euro},20€={s.Cashbox_20_euro},50€={s.Cashbox_50_euro},100€={s.Cashbox_100_euro},200€={s.Cashbox_200_euro},500€={s.Cashbox_500_euro}"; }
+        { return s == null ? "-" : $"5{EuroSign}={s.Cashbox_5_euro},10{EuroSign}={s.Cashbox_10_euro},20{EuroSign}={s.Cashbox_20_euro},50{EuroSign}={s.Cashbox_50_euro},100{EuroSign}={s.Cashbox_100_euro},200{EuroSign}={s.Cashbox_200_euro},500{EuroSign}={s.Cashbox_500_euro}"; }
         public static bool BaselineIsSet => _baselineSet;
 
         public static void LogKassenbestandSnapshotCombined(NV200_SSP nv1, int[] coin1, NV200_SSP nv2, int[] coin2, bool setBaselineIfNotSet = false, string baselineReason = null)
         {
             try
             {
-                if ((coin1 == null || coin1.Length < 8))
-                {
-                    try { var c = CoinManager.Instance; if (c is Rm5CctalkValidator rm5) coin1 = rm5.GetCoinAvailability(); } catch { }
-                }
-                if ((coin2 == null || coin2.Length < 8))
-                {
-                    try { var c2 = Coin2Manager.Instance; if (c2 is Rm5CctalkValidator rm5b) coin2 = rm5b.GetCoinAvailability(); } catch { }
-                }
-                string FormatCoins(int[] lv) => FormatCoinsLine(lv);
-                decimal sum1 = ComputeKassenbestandEuro(nv1, coin1);
-                decimal sum2 = ComputeKassenbestandEuro(nv2, coin2);
-                decimal gesamt = sum1 + sum2;
+                // Ja: das kann direkt hier im `AppLogger` passieren (statt neuer Form/Helper).
+                // Wir ersetzen lediglich die alte Ausgabe (Zeilen ~380-413) durch die neue BlÃ¶cke-Ansicht.
+
                 var sb = new StringBuilder();
+                const int frameWidth = 49;
+
+                // Header-Zeile soll im Log den Zeitstempel tragen (AppLogger.Log() setzt Zeitstempel pro Zeile).
+                // Die Rahmenlinie soll direkt NACH der Header-Zeile kommen.
                 sb.AppendLine("Bestand (kombiniert) |");
-                sb.AppendLine("-- NV200/1 --");
-                sb.AppendLine($"Coins: {FormatCoins(coin1)}");
-                sb.AppendLine($"Payout: {FormatPayoutCounts(nv1)}");
-                sb.AppendLine($"Cashbox: {FormatCashboxCounts(nv1)}");
-                sb.AppendLine($"Summe NV200/1: {sum1:0.00} €");
-                sb.AppendLine("-- NV200/2 --");
-                sb.AppendLine($"Coins: {FormatCoins(coin2)}");
-                sb.AppendLine($"Payout: {FormatPayoutCounts(nv2)}");
-                sb.AppendLine($"Cashbox: {FormatCashboxCounts(nv2)}");
-                sb.AppendLine($"Summe NV200/2: {sum2:0.00} €");
-                sb.Append($"Summe Gesamt: {gesamt:0.00} €");
+                sb.AppendLine(new string('~', frameWidth));
+
+                bool nv2001Disabled = false;
+                bool nv2002Disabled = false;
+                bool smartCoin1Disabled = false;
+                bool smartCoin2Disabled = false;
+                bool rm5Active = false;
+
+                try { nv2001Disabled = AdminNV200Form.DeviceDisabled; } catch { }
+                try { nv2002Disabled = AdminNV200_2Form.DeviceDisabled; } catch { }
+                try { smartCoin2Disabled = AdminCoin2Form.DeviceDisabled; } catch { }
+
+                try
+                {
+                    if (!nv2001Disabled)
+                    {
+                        var dv = IniHelper.ReadValue("NV200/1", "Disabled", AppSettings.IniPath);
+                        if (!string.IsNullOrWhiteSpace(dv))
+                            nv2001Disabled = dv.Trim().Equals("1", StringComparison.OrdinalIgnoreCase) || dv.Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
+                    }
+                }
+                catch { }
+
+                try
+                {
+                    if (!nv2002Disabled)
+                    {
+                        var dv = IniHelper.ReadValue("NV200/2", "Disabled", AppSettings.IniPath);
+                        if (!string.IsNullOrWhiteSpace(dv))
+                            nv2002Disabled = dv.Trim().Equals("1", StringComparison.OrdinalIgnoreCase) || dv.Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
+                    }
+                }
+                catch { }
+
+                try
+                {
+                    var dv = IniHelper.ReadValue("SmartCoin/1", "Disabled", AppSettings.IniPath);
+                    if (!string.IsNullOrWhiteSpace(dv))
+                        smartCoin1Disabled = dv.Trim().Equals("1", StringComparison.OrdinalIgnoreCase) || dv.Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
+                }
+                catch { }
+
+                try
+                {
+                    if (!smartCoin2Disabled)
+                    {
+                        var dv = IniHelper.ReadValue("SmartCoin/2", "Disabled", AppSettings.IniPath);
+                        if (!string.IsNullOrWhiteSpace(dv))
+                            smartCoin2Disabled = dv.Trim().Equals("1", StringComparison.OrdinalIgnoreCase) || dv.Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
+                    }
+                }
+                catch { }
+
+                try
+                {
+                    rm5Active = (CoinManager.Instance is Rm5CctalkValidator);
+                    if (!rm5Active)
+                    {
+                        var t = IniHelper.ReadValue("SmartCoin/1", "Typ", AppSettings.IniPath);
+                        rm5Active = !string.IsNullOrWhiteSpace(t) && t.Trim().Equals("RM5", StringComparison.OrdinalIgnoreCase);
+                    }
+                }
+                catch { rm5Active = false; }
+
+                decimal sumSmartcoins = 0m;
+                decimal sumNv200 = 0m;
+
+                // ---- SmartCoin / RM5 ----
+                if (rm5Active)
+                {
+                    if (coin1 == null || coin1.Length < 8)
+                    {
+                        try { var c = CoinManager.Instance as Rm5CctalkValidator; if (c != null) coin1 = c.GetCoinAvailability(); } catch { }
+                    }
+
+                    var eur = SumCoinsEuro(coin1);
+                    if (eur > 0m || (coin1 != null && coin1.Length >= 8))
+                    {
+                        sb.AppendLine("-- RM5 --");
+                        sb.AppendLine($"Summe={eur:0.00}{EuroSign}");
+                        sb.AppendLine("Coins: " + FormatCoinsLine(coin1));
+                        sb.AppendLine();
+                        sumSmartcoins += eur;
+                    }
+                }
+                else
+                {
+                    if (!smartCoin1Disabled)
+                    {
+                        if (coin1 == null || coin1.Length < 8)
+                        {
+                            try { var c = CoinManager.Instance; if (c is SmartCoinV1 sc1) coin1 = sc1.GetCoinAvailability(); } catch { }
+                        }
+                        var eur1 = SumCoinsEuro(coin1);
+                        if (eur1 > 0m || (coin1 != null && coin1.Length >= 8))
+                        {
+                            sb.AppendLine("-- SmartCoin 1 --");
+                            sb.AppendLine($"Summe={eur1:0.00}{EuroSign}");
+                            sb.AppendLine("Coins 1: " + FormatCoinsLine(coin1));
+                            sumSmartcoins += eur1;
+                        }
+                    }
+
+                    if (!smartCoin2Disabled)
+                    {
+                        if (coin2 == null || coin2.Length < 8)
+                        {
+                            try { var c2 = Coin2Manager.Instance; if (c2 is SmartCoinV1 sc2) coin2 = sc2.GetCoinAvailability(); } catch { }
+                        }
+                        var eur2 = SumCoinsEuro(coin2);
+                        if (eur2 > 0m || (coin2 != null && coin2.Length >= 8))
+                        {
+                            sb.AppendLine("-- SmartCoin 2 --");
+                            sb.AppendLine($"Summe={eur2:0.00}{EuroSign}");
+                            sb.AppendLine("Coins 2: " + FormatCoinsLine(coin2));
+                            sumSmartcoins += eur2;
+                        }
+                    }
+
+                    if (sumSmartcoins > 0m)
+                    {
+                        sb.AppendLine($"Summe Smartcoins: {sumSmartcoins:0.00} {EuroSign}");
+                        sb.AppendLine();
+                    }
+                }
+
+                // ---- NV200 ----
+                if (!nv2001Disabled)
+                {
+                    var sum1 = SumNv200Euro(nv1);
+                    sb.AppendLine("-- NV200/1 --");
+                    sb.AppendLine($"Summe={sum1:0.00}{EuroSign}");
+                    sb.AppendLine("Payout: " + FormatPayoutCounts(nv1));
+                    sb.AppendLine("Cashbox: " + FormatCashboxCounts(nv1));
+                    sumNv200 += sum1;
+                }
+
+                if (!nv2002Disabled)
+                {
+                    var sum2 = SumNv200Euro(nv2);
+                    sb.AppendLine("-- NV200/2 --");
+                    sb.AppendLine($"Summe={sum2:0.00}{EuroSign}");
+                    sb.AppendLine("Payout: " + FormatPayoutCounts(nv2));
+                    sb.AppendLine("Cashbox: " + FormatCashboxCounts(nv2));
+                    sumNv200 += sum2;
+                }
+
+                if (sumNv200 > 0m)
+                {
+                    sb.AppendLine($"Summe NV200: {sumNv200:0.00} {EuroSign}");
+                    sb.AppendLine();
+                }
+
+                var gesamt = sumSmartcoins + sumNv200;
+                sb.AppendLine($"Summe Gesamt: {gesamt:0.00} {EuroSign}");
+                sb.AppendLine(new string('~', frameWidth));
+
                 Log(sb.ToString());
                 if (setBaselineIfNotSet && !_baselineSet) SetKassenbestandBaseline(gesamt, baselineReason);
             }
             catch { }
+        }
+
+        private static decimal SumCoinsEuro(int[] coinLevels)
+        {
+            try
+            {
+                if (coinLevels == null || coinLevels.Length < 8) return 0m;
+                long cent = 0;
+                int[] vals = { 1, 2, 5, 10, 20, 50, 100, 200 };
+                for (int i = 0; i < 8; i++)
+                {
+                    int c = coinLevels[i];
+                    if (c < 0) c = 0;
+                    cent += (long)c * vals[i];
+                }
+                return Math.Round(cent / 100m, 2);
+            }
+            catch { return 0m; }
+        }
+
+        private static decimal SumNv200Euro(NV200_SSP ssp)
+        {
+            try
+            {
+                if (ssp == null) return 0m;
+                long payoutCent = (long)ssp.Payout_5_euro * 500 + (long)ssp.Payout_10_euro * 1000 + (long)ssp.Payout_20_euro * 2000 + (long)ssp.Payout_50_euro * 5000 + (long)ssp.Payout_100_euro * 10000 + (long)ssp.Payout_200_euro * 20000 + (long)ssp.Payout_500_euro * 50000;
+                long cashboxCent = (long)ssp.Cashbox_5_euro * 500 + (long)ssp.Cashbox_10_euro * 1000 + (long)ssp.Cashbox_20_euro * 2000 + (long)ssp.Cashbox_50_euro * 5000 + (long)ssp.Cashbox_100_euro * 10000 + (long)ssp.Cashbox_200_euro * 20000 + (long)ssp.Cashbox_500_euro * 50000;
+                return Math.Round((payoutCent + cashboxCent) / 100m, 2);
+            }
+            catch { return 0m; }
         }
     }
 }
