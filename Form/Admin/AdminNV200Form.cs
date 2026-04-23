@@ -49,6 +49,8 @@ namespace TaMi_Einzahlautomat
         private Label _lblLastEvt;
         private Label _lblState;
         private Label _lblCashboxTypeStatus;
+        private Label _lblSerialNumber;
+        private Button _btnCopySerial;
         private Timer _tmrStatus;
         private DateTime _lastEvtUtc = DateTime.MinValue;
 
@@ -202,7 +204,7 @@ namespace TaMi_Einzahlautomat
             // Bestands-Panel muss existieren bevor Controls hinzugefügt werden
             _panelBestand = new Panel
             {
-                Location = new Point(850, yStart + 180),
+                Location = new Point(850, yStart + 220),
                 Size = new Size(380, 420),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 BackColor = Color.FromArgb(245, 247, 250)
@@ -299,7 +301,7 @@ namespace TaMi_Einzahlautomat
             _panelStatus = new Panel
             {
                 Location = new Point(850, yStart),
-                Size = new Size(380, 178),
+                Size = new Size(380, 210),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 BackColor = Color.FromArgb(245, 247, 250)
             };
@@ -324,7 +326,7 @@ namespace TaMi_Einzahlautomat
             _lblPort = new Label { Text = "-", Location = new Point(140, 68), AutoSize = true, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
             _panelStatus.Controls.Add(_lblPort);
 
-            var lLast = new Label { Text = "Letzte Aktivit�t:", Location = new Point(20, 96), AutoSize = true, Font = new Font("Segoe UI Variable", 11F) };
+            var lLast = new Label { Text = "Letzte Aktivität:", Location = new Point(20, 96), AutoSize = true, Font = new Font("Segoe UI Variable", 11F) };
             _panelStatus.Controls.Add(lLast);
             _lblLastEvt = new Label { Text = "-", Location = new Point(140, 94), AutoSize = true, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
             _panelStatus.Controls.Add(_lblLastEvt);
@@ -350,6 +352,41 @@ namespace TaMi_Einzahlautomat
             cboCashboxType.Location = new Point(140, 138);
             cboCashboxType.Size = new Size(220, 26);
             _panelStatus.Controls.Add(cboCashboxType);
+
+            // Seriennummer unter Cashbox-Typ
+            var lSerial = new Label { Text = "Seriennummer:", Location = new Point(20, 170), AutoSize = true, Font = new Font("Segoe UI Variable", 11F) };
+            _panelStatus.Controls.Add(lSerial);
+            _lblSerialNumber = new Label { Text = "-", Location = new Point(140, 168), AutoSize = true, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
+            _panelStatus.Controls.Add(_lblSerialNumber);
+
+            // Kopier-Button neben Seriennummer
+            _btnCopySerial = new Button
+            {
+                Text = "📋",
+                Location = new Point(280, 166),
+                Size = new Size(32, 24),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10F),
+                Cursor = Cursors.Hand,
+                BackColor = Color.FromArgb(240, 240, 240),
+                ForeColor = Color.FromArgb(33, 37, 41)
+            };
+            _btnCopySerial.FlatAppearance.BorderSize = 0;
+            _btnCopySerial.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 220, 220);
+            _btnCopySerial.Click += (s, e) =>
+            {
+                try
+                {
+                    var serial = _ssp?.SerialNumber;
+                    if (!string.IsNullOrEmpty(serial) && serial != "-" && serial != "-.-")
+                    {
+                        Clipboard.SetText(serial);
+                        AppendLog($"Seriennummer in Zwischenablage kopiert: {serial}");
+                    }
+                }
+                catch (Exception ex) { AppendLog("Fehler beim Kopieren: " + ex.Message); }
+            };
+            _panelStatus.Controls.Add(_btnCopySerial);
 
             var lblTitel = new Label
             {
@@ -814,13 +851,14 @@ namespace TaMi_Einzahlautomat
             {
                 if (DeviceDisabled)
                 {
-                    _lblConn.Text = "Deaktiviert"; _lblConn.ForeColor = Color.Gray; _lblPort.Text = "-"; _lblLastEvt.Text = "-"; _lblState.Text = "disabled"; _lblState.ForeColor = Color.Gray; return;
+                    _lblConn.Text = "Deaktiviert"; _lblConn.ForeColor = Color.Gray; _lblPort.Text = "-"; _lblLastEvt.Text = "-"; _lblState.Text = "disabled"; _lblState.ForeColor = Color.Gray; if (_lblSerialNumber != null) _lblSerialNumber.Text = "-"; return;
                 }
                 bool commAlive = false; if (_ssp != null) { var diff = DateTime.Now - _ssp.Last_Communicationtime; commAlive = diff.TotalSeconds < 3.0; }
                 _lblConn.Text = commAlive ? "Verbunden" : "Keine Aktivität"; _lblConn.ForeColor = commAlive ? Color.FromArgb(0,128,0) : Color.FromArgb(183,28,28);
                 _lblPort.Text = $"{(_ssp?.ComPort ?? "-")}, Addr {(_ssp!=null ? _ssp.SSPAdress.ToString() : "-")}"; EnsureSelectedPort(_ssp?.ComPort,false);
                 if (_lastEvtUtc == DateTime.MinValue) _lblLastEvt.Text = "-"; else { var ago = DateTime.UtcNow - _lastEvtUtc; _lblLastEvt.Text = $"{_lastEvtUtc.ToLocalTime():HH:mm:ss} ({Math.Max(0,(int)ago.TotalSeconds)} s)"; }
                 var s = _tempStateText ?? (_ssp?.states ?? "-"); _lblState.Text = s; var t = (s??"").ToLowerInvariant(); Color c = Color.SteelBlue; if (t.Contains("idle")||t.Contains("bereit")||t.Contains("started")||t.Contains("connected")||t.Contains("synchron")) c=Color.FromArgb(0,128,0); else if (t.Contains("dispens")||t.Contains("stack")||t.Contains("reading")||t.Contains("read note")) c=Color.FromArgb(255,140,0); else if (t.Contains("disabled")||t.Contains("jammed")||t.Contains("halted")||t.Contains("failed")||t.Contains("timeout")||t.Contains("open sspcomport")||t.Contains("neustart")) c=Color.FromArgb(183,28,28); _lblState.ForeColor = c;
+                if (_lblSerialNumber != null) _lblSerialNumber.Text = _ssp?.SerialNumber ?? "-";
             }
             catch { }
         }

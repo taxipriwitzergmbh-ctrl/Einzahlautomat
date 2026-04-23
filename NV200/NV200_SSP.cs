@@ -142,6 +142,7 @@ namespace TaMi_Einzahlautomat
         public string Nv200_speicher_zusatz = "";
 
         public string Firmware = "-.-";
+        public string SerialNumber = "-.-";
 
         public List<List<byte>> Sendeliste = new List<List<byte>>();
         public List<List<string>> Ereignisliste = new List<List<string>>();
@@ -730,6 +731,29 @@ namespace TaMi_Einzahlautomat
                 for (int n = 1; n < CommandStructure.ResponseDataLength; n++)
                     Firmware += Convert.ToChar(CommandStructure.ResponseData[n]);
                 Ereignis_adden("Firmware: " + Firmware);
+                return;
+            }
+
+            // Seriennummer (4 Bytes als uint32, Big-Endian)
+            if (sendElement[2] == CCommands.SSP_CMD_GET_SERIAL_NUMBER)
+            {
+                if (CommandStructure.ResponseDataLength >= 5) // Status + 4 Bytes
+                {
+                    // Big-Endian: höchstwertiges Byte zuerst
+                    uint serialNum = (uint)(
+                        (CommandStructure.ResponseData[1] << 24) |
+                        (CommandStructure.ResponseData[2] << 16) |
+                        (CommandStructure.ResponseData[3] << 8) |
+                        CommandStructure.ResponseData[4]
+                    );
+                    SerialNumber = serialNum.ToString();
+                    Ereignis_adden("Seriennummer: " + SerialNumber);
+                }
+                else
+                {
+                    SerialNumber = "error";
+                    Ereignis_adden("Seriennummer: Fehler - ungültige Antwortlänge");
+                }
                 return;
             }
 
