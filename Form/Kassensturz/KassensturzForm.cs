@@ -98,6 +98,20 @@ namespace TaMi_Einzahlautomat
             }
             catch { }
 
+            // Pr�fen, ob SmartCoin/2 global deaktiviert ist (Flag oder INI)
+            bool sc2Disabled = false;
+            try
+            {
+                sc2Disabled = AdminCoin2Form.DeviceDisabled;
+                if (!sc2Disabled)
+                {
+                    var dv = IniHelper.ReadValue("SmartCoin/2", "Disabled", AppSettings.IniPath);
+                    if (!string.IsNullOrWhiteSpace(dv))
+                        sc2Disabled = dv.Trim().Equals("1", StringComparison.OrdinalIgnoreCase) || dv.Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            catch { }
+
             // Kassendifferenz und Hinweisfeld unterhalb des Headers
             lblKassendifferenz = new Label
             {
@@ -176,6 +190,7 @@ namespace TaMi_Einzahlautomat
                 GradientEnd = UiTheme.PrimaryEnd
             };
             btnSmartcoin2.Click += BtnSmartcoin2_Click;
+            if (sc2Disabled) btnSmartcoin2.Visible = false;
             Controls.Add(btnSmartcoin2);
 
             // RM5 Erkennung und UI-Anpassung

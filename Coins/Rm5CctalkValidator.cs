@@ -327,7 +327,7 @@ namespace TaMi_Einzahlautomat.Coins
         public void PayoutCoins(int[] countsByIndex)
         {
             if (countsByIndex == null || countsByIndex.Length < 8) return;
-            try { if (!SuppressUiNotifications) BusyAnimationManager.Begin("M�nzauszahlung l�uft"); } catch { }
+            try { if (!SuppressUiNotifications) BusyAnimationManager.Begin("Münzauszahlung läuft"); } catch { }
             var lv = GetCoinAvailability();
             var sb = new StringBuilder(); sb.Append("PayoutCoins Request=[");
             for (int i = 0; i < 8; i++) { if (i > 0) sb.Append(','); sb.Append(countsByIndex[i]); }
@@ -347,7 +347,7 @@ namespace TaMi_Einzahlautomat.Coins
                 }
                 else
                 {
-                    Log($"Hopper {h} Serial fehlt -> erneut anfordern f�r Auszahlung");
+                    Log($"Hopper {h} Serial fehlt -> erneut anfordern für Auszahlung");
                     Enqueue(_hoppers[h].Address, CMD_REQ_SERIAL, null);
                 }
             }
@@ -892,7 +892,7 @@ namespace TaMi_Einzahlautomat.Coins
         public void ForcePayoutRaw(int[] countsByIndex)
         {
             if (countsByIndex == null || countsByIndex.Length < 8) return;
-            try { if (!SuppressUiNotifications) BusyAnimationManager.Begin("M�nzauszahlung l�uft"); } catch { }
+            try { if (!SuppressUiNotifications) BusyAnimationManager.Begin("Münzauszahlung läuft"); } catch { }
             Log("ForcePayoutRaw gestartet: " + string.Join(",", countsByIndex));
             for (int h = 0; h < MAX_HOPPERS; h++)
             {
