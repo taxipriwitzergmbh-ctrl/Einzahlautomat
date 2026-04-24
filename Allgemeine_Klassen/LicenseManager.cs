@@ -36,6 +36,7 @@ namespace TaMi_Einzahlautomat
         private static string _customerId = string.Empty;
         private static string _lastSystemId = string.Empty;
         private static string _lastLicenseLogValue = string.Empty;
+        private static int _licenseType = -1; // -1=Fehler, 0=Demo, 1=Kauf mit WV, 2=Kauf ohne WV, 3=Miete, 4=Partner, 5=Gesperrt
         private static readonly System.Collections.Generic.HashSet<string> _licensedSmartCoinSerials = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private static readonly System.Collections.Generic.HashSet<string> _licensedNv200Serials = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private static bool _debugMode = false;
@@ -54,6 +55,37 @@ namespace TaMi_Einzahlautomat
         /// True wenn der Lizenzserver aktuell nicht erreichbar ist, aber die 24h-Gnadenfrist noch läuft.
         /// </summary>
         public static bool IsOfflineGracePeriodActive => _offlineGracePeriodActive;
+
+        /// <summary>
+        /// Lizenztyp-Zahl wie vom Server geliefert (-1=Fehler, 0=Demo, 1=Kauf mit WV, 2=Kauf ohne WV, 3=Miete, 4=Partner, 5=Gesperrt)
+        /// </summary>
+        public static int LicenseType { get { lock (_lock) return _licenseType; } }
+
+        /// <summary>
+        /// Lizenztyp als lesbarer Klartext
+        /// </summary>
+        public static string LicenseTypeName
+        {
+            get
+            {
+                switch (LicenseType)
+                {
+                    case -1: return "Fehler";
+                    case  0: return "Demo";
+                    case  1: return "Kauf mit WV";
+                    case  2: return "Kauf ohne WV";
+                    case  3: return "Miete";
+                    case  4: return "Partner";
+                    case  5: return "Gesperrt";
+                    default: return "Unbekannt (" + LicenseType + ")";
+                }
+            }
+        }
+
+        /// <summary>
+        /// True wenn der Lizenztyp Demo ist (Geräte-Seriennummern werden als nicht lizenziert behandelt)
+        /// </summary>
+        public static bool IsDemoLicense { get { lock (_lock) return _licenseType == 0; } }
 
         // Gesetzt nachdem der verzögerte Flush abgeschlossen ist (dann direkt loggen)
         private static volatile bool _pendingSerialChecksClosed = false;
@@ -249,13 +281,24 @@ namespace TaMi_Einzahlautomat
                 try
                 {
                     string coinSerials, nv200Serials;
+                    bool isDemo;
                     lock (_lock)
                     {
                         coinSerials  = _licensedSmartCoinSerials.Count  > 0 ? string.Join(", ", _licensedSmartCoinSerials)  : "(keine)";
                         nv200Serials = _licensedNv200Serials.Count > 0 ? string.Join(", ", _licensedNv200Serials) : "(keine)";
+                        isDemo = _licenseType == 0;
                     }
-                    AppLogger.Log($"LicenseManager: Lizenzierte SmartCoin-Serials: {coinSerials}");
-                    AppLogger.Log($"LicenseManager: Lizenzierte NV200-Serials: {nv200Serials}");
+                    AppLogger.Log($"LicenseManager: Lizenztyp: {LicenseTypeName}");
+                    if (isDemo)
+                    {
+                        AppLogger.Log("LicenseManager: Demo-Lizenz – SmartCoin-Serials: (Demo, keine Lizenz)");
+                        AppLogger.Log("LicenseManager: Demo-Lizenz – NV200-Serials: (Demo, keine Lizenz)");
+                    }
+                    else
+                    {
+                        AppLogger.Log($"LicenseManager: Lizenzierte SmartCoin-Serials: {coinSerials}");
+                        AppLogger.Log($"LicenseManager: Lizenzierte NV200-Serials: {nv200Serials}");
+                    }
                 }
                 catch { }
 
@@ -405,53 +448,71 @@ namespace TaMi_Einzahlautomat
                             if (parsed.ContainsKey("lic"))
                             {
                                 decryptedLic = TinyDecrypt(parsed["lic"]);
+
                                 var licInfo = ParseLicenseInfo(decryptedLic);
+
+                                // Lizenztyp auslesen und speichern
+                                int parsedLicType = -1;
+                                if (licInfo.ContainsKey("ltyp") && int.TryParse(licInfo["ltyp"], out int lt))
+                                    parsedLicType = lt;
+
+                                bool isBlockedByType = (parsedLicType == -1 || parsedLicType == 5); // Fehler oder Gesperrt
+                                bool isDemo = (parsedLicType == 0);
 
                                 lock (_lock)
                                 {
+                                    _licenseType = parsedLicType;
                                     _customerName = licInfo.ContainsKey("customer") ? licInfo["customer"] : string.Empty;
                                     _customerId = licInfo.ContainsKey("customerid") ? licInfo["customerid"] : string.Empty;
                                     _lastLicenseLogValue = ExtractLicenseLogValue(decryptedLic);
                                     _licensedSmartCoinSerials.Clear();
                                     _licensedNv200Serials.Clear();
-                                    foreach (var entry in licInfo)
+
+                                    // Bei Demo: Seriennummern NICHT übernehmen -> alle Geräte gelten als unlizenziert
+                                    if (!isDemo)
                                     {
-                                        if (entry.Key.StartsWith("coin", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(entry.Value))
-                                            _licensedSmartCoinSerials.Add(entry.Value.Trim());
-                                        if (entry.Key.StartsWith("nv200", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(entry.Value))
-                                            _licensedNv200Serials.Add(entry.Value.Trim());
+                                        foreach (var entry in licInfo)
+                                        {
+                                            if (entry.Key.StartsWith("coin", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(entry.Value))
+                                                _licensedSmartCoinSerials.Add(entry.Value.Trim());
+                                            if (entry.Key.StartsWith("nv200", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(entry.Value))
+                                                _licensedNv200Serials.Add(entry.Value.Trim());
+                                        }
                                     }
                                 }
 
-                                if (licInfo.ContainsKey("ezatm") && licInfo["ezatm"].Equals("1"))
+                                // Ablaufdatum auslesen und loggen
+                                string ablaufStr = licInfo.ContainsKey("ablauf") ? licInfo["ablauf"] : string.Empty;
+
+                                // Klartext-Lizenztyp immer loggen
+                                string typName = LicenseTypeName;
+                                string customerPart = !string.IsNullOrEmpty(_customerName) ? $"Kunde:{_customerName}" : string.Empty;
+                                string idPart = !string.IsNullOrEmpty(_customerId) ? $"Knd:{_customerId}" : string.Empty;
+                                string combined = string.Join(", ", new[] { customerPart, idPart }.Where(s => !string.IsNullOrEmpty(s)));
+
+                                if (licInfo.ContainsKey("ezatm") && licInfo["ezatm"].Equals("1") && !isBlockedByType)
                                 {
                                     valid = true;
 
-                                    // Letzten erfolgreichen Check persistieren & Gnadenfrist-Merker zurücksetzen
                                     _lastSuccessfulOnlineCheckUtc = DateTime.UtcNow;
                                     SaveLastSuccessfulCheck(_lastSuccessfulOnlineCheckUtc);
                                     _offlineGracePeriodActive = false;
-                                
 
-                                    if (_debugMode)
-                                    {
-                                        AppLogger.Log($"LicenseManager: Lizenzinfo entschlüsselt: {decryptedLic}");
-                                        AppLogger.Log("LicenseManager: Lizenzprüfung erfolgreich (OK)");
-                                    }
-                                    else
-                                    {
-                                        string customerPart = !string.IsNullOrEmpty(_customerName) ? $"Kunde:{_customerName}" : string.Empty;
-                                        string idPart = !string.IsNullOrEmpty(_customerId) ? $"Knd:{_customerId}" : string.Empty;
-                                        string combined = string.Join(", ", new[] { customerPart, idPart }.Where(s => !string.IsNullOrEmpty(s)));
-                                        AppLogger.Log($"LicenseManager: Lizenzprüfung erfolgreich (OK) {combined} Einzahlautomat");
-                                    }
+                                    string demoHint = isDemo ? " [DEMO – Geräte nicht lizenziert]" : string.Empty;
+                                    AppLogger.Log($"LicenseManager: Lizenzprüfung erfolgreich – Typ: {typName}{demoHint} | {combined} | Ablauf: {ablaufStr}");
+
+                                    if (isDemo)
+                                        AppLogger.Log("LicenseManager: Demo-Lizenz aktiv – Geräte-Seriennummern werden nicht übernommen, alle Geräte gelten als unlizenziert.");
                                 }
                                 else
                                 {
-                                    // Server sagt explizit: keine EZATM-Lizenz -> sofort sperren, keine Gnadenfrist
-                                    errorMsg = "Keine gültige EZATM-Lizenz";
-                                    if (_debugMode)
-                                        AppLogger.Log($"LicenseManager: Lizenzinfo entschlüsselt: {decryptedLic}");
+                                    // ezatm!=1 oder Typ Fehler/Gesperrt -> ungültig, sofort sperren
+                                    if (isBlockedByType)
+                                        errorMsg = $"Lizenztyp gesperrt: {typName}";
+                                    else
+                                        errorMsg = "Keine gültige EZATM-Lizenz";
+
+                                    AppLogger.Log($"LicenseManager: Lizenz ungültig – Typ: {typName} | {combined} | Ablauf: {ablaufStr} | Grund: {errorMsg}");
                                 }
                             }
                             else
@@ -652,7 +713,19 @@ namespace TaMi_Einzahlautomat
 
                 if (parts.Length >= 6)
                 {
-                    // Index 3: Lizenzen (fhz=0,ezatm=1)
+                    // Index 1: Lizenztyp (-1=Fehler, 0=Demo, 1=Kauf mit WV, ...)
+                    if (parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1]))
+                    {
+                        result["ltyp"] = parts[1].Trim();
+                    }
+
+                    // Index 2: Ablaufdatum
+                    if (parts.Length > 2 && !string.IsNullOrWhiteSpace(parts[2]))
+                    {
+                        result["ablauf"] = parts[2].Trim();
+                    }
+
+                    // Index 3: Lizenzen (ezatm=1,coin1=...,nv200_1=...)
                     if (parts.Length > 3)
                     {
                         var licenses = parts[3].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
