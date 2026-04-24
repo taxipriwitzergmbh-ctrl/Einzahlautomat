@@ -385,6 +385,7 @@ namespace TaMi_Einzahlautomat
             {
                 string status = _ssp.states ?? "-";
                 if (AdminNV200Form.DeviceDisabled) status = "deaktiviert";
+                else if (!string.IsNullOrWhiteSpace(status) && status.IndexOf("unlizenziert", StringComparison.OrdinalIgnoreCase) >= 0) status = "keine Lizenz";
                 btnNV200_1.Text = $"Scheinautomat NV200/1\nStatus: {status}";
                 if (!AdminNV200Form.DeviceDisabled)
                     TryApplyBezel(Program.NV200Instance ?? _ssp, status, isNv2: false);
@@ -396,6 +397,7 @@ namespace TaMi_Einzahlautomat
             {
                 string status2 = nv2.states ?? "-";
                 if (AdminNV200_2Form.DeviceDisabled) status2 = "deaktiviert";
+                else if (!string.IsNullOrWhiteSpace(status2) && status2.IndexOf("unlizenziert", StringComparison.OrdinalIgnoreCase) >= 0) status2 = "keine Lizenz";
                 btnNV200_2.Text = $"Scheinautomat NV200/2\nStatus: {status2}";
                 if (!AdminNV200_2Form.DeviceDisabled)
                     TryApplyBezel(nv2, status2, isNv2: true);
@@ -415,10 +417,12 @@ namespace TaMi_Einzahlautomat
                 {
                     zustand1 = "deaktiviert";
                 }
-                else if (coin1 != null && coin1.Connected)
+                else if (coin1 != null)
                 {
                     zustand1 = (coin1 as TaMi_Einzahlautomat.Coins.SmartCoinV1)?.CurrentStatus;
                 }
+                if (!string.IsNullOrWhiteSpace(zustand1) && zustand1.IndexOf("unlizenziert", StringComparison.OrdinalIgnoreCase) >= 0)
+                    zustand1 = "keine Lizenz";
                 if (string.IsNullOrWhiteSpace(zustand1))
                     zustand1 = (coin1 != null && coin1.Connected) ? "Verbunden" : "Nicht verbunden";
                 btnCoinAdmin.Text = $"Münzprüfer/1\nZustand: {zustand1}";
@@ -437,10 +441,12 @@ namespace TaMi_Einzahlautomat
                 {
                     zustand2 = "deaktiviert";
                 }
-                else if (coin2 != null && coin2.Connected)
+                else if (coin2 != null)
                 {
                     zustand2 = (coin2 as TaMi_Einzahlautomat.Coins.SmartCoinV1)?.CurrentStatus;
                 }
+                if (!string.IsNullOrWhiteSpace(zustand2) && zustand2.IndexOf("unlizenziert", StringComparison.OrdinalIgnoreCase) >= 0)
+                    zustand2 = "keine Lizenz";
                 if (string.IsNullOrWhiteSpace(zustand2))
                     zustand2 = (coin2 != null && coin2.Connected) ? "Verbunden" : "Nicht verbunden";
                 btnCoinAdmin2.Text = $"Münzprüfer/2\nZustand: {zustand2}";
@@ -490,7 +496,7 @@ namespace TaMi_Einzahlautomat
                     // Gr�n = bereit/idle
                     r = 0; g = 255; b = 0;
                 }
-                else if (t.Contains("disabled") || t.Contains("jammed") || t.Contains("halted") || t.Contains("failed") || t.Contains("timeout") || t.Contains("open sspcomport") || t.Contains("neustart"))
+                else if (t.Contains("disabled") || t.Contains("jammed") || t.Contains("halted") || t.Contains("failed") || t.Contains("timeout") || t.Contains("open sspcomport") || t.Contains("neustart") || t.Contains("unlizenziert") || t.Contains("keine lizenz"))
                 {
                     // Rot = gesperrt/Fehler
                     r = 255; g = 0; b = 0;

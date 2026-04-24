@@ -443,10 +443,8 @@ namespace TaMi_Einzahlautomat
         {
             _licenseBlocked = true;
             states = "Unlizenziertes Gerät Seriennummer unbekannt";
-            try { Disable_Device(); } catch { }
-            try { SetInhibit(true); } catch { }
-            try { ConfigureBezel(255, 0, 0); } catch { }
             try { Connection.CloseComPort(); } catch { }
+            try { Sendeliste.Clear(); } catch { }
             Ereignis_adden("Verbindung getrennt (Lizenz ungültig): " + reason);
         }
 
@@ -495,12 +493,12 @@ namespace TaMi_Einzahlautomat
                         Ereignis_adden($"Erzwinge Neustart nach {_consecutiveSendFails} Send-Fehlern");
                         _consecutiveSendFails = 0; // reset counter on forced restart
                     }
-                    states = "Neustart"; // only logged at real reconnect attempt
                     if (_licenseBlocked)
                     {
                         Thread.Sleep(500);
                         continue;
                     }
+                    states = "Neustart";
                     Ereignis_adden(states);
                     try { Connection.CloseComPort(); } catch { Ereignis_adden("Failed CloseComport vor Neustart"); }
                     CommandStructure.RetryLevel = 2;
@@ -651,7 +649,7 @@ namespace TaMi_Einzahlautomat
                                 Connection.CloseComPort();
                                 break;
                             }
-                            states = state;
+                            if (!_licenseBlocked) states = state;
                         }
                     }
                     else
@@ -671,7 +669,7 @@ namespace TaMi_Einzahlautomat
                 {
                     Ereignis_adden(exi.Message);
                 }
-                states = state;
+                if (!_licenseBlocked) states = state;
                 try { bool isIdle = !string.IsNullOrWhiteSpace(state) && state.ToLowerInvariant().Contains("idle"); SyncCoinFeederByIdle(isIdle); } catch { }
             }
             Protokoll_speichern();
@@ -1546,6 +1544,7 @@ namespace TaMi_Einzahlautomat
         // Komplette Freigabe-Sequenz wie im VB-Code
         public void Freigeben()
         {
+            if (_licenseBlocked) { try { Ereignis_adden("Freigeben ignoriert (Lizenz gesperrt)"); } catch { } return; }
             PayoutSetupRequest();
             SetValueReportingType(1); // WICHTIG: auf Value stellen
             SetInhibits();
