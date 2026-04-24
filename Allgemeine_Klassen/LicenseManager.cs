@@ -20,6 +20,11 @@ namespace TaMi_Einzahlautomat
         private static readonly string CAN_VALUE = "EZATM";
         private static readonly string CAV_VERSION = GetApplicationVersion();
 
+        // Offline-Gnadenfrist: 24 Stunden nach letztem erfolgreichen Online-Check
+        private const int OfflineGracePeriodHours = 24;
+        private static DateTime _lastSuccessfulOnlineCheckUtc = DateTime.MinValue;
+        private static readonly string _persistPath = GetPersistPath();
+
         private static System.Threading.Timer _licenseCheckTimer;
         private static bool _isLicenseValid = false;
         private static DateTime _lastCheckTime = DateTime.MinValue;
@@ -41,6 +46,15 @@ namespace TaMi_Einzahlautomat
         /// True sobald die erste Lizenzprüfung abgeschlossen ist und Seriennummern geladen wurden.
         /// </summary>
         public static bool IsInitialized => _licenseInitialized;
+
+        // Merker: letzter Online-Check ist fehlgeschlagen (Netzwerkfehler), Gnadenfrist läuft
+        private static volatile bool _offlineGracePeriodActive = false;
+
+        /// <summary>
+        /// True wenn der Lizenzserver aktuell nicht erreichbar ist, aber die 24h-Gnadenfrist noch läuft.
+        /// </summary>
+        public static bool IsOfflineGracePeriodActive => _offlineGracePeriodActive;
+
         // Gesetzt nachdem der verzögerte Flush abgeschlossen ist (dann direkt loggen)
         private static volatile bool _pendingSerialChecksClosed = false;
 
@@ -279,7 +293,55 @@ namespace TaMi_Einzahlautomat
             }
             catch { }
         }
-        
+
+        // --- Offline-Persistierung: letzten erfolgreichen Check-Zeitstempel speichern ---
+
+        private static string GetPersistPath()
+        {
+            try
+            {
+                string dir = Path.GetDirectoryName(Application.ExecutablePath);
+                return Path.Combine(dir, "lc.dat");
+            }
+            catch { return null; }
+        }
+
+        private static void SaveLastSuccessfulCheck(DateTime utc)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(_persistPath)) return;
+                // Zeitstempel als Ticks verschlüsseln und speichern
+                string plain = utc.Ticks.ToString();
+                string enc = TinyEncrypt(plain);
+                File.WriteAllText(_persistPath, enc, Encoding.ASCII);
+            }
+            catch { }
+        }
+
+        private static DateTime LoadLastSuccessfulCheck()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(_persistPath) || !File.Exists(_persistPath)) return DateTime.MinValue;
+                string enc = File.ReadAllText(_persistPath, Encoding.ASCII).Trim();
+                if (string.IsNullOrEmpty(enc)) return DateTime.MinValue;
+                string plain = TinyDecrypt(enc);
+                if (long.TryParse(plain, out long ticks) && ticks > 0)
+                    return new DateTime(ticks, DateTimeKind.Utc);
+            }
+            catch { }
+            return DateTime.MinValue;
+        }
+
+        private static bool IsWithinOfflineGracePeriod()
+        {
+            var last = _lastSuccessfulOnlineCheckUtc;
+            if (last == DateTime.MinValue) last = LoadLastSuccessfulCheck();
+            if (last == DateTime.MinValue) return false;
+            return (DateTime.UtcNow - last).TotalHours < OfflineGracePeriodHours;
+        }
+
         /// <summary>
         /// Prüft die Lizenz gegen den LAUS Server
         /// </summary>
@@ -309,8 +371,6 @@ namespace TaMi_Einzahlautomat
                 {
                     _lastSystemId = systemId;
                     _lastLicenseLogValue = string.Empty;
-                    _licensedSmartCoinSerials.Clear();
-                    _licensedNv200Serials.Clear();
                 }
 
                 string encryptedSid = TinyEncrypt(systemId);
@@ -319,119 +379,163 @@ namespace TaMi_Einzahlautomat
 
                 string url = $"{LAUS_URL}?v=101&sid={encryptedSid}&can={encryptedCan}&cav={encryptedCav}";
 
-                // System-ID nur im Debug-Modus loggen
                 if (_debugMode)
                 {
                     AppLogger.Log($"LicenseManager: Prüfe Lizenz... (System-ID: {systemId.Substring(0, Math.Min(20, systemId.Length))}...)");
                 }
 
-                using (var client = new HttpClient())
+                try
                 {
-                    client.Timeout = TimeSpan.FromSeconds(10);
-
-                    var response = await client.PostAsync(url, null);
-                    string responseText = await response.Content.ReadAsStringAsync();
-                    responseText = (responseText ?? "").Trim();
-
-                    // LAUS Server Antwort parsen: "v=100;r=1;msg=OK;lic=..."
-                    var parsed = ParseLausResponse(responseText);
-
-                    bool valid = false;
-                    string errorMsg = string.Empty;
-                    string decryptedLic = string.Empty;
-
-                    if (parsed.ContainsKey("msg") && parsed["msg"].Equals("OK", StringComparison.OrdinalIgnoreCase))
+                    using (var client = new HttpClient())
                     {
-                        // msg=OK -> Lizenz potentiell gültig, jetzt lic= prüfen
-                        if (parsed.ContainsKey("lic"))
+                        client.Timeout = TimeSpan.FromSeconds(10);
+
+                        var response = await client.PostAsync(url, null);
+                        string responseText = await response.Content.ReadAsStringAsync();
+                        responseText = (responseText ?? "").Trim();
+
+                        var parsed = ParseLausResponse(responseText);
+
+                        bool valid = false;
+                        string errorMsg = string.Empty;
+                        string decryptedLic = string.Empty;
+
+                        if (parsed.ContainsKey("msg") && parsed["msg"].Equals("OK", StringComparison.OrdinalIgnoreCase))
                         {
-                            decryptedLic = TinyDecrypt(parsed["lic"]);
-
-                            // Lizenzinfo parsen und ezatm=1 prüfen
-                            var licInfo = ParseLicenseInfo(decryptedLic);
-
-                            // Kundendaten speichern (für Fehlerfall)
-                            lock (_lock)
+                            if (parsed.ContainsKey("lic"))
                             {
-                                _customerName = licInfo.ContainsKey("customer") ? licInfo["customer"] : string.Empty;
-                                _customerId = licInfo.ContainsKey("customerid") ? licInfo["customerid"] : string.Empty;
-                                _lastLicenseLogValue = ExtractLicenseLogValue(decryptedLic);
-                                _licensedSmartCoinSerials.Clear();
-                                _licensedNv200Serials.Clear();
-                                foreach (var entry in licInfo)
+                                decryptedLic = TinyDecrypt(parsed["lic"]);
+                                var licInfo = ParseLicenseInfo(decryptedLic);
+
+                                lock (_lock)
                                 {
-                                    if (entry.Key.StartsWith("coin", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(entry.Value))
-                                        _licensedSmartCoinSerials.Add(entry.Value.Trim());
-                                    if (entry.Key.StartsWith("nv200", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(entry.Value))
-                                        _licensedNv200Serials.Add(entry.Value.Trim());
+                                    _customerName = licInfo.ContainsKey("customer") ? licInfo["customer"] : string.Empty;
+                                    _customerId = licInfo.ContainsKey("customerid") ? licInfo["customerid"] : string.Empty;
+                                    _lastLicenseLogValue = ExtractLicenseLogValue(decryptedLic);
+                                    _licensedSmartCoinSerials.Clear();
+                                    _licensedNv200Serials.Clear();
+                                    foreach (var entry in licInfo)
+                                    {
+                                        if (entry.Key.StartsWith("coin", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(entry.Value))
+                                            _licensedSmartCoinSerials.Add(entry.Value.Trim());
+                                        if (entry.Key.StartsWith("nv200", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(entry.Value))
+                                            _licensedNv200Serials.Add(entry.Value.Trim());
+                                    }
                                 }
-                            }
 
-                            if (licInfo.ContainsKey("ezatm") && licInfo["ezatm"].Equals("1"))
-                            {
-                                // ezatm=1 -> Lizenz gültig
-                                valid = true;
-
-                                // Logging je nach Debug-Modus
-                                if (_debugMode)
+                                if (licInfo.ContainsKey("ezatm") && licInfo["ezatm"].Equals("1"))
                                 {
-                                    AppLogger.Log($"LicenseManager: Lizenzinfo entschlüsselt: {decryptedLic}");
-                                    AppLogger.Log("LicenseManager: Lizenzprüfung erfolgreich (OK)");
+                                    valid = true;
+
+                                    // Letzten erfolgreichen Check persistieren & Gnadenfrist-Merker zurücksetzen
+                                    _lastSuccessfulOnlineCheckUtc = DateTime.UtcNow;
+                                    SaveLastSuccessfulCheck(_lastSuccessfulOnlineCheckUtc);
+                                    _offlineGracePeriodActive = false;
+                                
+
+                                    if (_debugMode)
+                                    {
+                                        AppLogger.Log($"LicenseManager: Lizenzinfo entschlüsselt: {decryptedLic}");
+                                        AppLogger.Log("LicenseManager: Lizenzprüfung erfolgreich (OK)");
+                                    }
+                                    else
+                                    {
+                                        string customerPart = !string.IsNullOrEmpty(_customerName) ? $"Kunde:{_customerName}" : string.Empty;
+                                        string idPart = !string.IsNullOrEmpty(_customerId) ? $"Knd:{_customerId}" : string.Empty;
+                                        string combined = string.Join(", ", new[] { customerPart, idPart }.Where(s => !string.IsNullOrEmpty(s)));
+                                        AppLogger.Log($"LicenseManager: Lizenzprüfung erfolgreich (OK) {combined} Einzahlautomat");
+                                    }
                                 }
                                 else
                                 {
-                                    string customerPart = !string.IsNullOrEmpty(_customerName) ? $"Kunde:{_customerName}" : string.Empty;
-                                    string idPart = !string.IsNullOrEmpty(_customerId) ? $"Knd:{_customerId}" : string.Empty;
-                                    string combined = string.Join(", ", new[] { customerPart, idPart }.Where(s => !string.IsNullOrEmpty(s)));
-                                    AppLogger.Log($"LicenseManager: Lizenzprüfung erfolgreich (OK) {combined} Einzahlautomat");
+                                    // Server sagt explizit: keine EZATM-Lizenz -> sofort sperren, keine Gnadenfrist
+                                    errorMsg = "Keine gültige EZATM-Lizenz";
+                                    if (_debugMode)
+                                        AppLogger.Log($"LicenseManager: Lizenzinfo entschlüsselt: {decryptedLic}");
                                 }
                             }
                             else
                             {
-                                // ezatm != 1 -> ungültige Lizenz
-                                errorMsg = "Keine gültige EZATM-Lizenz";
-                                if (_debugMode)
-                                {
-                                    AppLogger.Log($"LicenseManager: Lizenzinfo entschlüsselt: {decryptedLic}");
-                                }
+                                errorMsg = "Keine Lizenzinfo im Response";
                             }
                         }
                         else
                         {
-                            errorMsg = "Keine Lizenzinfo im Response";
+                            // Server antwortet, aber msg != OK -> sofort sperren, keine Gnadenfrist
+                            errorMsg = parsed.ContainsKey("msg") ? parsed["msg"] : responseText;
                         }
+
+                        lock (_lock)
+                        {
+                            _isLicenseValid = valid;
+                            _lastError = valid ? string.Empty : errorMsg;
+                        }
+                        _licenseInitialized = true;
+
+                        if (!valid)
+                        {
+                            string customerPart = !string.IsNullOrEmpty(_customerName) ? $"Kunde:{_customerName}" : string.Empty;
+                            string idPart = !string.IsNullOrEmpty(_customerId) ? $"Knd:{_customerId}" : string.Empty;
+                            string combined = string.Join(", ", new[] { customerPart, idPart }.Where(s => !string.IsNullOrEmpty(s)));
+
+                            if (!string.IsNullOrEmpty(combined))
+                                AppLogger.Log($"LicenseManager: Lizenz ungültig – Fehler: {errorMsg} für {combined} Einzahlautomat");
+                            else
+                                AppLogger.Log($"LicenseManager: Lizenz ungültig – Fehler: {errorMsg}");
+                        }
+
+                        return valid;
+                    }
+                }
+                catch (Exception netEx)
+                {
+                    // Netzwerkfehler (kein Internet, Timeout, DNS etc.) -> Offline-Gnadenfrist prüfen
+                    AppLogger.Log($"LicenseManager: Netzwerkfehler bei Lizenzprüfung: {netEx.Message}");
+
+                    bool withinGrace = IsWithinOfflineGracePeriod();
+                    var lastOk = _lastSuccessfulOnlineCheckUtc != DateTime.MinValue
+                        ? _lastSuccessfulOnlineCheckUtc
+                        : LoadLastSuccessfulCheck();
+
+                    if (withinGrace)
+                    {
+                        double hoursAgo = lastOk != DateTime.MinValue
+                            ? (DateTime.UtcNow - lastOk).TotalHours
+                            : 0;
+                        double hoursLeft = OfflineGracePeriodHours - hoursAgo;
+
+                        AppLogger.Log($"LicenseManager: Offline-Gnadenfrist aktiv – letzter erfolgreicher Check vor {hoursAgo:F1}h, noch {hoursLeft:F1}h verfügbar. Software bleibt aktiv.");
+
+                        _offlineGracePeriodActive = true; // Merker setzen: Gnadenfrist läuft
+
+                        lock (_lock)
+                        {
+                            if (!_isLicenseValid)
+                            {
+                                _lastError = $"Kein Internetzugang – Gnadenfrist: noch {hoursLeft:F1}h";
+                            }
+                        }
+                        _licenseInitialized = true;
+                        return _isLicenseValid;
                     }
                     else
                     {
-                        // msg != OK oder nicht vorhanden -> ungültig
-                        errorMsg = parsed.ContainsKey("msg") ? parsed["msg"] : responseText;
-                    }
+                        double hoursAgo = lastOk != DateTime.MinValue
+                            ? (DateTime.UtcNow - lastOk).TotalHours
+                            : double.MaxValue;
 
-                    lock (_lock)
-                    {
-                        _isLicenseValid = valid;
-                        _lastError = valid ? string.Empty : errorMsg;
-                    }
-                    _licenseInitialized = true;
+                        AppLogger.Log($"LicenseManager: Offline-Gnadenfrist abgelaufen (letzter Kontakt vor {hoursAgo:F1}h) – Software wird gesperrt.");
 
-                    if (!valid)
-                    {
-                        // Bei ungültiger Lizenz auch Kundeninfos anzeigen
-                        string customerPart = !string.IsNullOrEmpty(_customerName) ? $"Kunde:{_customerName}" : string.Empty;
-                        string idPart = !string.IsNullOrEmpty(_customerId) ? $"Knd:{_customerId}" : string.Empty;
-                        string combined = string.Join(", ", new[] { customerPart, idPart }.Where(s => !string.IsNullOrEmpty(s)));
+                        _offlineGracePeriodActive = false; // Gnadenfrist vorbei
 
-                        if (!string.IsNullOrEmpty(combined))
+                        lock (_lock)
                         {
-                            AppLogger.Log($"LicenseManager: Lizenz ungültig – Fehler: {errorMsg} für {combined} Einzahlautomat");
+                            _isLicenseValid = false;
+                            _lastError = $"Kein Internetzugang seit mehr als {OfflineGracePeriodHours}h – Lizenz abgelaufen";
                         }
-                        else
-                        {
-                            AppLogger.Log($"LicenseManager: Lizenz ungültig – Fehler: {errorMsg}");
-                        }
+                        _licenseInitialized = true;
+                        return false;
                     }
-
-                    return valid;
                 }
             }
             catch (Exception ex)
@@ -442,6 +546,7 @@ namespace TaMi_Einzahlautomat
                     _isLicenseValid = false;
                 }
                 AppLogger.Log($"LicenseManager: Fehler bei Lizenzprüfung: {ex.Message}");
+                _licenseInitialized = true;
                 return false;
             }
         }

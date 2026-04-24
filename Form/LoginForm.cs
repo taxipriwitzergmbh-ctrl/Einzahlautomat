@@ -1046,6 +1046,14 @@ namespace TaMi_Einzahlautomat
                 var codes = new System.Collections.Generic.List<string>();
                 // Lizenzzustand (Hauptlizenz)
                 try { if (!LicenseManager.IsLicenseValid) codes.Add("LIZENZ"); } catch { }
+                // Offline-Gnadenfrist: Lizenz noch gültig, aber kein Serverkontakt – Hinweis anzeigen
+                try
+                {
+                    if (LicenseManager.IsLicenseValid && LicenseManager.IsOfflineGracePeriodActive)
+                        codes.Add("OFFLINE – Support kontaktieren");
+                }
+                catch { }
+
                 // Geräte-Lizenz: NV200 und SmartCoin Seriennummern prüfen
                 try
                 {
