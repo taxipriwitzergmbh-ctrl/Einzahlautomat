@@ -32,6 +32,7 @@ namespace TaMi_Einzahlautomat.Properties {
         internal static Image Hintergrund => GetImage("Hintergrund");
         internal static Image Hintergrund_Abrechnen => GetImage("Hintergrund_Abrechnen");
         internal static Image NFC => GetImage("NFC");
+        internal static Image KeineLizenz => GetImage("KeineLizenz");
         internal static Image _1cent => GetImage("_1cent");
         internal static Image _2cent => GetImage("_2cent");
         internal static Image _2cent1 => GetImage("_2cent1");

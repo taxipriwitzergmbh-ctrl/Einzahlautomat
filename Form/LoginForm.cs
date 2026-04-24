@@ -624,6 +624,7 @@ namespace TaMi_Einzahlautomat
         private void HiddenMaintBtn_Click(object sender, EventArgs e)
         {
             if (_maintenanceMode) return;
+            if (!LicenseManager.IsLicenseValid) return; // Wartungszugang bei ungültiger Lizenz gesperrt
             var now = DateTime.UtcNow;
             if ((now - _hiddenBtnLastClick).TotalMilliseconds <= HiddenBtnDoubleClickMs)
             {
@@ -923,11 +924,13 @@ namespace TaMi_Einzahlautomat
         private void ApplyOnlyNfcLayout()
         {
             if (_maintenanceMode) { ForceMaintenanceLayout(); PositionExitMaintenanceButton(); return; }
-            if (!_onlyNfc)
+            bool licenseInvalid = !LicenseManager.IsLicenseValid;
+            if (!_onlyNfc && !licenseInvalid)
             {
                 if (_picNfc != null) { Controls.Remove(_picNfc); try { _picNfc.Dispose(); } catch { } _picNfc = null; }
                 lblPrompt.Visible = true; txtPersId.Visible = true; btnCancelPwd.Visible = false; lblError.Visible = true; btnLogin.Visible = true; numPadPanel.Visible = true; PositionExitMaintenanceButton(); return;
             }
+            // Bild anzeigen: NFC-Only-Modus oder Lizenz ungültig
             lblPrompt.Visible = false; txtPersId.Visible = false; btnCancelPwd.Visible = false; lblError.Visible = false; btnLogin.Visible = false; numPadPanel.Visible = false;
             if (_picNfc == null)
             {
@@ -935,7 +938,9 @@ namespace TaMi_Einzahlautomat
                 Controls.Add(_picNfc); try { _picNfc.SendToBack(); } catch { }
                 try { headerPanel?.BringToFront(); } catch { }
             }
-            try { _picNfc.Image = TaMi_Einzahlautomat.Properties.Resources.NFC; } catch { }
+            try { _picNfc.Image = licenseInvalid
+                    ? TaMi_Einzahlautomat.Properties.Resources.KeineLizenz
+                    : TaMi_Einzahlautomat.Properties.Resources.NFC; } catch { }
         }
 
         private void BuildNumPad()
@@ -1039,6 +1044,27 @@ namespace TaMi_Einzahlautomat
                 try { var c2 = Coins.Coin2Manager.Instance as Coins.SmartCoinV1; c2?.RequestCoinLevels(); } catch { }
 
                 var codes = new System.Collections.Generic.List<string>();
+                // Lizenzzustand (Hauptlizenz)
+                try { if (!LicenseManager.IsLicenseValid) codes.Add("LIZENZ"); } catch { }
+                // Geräte-Lizenz: NV200 und SmartCoin Seriennummern prüfen
+                try
+                {
+                    bool geraetLizenzFehlt = false;
+                    var nv1 = Program.NV200Instance;
+                    if (nv1 != null && !string.IsNullOrWhiteSpace(nv1.SerialNumber) && nv1.SerialNumber != "-.-")
+                        if (!LicenseManager.IsNv200SerialLicensed(nv1.SerialNumber)) geraetLizenzFehlt = true;
+                    var nv2 = Program.NV2002Instance;
+                    if (nv2 != null && !string.IsNullOrWhiteSpace(nv2.SerialNumber) && nv2.SerialNumber != "-.-")
+                        if (!LicenseManager.IsNv200SerialLicensed(nv2.SerialNumber)) geraetLizenzFehlt = true;
+                    var sc1 = Coins.CoinManager.Instance as Coins.SmartCoinV1;
+                    if (sc1 != null && !string.IsNullOrWhiteSpace(sc1.SerialNumber))
+                        if (!LicenseManager.IsSmartCoinSerialLicensed(sc1.SerialNumber)) geraetLizenzFehlt = true;
+                    var sc2 = Coins.Coin2Manager.Instance as Coins.SmartCoinV1;
+                    if (sc2 != null && !string.IsNullOrWhiteSpace(sc2.SerialNumber))
+                        if (!LicenseManager.IsSmartCoinSerialLicensed(sc2.SerialNumber)) geraetLizenzFehlt = true;
+                    if (geraetLizenzFehlt) codes.Add("GERÄTE-LIZ");
+                }
+                catch { }
                 // Kassendifferenz
                 try { var diff = KassenSummary.Difference; if (diff.HasValue && diff.Value != 0m) codes.Add("DIF"); } catch { }
                 // NV200 Fehler
@@ -1066,6 +1092,9 @@ namespace TaMi_Einzahlautomat
                         _lblService.Visible = false;
                     }
                 }
+
+                // Layout je nach Lizenzstatus und NFC-Modus aktualisieren (live)
+                try { if (!_maintenanceMode) ApplyOnlyNfcLayout(); } catch { }
 
                 // Versandlogik
                 if (!needService)

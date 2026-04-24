@@ -171,4 +171,7 @@
   <data name="NFC" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Ressourcen\NFC.png;System.Drawing.Bitmap, System.Drawing</value>
   </data>
+  <data name="KeineLizenz" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Ressourcen\Keine Lizenz.png;System.Drawing.Bitmap, System.Drawing</value>
+  </data>
 </root>
