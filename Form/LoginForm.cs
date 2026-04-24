@@ -18,8 +18,7 @@ namespace TaMi_Einzahlautomat
         private Panel numPadPanel;
         private Point _mouseDownLocation;
         private Panel headerPanel;
-        private Button btnClose;
-        private Button btnMinimize;
+
         private Label lblTitle;
         // Titel-Hinweis mit Auto-Reset
         private Timer _titleResetTimer;
@@ -441,14 +440,7 @@ namespace TaMi_Einzahlautomat
             };
             Controls.Add(_lblService);
 
-            btnClose = new Button { Text = "?", Font = new Font("Segoe UI", 16F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 56, 6), TabStop = false, Visible = !Program.KioskModeEnabled };
-            btnClose.FlatAppearance.BorderSize = 0; btnClose.FlatAppearance.MouseOverBackColor = Color.Transparent; btnClose.Click += (s, e) => Close(); headerPanel.Controls.Add(btnClose);
-            try { ApplyModernButtonStyle(btnClose, Color.FromArgb(239, 83, 80), Color.FromArgb(198, 40, 40)); } catch { }
-
-            btnMinimize = new Button { Text = "–", Font = new Font("Segoe UI", 16F, FontStyle.Bold), ForeColor = Color.White, BackColor = Color.Transparent, FlatStyle = FlatStyle.Flat, Size = new Size(48, 48), Location = new Point(ClientSize.Width - 112, 6), TabStop = false, Visible = !Program.KioskModeEnabled };
-            btnMinimize.FlatAppearance.BorderSize = 0; btnMinimize.FlatAppearance.MouseOverBackColor = Color.Transparent; btnMinimize.Click += (s, e) => WindowState = FormWindowState.Minimized; headerPanel.Controls.Add(btnMinimize);
-            try { ApplyModernButtonStyle(btnMinimize, Color.FromArgb(96, 125, 139), Color.FromArgb(55, 71, 79)); } catch { }
-
+       
             // Einstellung aus INI: Fernwartungsbutton ausblenden
             try
             {

@@ -34,6 +34,14 @@ namespace TaMi_Einzahlautomat
         private static readonly System.Collections.Generic.HashSet<string> _licensedSmartCoinSerials = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private static readonly System.Collections.Generic.HashSet<string> _licensedNv200Serials = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private static bool _debugMode = false;
+        // Gesetzt sobald die erste Lizenzprüfung (Erfolg oder Fehler) abgeschlossen ist
+        private static volatile bool _licenseInitialized = false;
+        // Gesetzt nachdem der verzögerte Flush abgeschlossen ist (dann direkt loggen)
+        private static volatile bool _pendingSerialChecksClosed = false;
+
+        // Ausstehende Serienprüfungen, die vor der Initialisierung eingingen (werden danach nachgeprüft)
+        private static readonly System.Collections.Generic.List<(string deviceName, string serialNumber, bool isSmartCoin)> _pendingSerialChecks
+            = new System.Collections.Generic.List<(string, string, bool)>();
 
         public static bool IsLicenseValid
         {
@@ -77,7 +85,12 @@ namespace TaMi_Einzahlautomat
         {
             string device = string.IsNullOrWhiteSpace(deviceName) ? "SmartCoin" : deviceName.Trim();
             string serial = string.IsNullOrWhiteSpace(serialNumber) ? "unbekannt" : serialNumber.Trim();
-
+            if (!_pendingSerialChecksClosed)
+            {
+                // Flush noch nicht abgeschlossen – Check für später vormerken
+                lock (_pendingSerialChecks) { _pendingSerialChecks.Add((device, serial, true)); }
+                return;
+            }
             AppLogger.Log($"LicenseManager: Lizenz ungültig – unbekannte {device} Seriennummer {serial}");
         }
 
@@ -85,8 +98,42 @@ namespace TaMi_Einzahlautomat
         {
             string device = string.IsNullOrWhiteSpace(deviceName) ? "NV200" : deviceName.Trim();
             string serial = string.IsNullOrWhiteSpace(serialNumber) ? "unbekannt" : serialNumber.Trim();
-
+            if (!_pendingSerialChecksClosed)
+            {
+                // Flush noch nicht abgeschlossen – Check für später vormerken
+                lock (_pendingSerialChecks) { _pendingSerialChecks.Add((device, serial, false)); }
+                return;
+            }
             AppLogger.Log($"LicenseManager: Lizenz ungültig – unbekannte {device} Seriennummer {serial}");
+        }
+
+        // Ausstehende Serienprüfungen nach Initialisierung nachprüfen und ggf. loggen
+        private static void FlushPendingSerialChecks()
+        {
+            try
+            {
+                (string deviceName, string serialNumber, bool isSmartCoin)[] pending;
+                lock (_pendingSerialChecks)
+                {
+                    pending = _pendingSerialChecks.ToArray();
+                    _pendingSerialChecks.Clear();
+                }
+                foreach (var check in pending)
+                {
+                    try
+                    {
+                        bool licensed = check.isSmartCoin
+                            ? IsSmartCoinSerialLicensed(check.serialNumber)
+                            : IsNv200SerialLicensed(check.serialNumber);
+                        if (!licensed)
+                        {
+                            AppLogger.Log($"LicenseManager: Lizenz ungültig – unbekannte {check.deviceName} Seriennummer {check.serialNumber}");
+                        }
+                    }
+                    catch { }
+                }
+            }
+            catch { }
         }
 
         /// <summary>
@@ -131,6 +178,7 @@ namespace TaMi_Einzahlautomat
                 }
                 catch { _debugMode = false; }
 
+                AppLogger.BeginLicenseBlock();
                 AppLogger.Log("LicenseManager: Initialisierung gestartet");
 
                 // Sofortige erste Prüfung (synchron beim Start)
@@ -177,6 +225,30 @@ namespace TaMi_Einzahlautomat
                 {
                     AppLogger.Log($"LicenseManager: Initialisiert – Lizenz Prüfung alle 3 Stunden nächste Prüfung {nextCheckStr} Uhr");
                 }
+
+                // Geladene Seriennummern immer loggen (hilft bei Mismatch-Diagnose)
+                try
+                {
+                    string coinSerials, nv200Serials;
+                    lock (_lock)
+                    {
+                        coinSerials  = _licensedSmartCoinSerials.Count  > 0 ? string.Join(", ", _licensedSmartCoinSerials)  : "(keine)";
+                        nv200Serials = _licensedNv200Serials.Count > 0 ? string.Join(", ", _licensedNv200Serials) : "(keine)";
+                    }
+                    AppLogger.Log($"LicenseManager: Lizenzierte SmartCoin-Serials: {coinSerials}");
+                    AppLogger.Log($"LicenseManager: Lizenzierte NV200-Serials: {nv200Serials}");
+                }
+                catch { }
+
+                // Ausstehende Serial-Prüfungen verzögert nachholen (NV200 verbindet sich async ~1-2s später)
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    System.Threading.Thread.Sleep(4000);
+                    FlushPendingSerialChecks();
+                    _pendingSerialChecksClosed = true;
+                    AppLogger.Log(new string('*', 80));
+                    AppLogger.EndLicenseBlock();
+                });
             }
             catch (Exception ex)
             {
@@ -335,6 +407,7 @@ namespace TaMi_Einzahlautomat
                         _isLicenseValid = valid;
                         _lastError = valid ? string.Empty : errorMsg;
                     }
+                    _licenseInitialized = true;
 
                     if (!valid)
                     {

@@ -40,6 +40,7 @@ namespace TaMi_Einzahlautomat.Coins
 
         private Thread _thread;
         private volatile bool _stop;
+        private volatile bool _licenseBlocked; // permanent block after invalid serial – prevents reconnect
         private volatile bool _threadEnded = true;
 
         private readonly List<List<byte>> _sendQueue = new List<List<byte>>();
@@ -179,6 +180,7 @@ namespace TaMi_Einzahlautomat.Coins
         public void Connect()
         {
             if (Connected) return;
+            if (_licenseBlocked) { Log("Connect() ignoriert: Gerät ist dauerhaft gesperrt (Lizenz)"); return; }
             // Standardzustand beim Start: deaktiviert, damit ohne Login keine Annahme erfolgt.
             // Login-Flows rufen später explizit Enable(true) (z.B. in LoginForm.LogBestandSnapshot).
             SerialNumber = null;
@@ -477,6 +479,7 @@ namespace TaMi_Einzahlautomat.Coins
 
         private void DisconnectDueToInvalidLicense(string reason)
         {
+            _licenseBlocked = true;
             _stop = true;
             _encryptionOk = false;
             _wantEnabled = false;

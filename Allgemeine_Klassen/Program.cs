@@ -329,6 +329,7 @@ namespace TaMi_Einzahlautomat
             AppLogger.Init();
             try { AppLogger.LogStartBanner(); } catch { }
             SafeLog("Programmstart");
+            AppLogger.Log(new string('*', 80));
 
             // Lizenzprüfung initialisieren (prüft alle 3 Stunden)
             try { LicenseManager.Initialize(); } catch (Exception ex) { SafeLog("LicenseManager Init Fehler: " + ex.Message); }

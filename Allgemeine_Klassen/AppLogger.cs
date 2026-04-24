@@ -37,6 +37,18 @@ namespace TaMi_Einzahlautomat
         private static string _lastLine; private static DateTime _lastLineUtc; private static int _lastRepeatCount;
         private static readonly TimeSpan DedupWindow = TimeSpan.FromSeconds(2);
 
+        // Lizenz-Block: während der Init-Phase werden Nicht-Lizenz-Nachrichten gepuffert
+        private static volatile bool _licenseBlockActive = false;
+        private static readonly ConcurrentQueue<string> _licenseBuffer = new ConcurrentQueue<string>();
+        public static void BeginLicenseBlock() { _licenseBlockActive = true; }
+        public static void EndLicenseBlock()
+        {
+            _licenseBlockActive = false;
+            string msg;
+            while (_licenseBuffer.TryDequeue(out msg)) _queue.Enqueue(msg);
+            _signal.Set();
+        }
+
         public static bool KassensturzActive => _kassensturzOpenCount > 0;
         public static void KassensturzScopeEnter() { try { Interlocked.Increment(ref _kassensturzOpenCount); } catch { } }
         public static void KassensturzScopeExit() { try { Interlocked.Decrement(ref _kassensturzOpenCount); } catch { } }
@@ -214,6 +226,18 @@ namespace TaMi_Einzahlautomat
                     }
                 }
                 if (suppress) { _signal.Set(); return; }
+
+                // Während Lizenz-Block: Nicht-Lizenz-Nachrichten puffern
+                if (_licenseBlockActive)
+                {
+                    bool isLicenseMsg = original.IndexOf("LicenseManager:", StringComparison.OrdinalIgnoreCase) >= 0
+                                    || (original.Length > 0 && original.Trim().All(c => c == '*'));
+                    if (!isLicenseMsg)
+                    {
+                        _licenseBuffer.Enqueue(toEnqueue);
+                        return;
+                    }
+                }
 
                 _queue.Enqueue(toEnqueue);
                 _signal.Set(); // weckt Writer
