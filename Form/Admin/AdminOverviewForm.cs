@@ -128,7 +128,8 @@ namespace TaMi_Einzahlautomat
         public AdminOverviewForm(NV200_SSP ssp)
         {
             _ssp = ssp;
-            _coin = CoinValidatorFactory.CreateFromIni(_iniPath);
+            try { CoinManager.InitFromIni(AppSettings.IniPath); } catch { }
+            _coin = CoinManager.Instance;
             try { _coin?.Connect(); } catch { }
             _coinFeeder = Program.CoinFeeder; // globale Instanz
             InitializeModernOverview();
@@ -140,7 +141,7 @@ namespace TaMi_Einzahlautomat
         public AdminOverviewForm(NV200_SSP ssp, ICoinValidator coin)
             : this(ssp)
         {
-            _coin = coin;
+            _coin = coin ?? CoinManager.Instance;
         }
 
         private Button CreateMenuButton(Control parent, string text, int y, int height, Color backColor, Font font = null)
@@ -241,7 +242,19 @@ namespace TaMi_Einzahlautomat
             btnShowLog.Click       += (s,e)=> ShowOrActivate(()=> new LogViewForm());
             btnNV200_1.Click       += (s,e)=> ShowOrActivate(()=> new AdminNV200Form(_ssp));
             btnNV200_2.Click       += (s,e)=> { var nv2 = Program.NV2002Instance ?? _ssp; ShowOrActivate(()=> new AdminNV200_2Form(nv2)); };
-            btnCoinAdmin.Click     += (s,e)=> ShowOrActivate(()=> { var coin=_coin ?? CoinValidatorFactory.CreateFromIni(_iniPath); try { coin.Connect(); } catch { } return new AdminCoinForm(coin); });
+            btnCoinAdmin.Click     += (s,e)=> ShowOrActivate(()=>
+            {
+                var coin = _coin ?? CoinManager.Instance;
+                if (coin == null)
+                {
+                    try { CoinManager.InitFromIni(AppSettings.IniPath); } catch { }
+                    coin = CoinManager.Instance;
+                }
+                if (coin == null) return null;
+                _coin = coin;
+                try { coin.Connect(); } catch { }
+                return new AdminCoinForm(coin);
+            });
             btnCoinAdmin2.Click    += (s,e)=> ShowOrActivate(()=> { try { Coin2Manager.InitFromIni(AppSettings.IniPath); } catch { } return new AdminCoin2Form(Coin2Manager.Instance); });
             btnCoinFeeder.Click    += (s,e)=> ShowOrActivate(()=> new AdminCoinFeederForm(_iniPath));
 
@@ -351,7 +364,7 @@ namespace TaMi_Einzahlautomat
                 // SmartCoin/1
                 try
                 {
-                    var v = IniHelper.ReadValue("SmartCoin", "Disabled", _iniPath);
+                    var v = IniHelper.ReadValue("SmartCoin/1", "Disabled", _iniPath);
                     if (!string.IsNullOrWhiteSpace(v))
                         AdminCoinForm.DeviceDisabled = v.Trim().Equals("1", StringComparison.OrdinalIgnoreCase) || v.Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
                 }

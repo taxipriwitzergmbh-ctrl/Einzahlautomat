@@ -48,6 +48,8 @@ namespace TaMi_Einzahlautomat
         private Label _lblScPortAddr;
         private Label _lblScLastEvt;
         private Label _lblScState;
+        private Label _lblSerialNumber;
+        private Button _btnCopySerial;
         private Timer _tmrStatus;
         private DateTime _lastCoinEventUtc = DateTime.MinValue;
 
@@ -95,9 +97,13 @@ namespace TaMi_Einzahlautomat
         {
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(900, 760);
+            ClientSize = new Size(1280, 1024);
             BackColor = Color.White;
             DoubleBuffered = true;
+
+            int rightPanelWidth = 360;
+            int rightPanelX = ClientSize.Width - rightPanelWidth - 24;
+            int logWidth = rightPanelX - 48;
 
             _header = new ModernHeaderPanel { Title = "Admin - Münzprüfer" };
             _header.CloseClicked += () => { try { Close(); } catch { } };
@@ -153,7 +159,7 @@ namespace TaMi_Einzahlautomat
             btnRm5Enable = new ModernGradientButton { Text = "RM5 freigeben", Location = new Point(710, 230), Size = new Size(160, 44), GradientStart = Color.FromArgb(255, 143, 0), GradientEnd = Color.FromArgb(245, 124, 0), Visible = false };
             btnRm5Enable.Click += (s, e) => Rm5Enable();
 
-            txtLog = new TextBox { Multiline = true, ScrollBars = ScrollBars.Both, ReadOnly = true, Location = new Point(24, 290), Size = new Size(520, 380), Font = new Font("Consolas", 11F) };
+            txtLog = new TextBox { Multiline = true, ScrollBars = ScrollBars.Both, ReadOnly = true, Location = new Point(24, 290), Size = new Size(logWidth, 700), Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left, Font = new Font("Consolas", 11F) };
 
             Controls.Add(lblType);
             Controls.Add(cmbType);
@@ -188,7 +194,7 @@ namespace TaMi_Einzahlautomat
             };
             Controls.Add(_chkDisabled);
 
-            _panelStatus = new Panel { Location = new Point(560, 80), Size = new Size(300, 170), Anchor = AnchorStyles.Top | AnchorStyles.Right, BackColor = Color.FromArgb(245, 247, 250) };
+            _panelStatus = new Panel { Location = new Point(rightPanelX, 80), Size = new Size(rightPanelWidth, 210), Anchor = AnchorStyles.Top | AnchorStyles.Right, BackColor = Color.FromArgb(245, 247, 250) };
             Controls.Add(_panelStatus);
 
             var lblStatusTitle = new Label { Text = "Status", Location = new Point(10, 10), AutoSize = true, Font = new Font("Segoe UI Variable", 13F, FontStyle.Bold) };
@@ -210,7 +216,42 @@ namespace TaMi_Einzahlautomat
             _lblScState = new Label { Text = "-", Location = new Point(140, 116), AutoSize = true, Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
             _panelStatus.Controls.Add(_lblScState);
 
-            _panelBestand = new Panel { Location = new Point(560, 290), Size = new Size(300, 460), Anchor = AnchorStyles.Top | AnchorStyles.Right, BackColor = Color.FromArgb(245, 247, 250) };
+            // Seriennummer unter Zustand
+            var lblSerial = new Label { Text = "Seriennummer:", Location = new Point(20, 170), AutoSize = true, Font = new Font("Segoe UI Variable", 11F) };
+            _panelStatus.Controls.Add(lblSerial);
+            _lblSerialNumber = new Label { Text = "-", Location = new Point(140, 168), Size = new Size(170, 24), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
+            _panelStatus.Controls.Add(_lblSerialNumber);
+
+            // Kopier-Button neben Seriennummer
+            _btnCopySerial = new Button
+            {
+                Text = "📋",
+                Location = new Point(320, 166),
+                Size = new Size(24, 24),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10F),
+                Cursor = Cursors.Hand,
+                BackColor = Color.FromArgb(240, 240, 240),
+                ForeColor = Color.FromArgb(33, 37, 41)
+            };
+            _btnCopySerial.FlatAppearance.BorderSize = 0;
+            _btnCopySerial.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 220, 220);
+            _btnCopySerial.Click += (s, e) =>
+            {
+                try
+                {
+                    var serial = (_coin as SmartCoinV1)?.SerialNumber;
+                    if (!string.IsNullOrEmpty(serial) && serial != "-" && serial != "-.-")
+                    {
+                        Clipboard.SetText(serial);
+                        AppendLog($"Seriennummer in Zwischenablage kopiert: {serial}");
+                    }
+                }
+                catch (Exception ex) { AppendLog("Fehler beim Kopieren: " + ex.Message); }
+            };
+            _panelStatus.Controls.Add(_btnCopySerial);
+
+            _panelBestand = new Panel { Location = new Point(rightPanelX, 300), Size = new Size(rightPanelWidth, 460), Anchor = AnchorStyles.Top | AnchorStyles.Right, BackColor = Color.FromArgb(245, 247, 250) };
             Controls.Add(_panelBestand);
             var lblTitel = new Label { Text = "Kassenbestand (Münzen, Stück):", Location = new Point(10, 10), AutoSize = true, Font = new Font("Segoe UI Variable", 13F, FontStyle.Bold) };
             _panelBestand.Controls.Add(lblTitel);
@@ -776,10 +817,14 @@ namespace TaMi_Einzahlautomat
                 if (_coin is SmartCoinV1 sc1 && !string.IsNullOrWhiteSpace(sc1.CurrentStatus))
                 {
                     _statusText = sc1.CurrentStatus; UpdateStatusText(_statusText);
+                    // Seriennummer aktualisieren
+                    if (_lblSerialNumber != null) _lblSerialNumber.Text = sc1.SerialNumber ?? "-";
                 }
                 else if (_coin is Rm5CctalkValidator rm5)
                 {
                     _statusText = conn ? "RM5 verbunden" : "RM5 getrennt"; UpdateStatusText(_statusText);
+                    // RM5 hat keine Seriennummer
+                    if (_lblSerialNumber != null) _lblSerialNumber.Text = "-";
                 }
 
                 if (!_didFirstReadyRefresh && _eventsAttached) RefreshBestandCoins();

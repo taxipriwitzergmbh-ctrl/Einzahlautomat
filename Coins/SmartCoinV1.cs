@@ -34,7 +34,9 @@ namespace TaMi_Einzahlautomat.Coins
         // NEU: Statusänderung (Idle, Neustart, Busy, Disabled, Jammed, ...)
         public event Action<string> StatusChanged;
         public string CurrentStatus { get { return _status; } }
+        public string SerialNumber { get; private set; }
         private string _status = "Unbekannt";
+        private volatile bool _serialNumberRequested = false;
 
         private Thread _thread;
         private volatile bool _stop;
@@ -179,6 +181,8 @@ namespace TaMi_Einzahlautomat.Coins
             if (Connected) return;
             // Standardzustand beim Start: deaktiviert, damit ohne Login keine Annahme erfolgt.
             // Login-Flows rufen später explizit Enable(true) (z.B. in LoginForm.LogBestandSnapshot).
+            SerialNumber = null;
+            _serialNumberRequested = false;
             _wantEnabled = false;
             _stop = false;
             try { ReloadDenomConfigFromIni(); } catch { }
@@ -209,6 +213,8 @@ namespace TaMi_Einzahlautomat.Coins
             catch { }
             try { SafeClose(); } catch { }
             Connected = false;
+            SerialNumber = null;
+            _serialNumberRequested = false;
             SetStatus("Getrennt");
             Log("Getrennt (Disconnect abgeschlossen)");
         }
@@ -370,6 +376,10 @@ namespace TaMi_Einzahlautomat.Coins
                                         else
                                         {
                                             Log($"Resp not OK ({rsp}) for cmd=0x{sentCmd:X2}");
+                                            if (sentCmd == (byte)CCommands.SSP_CMD_GET_SERIAL_NUMBER)
+                                            {
+                                                _serialNumberRequested = false;
+                                            }
                                             if (sentCmd == (byte)CCommands.SSP_CMD_GET_DENOMINATION_LEVEL && !_retryGetDenomUnenc)
                                             {
                                                 _retryGetDenomUnenc = true;
@@ -541,6 +551,7 @@ namespace TaMi_Einzahlautomat.Coins
                 try
                 {
                     SetProtocolVersion(7);
+                    RequestSerialNumber(false);
                     Log("Host Protocol Version 7 requested");
                 }
                 catch { }
@@ -628,6 +639,35 @@ namespace TaMi_Einzahlautomat.Coins
                 return;
             }
 
+            if (cmd == (byte)CCommands.SSP_CMD_GET_SERIAL_NUMBER)
+            {
+                try
+                {
+                    _serialNumberRequested = false;
+                    if (_cmd.ResponseDataLength >= 5)
+                    {
+                        uint serialNum = (uint)((_cmd.ResponseData[1] << 24)
+                                      | (_cmd.ResponseData[2] << 16)
+                                      | (_cmd.ResponseData[3] << 8)
+                                      | _cmd.ResponseData[4]);
+                        SerialNumber = serialNum.ToString();
+                        Log("Seriennummer: " + SerialNumber);
+                    }
+                    else
+                    {
+                        SerialNumber = null;
+                        Log("Seriennummer: Fehler - ungültige Antwortlänge");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _serialNumberRequested = false;
+                    SerialNumber = null;
+                    Log("Parse GET_SERIAL_NUMBER failed: " + ex.Message);
+                }
+                return;
+            }
+
             if (cmd == (byte)CCommands.SSP_CMD_POLL)
             {
                 if (_cmd.ResponseDataLength == 1)
@@ -649,6 +689,8 @@ namespace TaMi_Einzahlautomat.Coins
                         case CCommands.SSP_POLL_DISABLED:
                             Log("Unit disabled");
                             SetStatus("Disabled");
+                            if (_encryptionOk && string.IsNullOrWhiteSpace(SerialNumber) && !_serialNumberRequested)
+                                RequestSerialNumber(false);
                             if (_wantEnabled && _encryptionOk) EnqueueEnableSequence();
                             break;
 
@@ -1331,6 +1373,14 @@ namespace TaMi_Einzahlautomat.Coins
         private void SetProtocolVersion(byte v)
         {
             Enqueue((byte)1, (byte)2, (byte)CCommands.SSP_CMD_HOST_PROTOCOL_VERSION, v);
+        }
+
+        private void RequestSerialNumber(bool encrypted)
+        {
+            byte enc = (byte)(encrypted ? 1 : 0);
+            Enqueue(enc, (byte)1, (byte)CCommands.SSP_CMD_GET_SERIAL_NUMBER);
+            _serialNumberRequested = true;
+            Log($"REQ SERIAL_NUMBER {(encrypted ? "[enc]" : "[plain]")}");
         }
 
         // Münzauszahlung nach Stückzahlen (Index: {1,2,5,10,20,50,100,200} Cent)
