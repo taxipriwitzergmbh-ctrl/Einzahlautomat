@@ -668,6 +668,19 @@ namespace TaMi_Einzahlautomat.Coins
                         SerialNumber = serialNum.ToString();
                         Log("Seriennummer: " + SerialNumber);
 
+                        // Warten bis LicenseManager initialisiert ist (Seriennummern vom Server geladen)
+                        if (!LicenseManager.IsInitialized)
+                        {
+                            Log("Warte auf LicenseManager-Initialisierung (max. 8s)...");
+                            int waited = 0;
+                            while (!LicenseManager.IsInitialized && waited < 8000)
+                            {
+                                System.Threading.Thread.Sleep(200);
+                                waited += 200;
+                            }
+                            Log("LicenseManager-Initialisierung nach " + waited + "ms abgeschlossen.");
+                        }
+
                         var deviceName = GetIniSectionName() ?? "SmartCoin";
                         if (!LicenseManager.IsSmartCoinSerialLicensed(SerialNumber))
                         {

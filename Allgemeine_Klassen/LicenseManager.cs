@@ -36,6 +36,11 @@ namespace TaMi_Einzahlautomat
         private static bool _debugMode = false;
         // Gesetzt sobald die erste Lizenzprüfung (Erfolg oder Fehler) abgeschlossen ist
         private static volatile bool _licenseInitialized = false;
+
+        /// <summary>
+        /// True sobald die erste Lizenzprüfung abgeschlossen ist und Seriennummern geladen wurden.
+        /// </summary>
+        public static bool IsInitialized => _licenseInitialized;
         // Gesetzt nachdem der verzögerte Flush abgeschlossen ist (dann direkt loggen)
         private static volatile bool _pendingSerialChecksClosed = false;
 
