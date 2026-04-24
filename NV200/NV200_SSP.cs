@@ -152,6 +152,7 @@ namespace TaMi_Einzahlautomat
         public DateTime Last_Communicationtime;
 
         public string states = "not started";
+        private volatile bool _licenseBlocked = false;
         // Track whether device is logically disabled to avoid misreporting Idle when no events
         private volatile bool _isDisabled = false;
         // Track last time a non-OK response was observed
@@ -438,6 +439,17 @@ namespace TaMi_Einzahlautomat
             Protokoll_Append(Element);
         }
 
+        private void BlockDueToInvalidLicense(string reason)
+        {
+            _licenseBlocked = true;
+            states = "Unlizenziertes Gerät Seriennummer unbekannt";
+            try { Disable_Device(); } catch { }
+            try { SetInhibit(true); } catch { }
+            try { ConfigureBezel(255, 0, 0); } catch { }
+            try { Connection.CloseComPort(); } catch { }
+            Ereignis_adden("Verbindung getrennt (Lizenz ungültig): " + reason);
+        }
+
         public int Noch_Verfuegbar()
         {
             int Neu = 0;
@@ -484,6 +496,11 @@ namespace TaMi_Einzahlautomat
                         _consecutiveSendFails = 0; // reset counter on forced restart
                     }
                     states = "Neustart"; // only logged at real reconnect attempt
+                    if (_licenseBlocked)
+                    {
+                        Thread.Sleep(500);
+                        continue;
+                    }
                     Ereignis_adden(states);
                     try { Connection.CloseComPort(); } catch { Ereignis_adden("Failed CloseComport vor Neustart"); }
                     CommandStructure.RetryLevel = 2;
@@ -748,11 +765,21 @@ namespace TaMi_Einzahlautomat
                     );
                     SerialNumber = serialNum.ToString();
                     Ereignis_adden("Seriennummer: " + SerialNumber);
+
+                    var deviceName = DetermineNvSection() ?? "NV200";
+                    if (!LicenseManager.IsNv200SerialLicensed(SerialNumber))
+                    {
+                        LicenseManager.InvalidateLicenseForUnknownNv200(deviceName, SerialNumber);
+                        BlockDueToInvalidLicense("Seriennummer " + SerialNumber + " ist nicht in der Lizenz hinterlegt");
+                    }
                 }
                 else
                 {
                     SerialNumber = "error";
                     Ereignis_adden("Seriennummer: Fehler - ungültige Antwortlänge");
+                    var deviceName = DetermineNvSection() ?? "NV200";
+                    LicenseManager.InvalidateLicenseForUnknownNv200(deviceName, null);
+                    BlockDueToInvalidLicense("Seriennummer konnte nicht gelesen werden");
                 }
                 return;
             }

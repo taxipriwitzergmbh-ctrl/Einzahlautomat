@@ -29,6 +29,10 @@ namespace TaMi_Einzahlautomat
         // Lizenzinfo-Cache
         private static string _customerName = string.Empty;
         private static string _customerId = string.Empty;
+        private static string _lastSystemId = string.Empty;
+        private static string _lastLicenseLogValue = string.Empty;
+        private static readonly System.Collections.Generic.HashSet<string> _licensedSmartCoinSerials = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private static readonly System.Collections.Generic.HashSet<string> _licensedNv200Serials = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private static bool _debugMode = false;
 
         public static bool IsLicenseValid
@@ -44,6 +48,45 @@ namespace TaMi_Einzahlautomat
         public static DateTime LastCheckTime
         {
             get { lock (_lock) return _lastCheckTime; }
+        }
+
+        public static string CurrentSystemId
+        {
+            get { lock (_lock) return _lastSystemId; }
+        }
+
+        public static bool IsSmartCoinSerialLicensed(string serialNumber)
+        {
+            lock (_lock)
+            {
+                return !string.IsNullOrWhiteSpace(serialNumber)
+                    && _licensedSmartCoinSerials.Contains(serialNumber.Trim());
+            }
+        }
+
+        public static bool IsNv200SerialLicensed(string serialNumber)
+        {
+            lock (_lock)
+            {
+                return !string.IsNullOrWhiteSpace(serialNumber)
+                    && _licensedNv200Serials.Contains(serialNumber.Trim());
+            }
+        }
+
+        public static void InvalidateLicenseForUnknownSmartCoin(string deviceName, string serialNumber)
+        {
+            string device = string.IsNullOrWhiteSpace(deviceName) ? "SmartCoin" : deviceName.Trim();
+            string serial = string.IsNullOrWhiteSpace(serialNumber) ? "unbekannt" : serialNumber.Trim();
+
+            AppLogger.Log($"LicenseManager: Lizenz ungültig – unbekannte {device} Seriennummer {serial}");
+        }
+
+        public static void InvalidateLicenseForUnknownNv200(string deviceName, string serialNumber)
+        {
+            string device = string.IsNullOrWhiteSpace(deviceName) ? "NV200" : deviceName.Trim();
+            string serial = string.IsNullOrWhiteSpace(serialNumber) ? "unbekannt" : serialNumber.Trim();
+
+            AppLogger.Log($"LicenseManager: Lizenz ungültig – unbekannte {device} Seriennummer {serial}");
         }
 
         /// <summary>
@@ -96,14 +139,17 @@ namespace TaMi_Einzahlautomat
 
                 if (!_isLicenseValid)
                 {
-                    // Bei ungültiger Lizenz auch Kundeninfos anzeigen
-                    string customerPart = !string.IsNullOrEmpty(_customerName) ? $"Kunde:{_customerName}" : string.Empty;
-                    string idPart = !string.IsNullOrEmpty(_customerId) ? $"Knd:{_customerId}" : string.Empty;
-                    string combined = string.Join(", ", new[] { customerPart, idPart }.Where(s => !string.IsNullOrEmpty(s)));
-
-                    if (!string.IsNullOrEmpty(combined))
+                    string systemIdForLog;
+                    string licenseValueForLog;
+                    lock (_lock)
                     {
-                        AppLogger.Log($"LicenseManager: WARNUNG - Lizenz ungültig: {_lastError} für {combined} Einzahlautomat");
+                        systemIdForLog = _lastSystemId;
+                        licenseValueForLog = _lastLicenseLogValue;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(systemIdForLog) && !string.IsNullOrWhiteSpace(licenseValueForLog))
+                    {
+                        AppLogger.Log($"LicenseManager: WARNUNG - Lizenz ungültig: {systemIdForLog} Lizenz={licenseValueForLog}");
                     }
                     else
                     {
@@ -173,9 +219,21 @@ namespace TaMi_Einzahlautomat
                     {
                         _isLicenseValid = false;
                         _lastError = "Konnte System-ID nicht ermitteln";
+                        _lastSystemId = string.Empty;
+                        _lastLicenseLogValue = string.Empty;
+                        _licensedSmartCoinSerials.Clear();
+                        _licensedNv200Serials.Clear();
                     }
                     AppLogger.Log("LicenseManager: System-ID konnte nicht ermittelt werden");
                     return false;
+                }
+
+                lock (_lock)
+                {
+                    _lastSystemId = systemId;
+                    _lastLicenseLogValue = string.Empty;
+                    _licensedSmartCoinSerials.Clear();
+                    _licensedNv200Serials.Clear();
                 }
 
                 string encryptedSid = TinyEncrypt(systemId);
@@ -220,6 +278,16 @@ namespace TaMi_Einzahlautomat
                             {
                                 _customerName = licInfo.ContainsKey("customer") ? licInfo["customer"] : string.Empty;
                                 _customerId = licInfo.ContainsKey("customerid") ? licInfo["customerid"] : string.Empty;
+                                _lastLicenseLogValue = ExtractLicenseLogValue(decryptedLic);
+                                _licensedSmartCoinSerials.Clear();
+                                _licensedNv200Serials.Clear();
+                                foreach (var entry in licInfo)
+                                {
+                                    if (entry.Key.StartsWith("coin", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(entry.Value))
+                                        _licensedSmartCoinSerials.Add(entry.Value.Trim());
+                                    if (entry.Key.StartsWith("nv200", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(entry.Value))
+                                        _licensedNv200Serials.Add(entry.Value.Trim());
+                                }
                             }
 
                             if (licInfo.ContainsKey("ezatm") && licInfo["ezatm"].Equals("1"))
@@ -362,6 +430,25 @@ namespace TaMi_Einzahlautomat
             }
 
             return result;
+        }
+
+        private static string ExtractLicenseLogValue(string licenseInfo)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(licenseInfo))
+                    return string.Empty;
+
+                var parts = licenseInfo.Split(new[] { "::" }, StringSplitOptions.None);
+                if (parts.Length > 3 && !string.IsNullOrWhiteSpace(parts[3]))
+                    return parts[3].Trim();
+
+                return licenseInfo.Trim();
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
         /// <summary>

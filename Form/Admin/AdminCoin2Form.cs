@@ -706,16 +706,17 @@ namespace TaMi_Einzahlautomat
                     return;
                 }
                 bool conn = _coin != null && _coin.Connected;
+                var sc1 = _coin as SmartCoinV1;
+                bool unlicensed = sc1 != null && !string.IsNullOrWhiteSpace(sc1.CurrentStatus) && sc1.CurrentStatus.IndexOf("unlizenziert", StringComparison.OrdinalIgnoreCase) >= 0;
                 if (_lblScConn != null)
                 {
-                    _lblScConn.Text = conn ? "Verbunden (Thread)" : "Getrennt";
-                    _lblScConn.ForeColor = conn ? Color.FromArgb(0, 128, 0) : Color.FromArgb(183, 28, 28);
+                    _lblScConn.Text = unlicensed ? "Unlizenziert" : (conn ? "Verbunden (Thread)" : "Getrennt");
+                    _lblScConn.ForeColor = unlicensed || !conn ? Color.FromArgb(183, 28, 28) : Color.FromArgb(0, 128, 0);
                 }
                 if (_lblScPortAddr != null) _lblScPortAddr.Text = $"{(_coin?.ComPort ?? "-")}, Addr {(_coin != null ? _coin.SspAddress.ToString() : "-")}";
                 EnsureSelectedPort(_coin?.ComPort, initial: false);
                 
                 // Hole den aktuellen Status auch ohne StatusChanged-Event
-                var sc1 = _coin as SmartCoinV1;
                 if (sc1 != null && !string.IsNullOrWhiteSpace(sc1.CurrentStatus))
                 {
                     _statusText = sc1.CurrentStatus;
@@ -729,7 +730,12 @@ namespace TaMi_Einzahlautomat
                 }
 
                 if (_lblScState != null)
+                {
                     _lblScState.Text = string.IsNullOrWhiteSpace(_statusText) ? "-" : _statusText;
+                    _lblScState.ForeColor = !string.IsNullOrWhiteSpace(_statusText) && _statusText.IndexOf("unlizenziert", StringComparison.OrdinalIgnoreCase) >= 0
+                        ? Color.FromArgb(183, 28, 28)
+                        : Color.FromArgb(33, 37, 41);
+                }
 
                 if (!_didFirstReadyRefresh && IsReadyStatus(_statusText) && _eventsAttached)
                 {

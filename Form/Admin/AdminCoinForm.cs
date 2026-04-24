@@ -780,7 +780,7 @@ namespace TaMi_Einzahlautomat
             Color c = Color.SteelBlue;
             if (t.Contains("idle") || t.Contains("bereit") || t.Contains("synchron") || t.Contains("verbunden") || t.Contains("handshake ok")) c = Color.FromArgb(0, 128, 0);
             else if (t.Contains("busy") || t.Contains("dispens") || t.Contains("einwurf")) c = Color.FromArgb(255, 140, 0);
-            else if (t.Contains("disabled") || t.Contains("störung") || t.Contains("jammed") || t.Contains("timeout") || t.Contains("getrennt") || t.Contains("port nicht verfügbar")) c = Color.FromArgb(183, 28, 28);
+            else if (t.Contains("disabled") || t.Contains("störung") || t.Contains("jammed") || t.Contains("timeout") || t.Contains("getrennt") || t.Contains("port nicht verfügbar") || t.Contains("unlizenziert")) c = Color.FromArgb(183, 28, 28);
             _lblScState.ForeColor = c;
         }
 
@@ -799,8 +799,10 @@ namespace TaMi_Einzahlautomat
                     return;
                 }
                 bool conn = _coin != null && _coin.Connected;
-                _lblScConn.Text = conn ? "Verbunden" : "Getrennt";
-                _lblScConn.ForeColor = conn ? Color.FromArgb(0, 128, 0) : Color.FromArgb(183, 28, 28);
+                var sc1Status = (_coin as SmartCoinV1)?.CurrentStatus;
+                bool unlicensed = !string.IsNullOrWhiteSpace(sc1Status) && sc1Status.IndexOf("unlizenziert", StringComparison.OrdinalIgnoreCase) >= 0;
+                _lblScConn.Text = unlicensed ? "Unlizenziert" : (conn ? "Verbunden" : "Getrennt");
+                _lblScConn.ForeColor = unlicensed || !conn ? Color.FromArgb(183, 28, 28) : Color.FromArgb(0, 128, 0);
                 if (_coin != null && _coin.GetType().Name == "Rm5CctalkValidator")
                     _lblScPortAddr.Text = _coin.ComPort + ", RM5";
                 else

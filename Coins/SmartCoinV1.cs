@@ -475,6 +475,18 @@ namespace TaMi_Einzahlautomat.Coins
             Log("Status: " + s);
         }
 
+        private void DisconnectDueToInvalidLicense(string reason)
+        {
+            _stop = true;
+            _encryptionOk = false;
+            _wantEnabled = false;
+            lock (_queueLock) { _sendQueue.Clear(); }
+            try { SafeClose(); } catch { }
+            Connected = false;
+            SetStatus("Unlizenziertes Gerät Seriennummer unbekannt");
+            Log("Verbindung getrennt (Lizenz ungültig): " + reason);
+        }
+
         // Request-Logging + korrektes Payload (Len=8: 1 cmd + 7 payload)
         private void RequestDenomLevel(int cent, bool encrypted)
         {
@@ -652,11 +664,22 @@ namespace TaMi_Einzahlautomat.Coins
                                       | _cmd.ResponseData[4]);
                         SerialNumber = serialNum.ToString();
                         Log("Seriennummer: " + SerialNumber);
+
+                        var deviceName = GetIniSectionName() ?? "SmartCoin";
+                        if (!LicenseManager.IsSmartCoinSerialLicensed(SerialNumber))
+                        {
+                            LicenseManager.InvalidateLicenseForUnknownSmartCoin(deviceName, SerialNumber);
+                            DisconnectDueToInvalidLicense("Seriennummer " + SerialNumber + " ist nicht in der Lizenz hinterlegt");
+                            return;
+                        }
                     }
                     else
                     {
                         SerialNumber = null;
                         Log("Seriennummer: Fehler - ungültige Antwortlänge");
+                        var deviceName = GetIniSectionName() ?? "SmartCoin";
+                        LicenseManager.InvalidateLicenseForUnknownSmartCoin(deviceName, null);
+                        DisconnectDueToInvalidLicense("Seriennummer konnte nicht gelesen werden");
                     }
                 }
                 catch (Exception ex)
@@ -664,6 +687,9 @@ namespace TaMi_Einzahlautomat.Coins
                     _serialNumberRequested = false;
                     SerialNumber = null;
                     Log("Parse GET_SERIAL_NUMBER failed: " + ex.Message);
+                    var deviceName = GetIniSectionName() ?? "SmartCoin";
+                    LicenseManager.InvalidateLicenseForUnknownSmartCoin(deviceName, null);
+                    DisconnectDueToInvalidLicense("Seriennummer konnte nicht gelesen werden");
                 }
                 return;
             }

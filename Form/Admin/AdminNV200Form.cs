@@ -854,10 +854,12 @@ namespace TaMi_Einzahlautomat
                     _lblConn.Text = "Deaktiviert"; _lblConn.ForeColor = Color.Gray; _lblPort.Text = "-"; _lblLastEvt.Text = "-"; _lblState.Text = "disabled"; _lblState.ForeColor = Color.Gray; if (_lblSerialNumber != null) _lblSerialNumber.Text = "-"; return;
                 }
                 bool commAlive = false; if (_ssp != null) { var diff = DateTime.Now - _ssp.Last_Communicationtime; commAlive = diff.TotalSeconds < 3.0; }
-                _lblConn.Text = commAlive ? "Verbunden" : "Keine Aktivität"; _lblConn.ForeColor = commAlive ? Color.FromArgb(0,128,0) : Color.FromArgb(183,28,28);
+                var s = _tempStateText ?? (_ssp?.states ?? "-");
+                bool unlicensed = !string.IsNullOrWhiteSpace(s) && s.IndexOf("unlizenziert", StringComparison.OrdinalIgnoreCase) >= 0;
+                _lblConn.Text = unlicensed ? "Unlizenziert" : (commAlive ? "Verbunden" : "Keine Aktivität"); _lblConn.ForeColor = unlicensed || !commAlive ? Color.FromArgb(183,28,28) : Color.FromArgb(0,128,0);
                 _lblPort.Text = $"{(_ssp?.ComPort ?? "-")}, Addr {(_ssp!=null ? _ssp.SSPAdress.ToString() : "-")}"; EnsureSelectedPort(_ssp?.ComPort,false);
                 if (_lastEvtUtc == DateTime.MinValue) _lblLastEvt.Text = "-"; else { var ago = DateTime.UtcNow - _lastEvtUtc; _lblLastEvt.Text = $"{_lastEvtUtc.ToLocalTime():HH:mm:ss} ({Math.Max(0,(int)ago.TotalSeconds)} s)"; }
-                var s = _tempStateText ?? (_ssp?.states ?? "-"); _lblState.Text = s; var t = (s??"").ToLowerInvariant(); Color c = Color.SteelBlue; if (t.Contains("idle")||t.Contains("bereit")||t.Contains("started")||t.Contains("connected")||t.Contains("synchron")) c=Color.FromArgb(0,128,0); else if (t.Contains("dispens")||t.Contains("stack")||t.Contains("reading")||t.Contains("read note")) c=Color.FromArgb(255,140,0); else if (t.Contains("disabled")||t.Contains("jammed")||t.Contains("halted")||t.Contains("failed")||t.Contains("timeout")||t.Contains("open sspcomport")||t.Contains("neustart")) c=Color.FromArgb(183,28,28); _lblState.ForeColor = c;
+                _lblState.Text = s; var t = (s??"").ToLowerInvariant(); Color c = Color.SteelBlue; if (t.Contains("idle")||t.Contains("bereit")||t.Contains("started")||t.Contains("connected")||t.Contains("synchron")) c=Color.FromArgb(0,128,0); else if (t.Contains("dispens")||t.Contains("stack")||t.Contains("reading")||t.Contains("read note")) c=Color.FromArgb(255,140,0); else if (t.Contains("disabled")||t.Contains("jammed")||t.Contains("halted")||t.Contains("failed")||t.Contains("timeout")||t.Contains("open sspcomport")||t.Contains("neustart")||t.Contains("unlizenziert")) c=Color.FromArgb(183,28,28); _lblState.ForeColor = c;
                 if (_lblSerialNumber != null) _lblSerialNumber.Text = _ssp?.SerialNumber ?? "-";
             }
             catch { }

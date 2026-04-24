@@ -165,7 +165,7 @@ namespace TaMi_Einzahlautomat
             // Fenster-Setup
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(450, 980); // etwas h�her, damit mehr Buttons sichtbar sind
+            ClientSize = new Size(450, 1010); // etwas höher, damit der untere Button vollständig sichtbar bleibt
             BackColor = Color.White;
             DoubleBuffered = true;
 
@@ -180,7 +180,7 @@ namespace TaMi_Einzahlautomat
             {
                 Location = new Point(0, _header.Bottom),
                 // Höhe etwas reduziert, damit unten Platz für ExeInfo-Label bleibt
-                Size = new Size(ClientSize.Width, ClientSize.Height - _header.Height - 30),
+                Size = new Size(ClientSize.Width, ClientSize.Height - _header.Height - 52),
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold),
                 ItemSize = new Size(200, 36),
@@ -533,9 +533,9 @@ namespace TaMi_Einzahlautomat
                     _lblExeInfo = new Label
                     {
                         AutoSize = false,
-                        Height = 22,
+                        Height = 40,
                         Width = ClientSize.Width - 12,
-                        Location = new Point(6, ClientSize.Height - 24),
+                        Location = new Point(6, ClientSize.Height - 42),
                         Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
                         TextAlign = ContentAlignment.MiddleLeft,
                         Font = new Font("Segoe UI", 8.25F, FontStyle.Regular),
@@ -549,7 +549,7 @@ namespace TaMi_Einzahlautomat
                         try
                         {
                             _lblExeInfo.Width = ClientSize.Width - 12;
-                            _lblExeInfo.Top = ClientSize.Height - 24;
+                            _lblExeInfo.Top = ClientSize.Height - 42;
                             _lblExeInfo.BringToFront();
                         }
                         catch { }
@@ -560,7 +560,10 @@ namespace TaMi_Einzahlautomat
                 DateTime dt;
                 try { dt = System.IO.File.GetLastWriteTime(Application.ExecutablePath); } catch { dt = DateTime.Now; }
                 string verStr = ver != null ? $"{ver.Major}.{ver.Minor}.{ver.Build}.{ver.Revision}" : "-";
-                _lblExeInfo.Text = $"Version {verStr}  |  Build {dt:dd.MM.yyyy HH:mm}";
+                string systemId = LicenseManager.CurrentSystemId;
+                _lblExeInfo.Text = string.IsNullOrWhiteSpace(systemId)
+                    ? $"Version {verStr}  |  Build {dt:dd.MM.yyyy HH:mm}"
+                    : $"Version {verStr}  |  Build {dt:dd.MM.yyyy HH:mm}{Environment.NewLine}SystemId {systemId}";
                 _lblExeInfo.BringToFront();
             }
             catch { }
