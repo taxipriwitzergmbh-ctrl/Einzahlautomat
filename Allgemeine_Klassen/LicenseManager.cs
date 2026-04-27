@@ -793,7 +793,7 @@ namespace TaMi_Einzahlautomat
                 return 0;
             }
         }
-        
+
         /// <summary>
         /// Liest die MAC-Adresse der ersten physischen Ethernet-Netzwerkkarte
         /// </summary>
@@ -801,36 +801,25 @@ namespace TaMi_Einzahlautomat
         {
             try
             {
-                // Alternative zu WMI: NetworkInterface aus System.Net.NetworkInformation
                 var interfaces = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
-                foreach (var nic in interfaces)
-                {
-                    try
-                    {
-                        // Nur physische Ethernet-Adapter (nicht virtuelle, Loopback, etc.)
-                        if (nic.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Ethernet &&
-                            nic.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up)
-                        {
-                            var mac = nic.GetPhysicalAddress().ToString();
-                            if (!string.IsNullOrEmpty(mac) && mac != "000000000000")
-                            {
-                                // MAC-Adresse formatieren mit Doppelpunkt (wie WMI: "AA:BB:CC:DD:EE:FF")
-                                if (mac.Length == 12)
-                                {
-                                    var formatted = string.Empty;
-                                    for (int i = 0; i < mac.Length; i += 2)
-                                    {
-                                        if (formatted.Length > 0) formatted += ":";
-                                        formatted += mac.Substring(i, 2);
-                                    }
-                                    return formatted.ToUpperInvariant();
-                                }
-                                return mac.ToUpperInvariant();
-                            }
-                        }
-                    }
-                    catch { }
-                }
+
+                // 1. Bevorzugt: Ethernet Adapter mit Status Up
+                string ethernetMac = GetMacFromInterfaceType(
+                    interfaces,
+                    System.Net.NetworkInformation.NetworkInterfaceType.Ethernet
+                );
+
+                if (!string.IsNullOrEmpty(ethernetMac))
+                    return ethernetMac;
+
+                // 2. Fallback: WLAN Adapter mit Status Up
+                string wlanMac = GetMacFromInterfaceType(
+                    interfaces,
+                    System.Net.NetworkInformation.NetworkInterfaceType.Wireless80211
+                );
+
+                if (!string.IsNullOrEmpty(wlanMac))
+                    return wlanMac;
 
                 return string.Empty;
             }
@@ -840,7 +829,54 @@ namespace TaMi_Einzahlautomat
                 return string.Empty;
             }
         }
-        
+
+        private static string GetMacFromInterfaceType(
+            System.Net.NetworkInformation.NetworkInterface[] interfaces,
+            System.Net.NetworkInformation.NetworkInterfaceType interfaceType)
+        {
+            foreach (var nic in interfaces)
+            {
+                try
+                {
+                    if (nic.NetworkInterfaceType == interfaceType &&
+                        nic.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up)
+                    {
+                        var mac = nic.GetPhysicalAddress().ToString();
+
+                        if (!string.IsNullOrEmpty(mac) && mac != "000000000000")
+                        {
+                            return FormatMac(mac);
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            return string.Empty;
+        }
+
+        private static string FormatMac(string mac)
+        {
+            mac = mac.Replace(":", "").Replace("-", "").ToUpperInvariant();
+
+            if (mac.Length == 12)
+            {
+                var formatted = string.Empty;
+
+                for (int i = 0; i < mac.Length; i += 2)
+                {
+                    if (formatted.Length > 0)
+                        formatted += ":";
+
+                    formatted += mac.Substring(i, 2);
+                }
+
+                return formatted;
+            }
+
+            return mac;
+        }
+
         /// <summary>
         /// Erstellt CRC32-Prüfsumme über Pfad + Dateiname der EXE
         /// </summary>
