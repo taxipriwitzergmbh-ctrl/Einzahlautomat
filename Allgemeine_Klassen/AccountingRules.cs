@@ -12,7 +12,7 @@ namespace TaMi_Einzahlautomat
         public int Konto { get; set; }
     }
 
-    // Kontext für Regelbewertung (kann bei Bedarf erweitert werden)
+    // tKontext für Regelbewertung (kann bei Bedarf erweitert werden)
     public class AccountingRuleContext
     {
         public int MandantId { get; set; }
