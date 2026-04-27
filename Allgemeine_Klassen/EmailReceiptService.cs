@@ -500,8 +500,12 @@ namespace TaMi_Einzahlautomat
         public string Password { get; set; }
         public string AlertEmail { get; set; } // mehrere Empfänger per ';'
         public bool DisableSupportMail { get; set; } // NEU: Support-Mail unterdrücken
+        public int Dienstkonto2ID { get; set; }
+        public string Dienstkonto2FromName { get; set; }
 
-        public bool IsConfigured => !string.IsNullOrWhiteSpace(FromAddress) && !string.IsNullOrWhiteSpace(SmtpHost);
+        public bool IsConfigured =>
+        Dienstkonto2ID > 0 &&
+        !string.IsNullOrWhiteSpace(Dienstkonto2FromName);
 
         private const string IniSection = "Mail";
 
@@ -533,6 +537,11 @@ namespace TaMi_Einzahlautomat
                 var storedPwd = IniHelper.ReadValue(IniSection, "Password", AppSettings.IniPath);
                 s.Password = DecryptSecret(storedPwd ?? string.Empty);
                 s.AlertEmail = IniHelper.ReadValue(IniSection, "AlertEmail", AppSettings.IniPath);
+                int dk2;
+                if (int.TryParse(IniHelper.ReadValue(IniSection, "Dienstkonto2ID", AppSettings.IniPath), out dk2))
+                    s.Dienstkonto2ID = dk2;
+
+                s.Dienstkonto2FromName = IniHelper.ReadValue(IniSection, "Dienstkonto2FromName", AppSettings.IniPath);
                 bool disableSupport; s.DisableSupportMail = bool.TryParse(IniHelper.ReadValue(IniSection, "DisableSupportMail", AppSettings.IniPath), out disableSupport) ? disableSupport : false;
             }
             catch { }

@@ -162,7 +162,7 @@ namespace TaMi_Einzahlautomat
                         if (diff > 0)
                             text = $"Nachzahlung Schicht \"{kennzeichen}\" vom {datum}{betragStr}";
                         else if (diff < 0)
-                            text = $"R�ckzahlung Schicht \"{kennzeichen}\" vom {datum}{betragStr}";
+                            text = $"Rückzahlung Schicht \"{kennzeichen}\" vom {datum}{betragStr}";
                         else
                             text = $"Schicht \"{kennzeichen}\" vom {datum}{betragStr}";
                     }

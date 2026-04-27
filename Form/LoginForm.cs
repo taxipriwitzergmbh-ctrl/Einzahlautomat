@@ -26,6 +26,7 @@ namespace TaMi_Einzahlautomat
 
         // Flow Steuerung
         private enum LoginStage { EnterPid, EnterPassword, CreatePassword1, CreatePassword2 }
+        private enum LoginHistoryType { None, PersIdPinPassword, NfcTag }
         private LoginStage _stage = LoginStage.EnterPid;
 
         private int _pendingPid = 0;
@@ -1176,7 +1177,7 @@ namespace TaMi_Einzahlautomat
             OpenAbrechnung(personal, details, true);
         }
 
-        private async System.Threading.Tasks.Task ProceedOpenAsync(DatabaseHelper db)
+        private async System.Threading.Tasks.Task ProceedOpenAsync(DatabaseHelper db, LoginHistoryType loginHistoryType = LoginHistoryType.None)
         {
             bool isAdmin = IsAdminBackdoor(txtPersId.Text ?? string.Empty) || IsAdminBackdoor(_expectedCode ?? string.Empty);
 
@@ -1232,6 +1233,33 @@ namespace TaMi_Einzahlautomat
                 }
             }
             catch { }
+
+            try
+            {
+                if (!isAdmin)
+                {
+                    if (loginHistoryType == LoginHistoryType.PersIdPinPassword)
+                    {
+                        await db.LogEzAtmLoginHistoryAsync(
+                            personal.PID,
+                            DatabaseHelper.TAMI_EVENT_EZATM_LOGIN_PERSID,AppSettings.AutomatenName);
+                    }
+                    else if (loginHistoryType == LoginHistoryType.NfcTag)
+                    {
+                        await db.LogEzAtmLoginHistoryAsync(
+                            personal.PID,
+                            DatabaseHelper.TAMI_EVENT_EZATM_LOGIN_NFCTAG, AppSettings.AutomatenName);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    AppLogger.Log("THistoryEvents Login-History konnte nicht geschrieben werden: " + ex.Message);
+                }
+                catch { }
+            }
 
             AppLogger.Log($"Login OK: {personal?.Vorname} {personal?.Name} (PID={_pendingPid}), Schicht {(details?.SchichtId ?? 0)}, Admin={isAdmin}, Personalguthaben: {guthaben:0.00} €");
             AppLogger.Log(new string('_', 74)); LogBestandSnapshot($"Anmeldung {personal?.Vorname} {personal?.Name}".Trim());
@@ -1418,7 +1446,7 @@ namespace TaMi_Einzahlautomat
                             var now = DateTime.Now; DateTime defExit = new DateTime(1899, 12, 30);
                             if (status.EintrittAm.HasValue && status.EintrittAm.Value > now) { lblError.Text = "Eintrittsdatum liegt in der Zukunft."; return; }
                             if (status.AustrittAm.HasValue && status.AustrittAm.Value != defExit && status.AustrittAm.Value < now) { lblError.Text = "Austrittsdatum abgelaufen."; return; }
-                            _pendingPid = personal.PID; _pendingPersonalInfo = personal; await ProceedOpenAsync(db); return;
+                            _pendingPid = personal.PID; _pendingPersonalInfo = personal; await ProceedOpenAsync(db, LoginHistoryType.PersIdPinPassword); return;
                         }
                         catch (Exception ex) { lblError.Text = "Fehler: " + ex.Message; return; }
                     }
@@ -1432,7 +1460,7 @@ namespace TaMi_Einzahlautomat
                     if (string.IsNullOrEmpty(entered)) { lblError.Text = "Bitte Passwort eingeben."; return; }
                     if (string.Equals(entered, _expectedCode, StringComparison.Ordinal))
                     {
-                        using (var db = new DatabaseHelper()) { await ProceedOpenAsync(db); }
+                        using (var db = new DatabaseHelper()) { await ProceedOpenAsync(db, LoginHistoryType.PersIdPinPassword); }
                         // Nach erfolgreichem Login Felder zurücksetzen
                         CancelPasswordFlow();
                         return;
@@ -1461,7 +1489,7 @@ namespace TaMi_Einzahlautomat
                         try { await db.SetFahrercodeAsync(_pendingPid, _newCodeFirst); _expectedCode = _newCodeFirst; }
                         catch (Exception ex) { lblError.Text = "Fehler beim Setzen: " + ex.Message; return; }
                         // Nach setzen direkt prüfen/öffnen
-                        await ProceedOpenAsync(db);
+                        await ProceedOpenAsync(db, LoginHistoryType.PersIdPinPassword);
                         // Felder zurücksetzen
                         CancelPasswordFlow();
                         return;
@@ -1564,7 +1592,7 @@ namespace TaMi_Einzahlautomat
                             }
                             _pendingPid = p.PID;
                             _pendingPersonalInfo = p;
-                            await ProceedOpenAsync(db);
+                            await ProceedOpenAsync(db, LoginHistoryType.NfcTag);
                             // Nach erfolgreichem Wartungsmodus-Login zurücksetzen
                             CancelPasswordFlow();
                             return;
@@ -1620,7 +1648,7 @@ namespace TaMi_Einzahlautomat
                         btnCancelPwd.Visible = false;
 
                         try { AppLogger.Log($"NFC-Login erkannt: Token='[...]', PID={_pendingPid}"); } catch { }
-                        await ProceedOpenAsync(db);
+                        await ProceedOpenAsync(db, LoginHistoryType.NfcTag);
                     }
                 }
                 catch (Exception ex)

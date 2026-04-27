@@ -132,8 +132,25 @@ namespace TaMi_Einzahlautomat
                 GradientStart = UiTheme.PrimaryStart,
                 GradientEnd = UiTheme.PrimaryEnd
             };
-            btnClose.Click += (s,e)=>
+            btnClose.Click += (s, e) =>
             {
+                grid.EndEdit();
+
+                foreach (var item in _binding)
+                {
+                    if (item == null)
+                        continue;
+
+                    if (string.IsNullOrWhiteSpace(item.Kost1))
+                        item.Kost1 = "0";
+
+                    if (string.IsNullOrWhiteSpace(item.Kost2))
+                        item.Kost2 = "0";
+
+                    if (string.IsNullOrWhiteSpace(item.Konto))
+                        item.Konto = "0";
+                }
+
                 PaymentSettingsStore.UpdateFromBindingList(_binding);
                 DialogResult = DialogResult.OK;
                 Close();
