@@ -13,7 +13,8 @@ namespace TaMi_Einzahlautomat
     public partial class PersonalVerwaltungForm : Form
     {
         private ModernHeaderPanel _header;
-        private TextBox txtPid; private Label lblName; private Label lblVorname; private TextBox txtNfc; private TextBox txtFahrercode; private Button btnSave; private Panel numPadPanel; private Button btnClearNfc; private Button btnShowHideCode; private Button btnClearCode; private Button btnNfcUebernehmen; private int _currentPid = 0; private TextBox _lastFocusedTextBox; private Label lblStatus; private Label lblEintritt; private Label lblAustritt; private PersonalInfo _loadedPersonal;
+        private Panel _contentPanel;
+        private TextBox txtPid; private ComboBox cboPersonal; private Label lblName; private Label lblVorname; private TextBox txtNfc; private TextBox txtFahrercode; private Button btnSave; private Panel numPadPanel; private Button btnClearNfc; private Button btnShowHideCode; private Button btnClearCode; private Button btnNfcUebernehmen; private int _currentPid = 0; private TextBox _lastFocusedTextBox; private Label lblStatus; private Label lblEintritt; private Label lblAustritt; private PersonalInfo _loadedPersonal;
         private static readonly DateTime PlaceholderExitDate = new DateTime(1899, 12, 30); // Platzhalter
 
         [DllImport("gdi32.dll", SetLastError = true)]
@@ -23,12 +24,58 @@ namespace TaMi_Einzahlautomat
 
         public PersonalVerwaltungForm() { InitUi(); }
 
+        private sealed class PersonalDropdownItem
+        {
+            public int PID { get; set; }
+            public string Name { get; set; }
+            public string Vorname { get; set; }
+            public override string ToString()
+            {
+                var fullName = ((Name ?? string.Empty) + ", " + (Vorname ?? string.Empty)).Trim(' ', ',');
+                return string.IsNullOrWhiteSpace(fullName) ? PID.ToString() : $"{PID} - {fullName}";
+            }
+        }
+
+        private Panel CreateSectionPanel(Point location, Size size)
+        {
+            return new Panel
+            {
+                Location = location,
+                Size = size,
+                BackColor = Color.FromArgb(248, 250, 252),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+        }
+
+        private Label CreateSectionTitle(string text, Point location)
+        {
+            return new Label
+            {
+                Text = text,
+                Location = location,
+                AutoSize = true,
+                Font = new Font("Segoe UI Variable", 12.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(33, 150, 243)
+            };
+        }
+
+        private Label CreateFieldLabel(string text, Point location)
+        {
+            return new Label
+            {
+                Text = text,
+                Location = location,
+                AutoSize = true,
+                Font = new Font("Segoe UI Variable", 11F)
+            };
+        }
+
         private void InitUi()
         {
             // Fenster-Setup
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(620, 840); // Höhe erhöht
+            ClientSize = new Size(700, 1040);
             BackColor = Color.White;
             DoubleBuffered = true;
             KeyPreview = true;
@@ -41,84 +88,133 @@ namespace TaMi_Einzahlautomat
             _header.BringToFront();
             try { _header.ApplyRoundedRegionToForm(this); } catch { }
 
-            int y = 80;
-            var lblPid = new Label { Text = "Personalnummer:", Location = new Point(24, y), AutoSize = true, Font = new Font("Segoe UI Variable", 12F) };
-            Controls.Add(lblPid);
-            txtPid = new TextBox { Location = new Point(24, y + 30), Width = 220, Font = new Font("Segoe UI Variable", 18F), TextAlign = HorizontalAlignment.Center, MaxLength = 8 };
+            _contentPanel = new Panel
+            {
+                Location = new Point(0, _header.Bottom),
+                Size = new Size(ClientSize.Width, ClientSize.Height - _header.Height),
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+                AutoScroll = true,
+                BackColor = Color.White
+            };
+            Controls.Add(_contentPanel);
+
+            int y = 20;
+            int sectionWidth = ClientSize.Width - 48;
+            int innerLeft = 18;
+            int sectionGap = 18;
+
+            var searchPanel = CreateSectionPanel(new Point(24, y), new Size(sectionWidth, 128));
+            searchPanel.Controls.Add(CreateSectionTitle("Mitarbeiter suchen", new Point(innerLeft, 12)));
+
+            var lblPid = CreateFieldLabel("Personalnummer", new Point(innerLeft, 48));
+            searchPanel.Controls.Add(lblPid);
+            txtPid = new TextBox { Location = new Point(innerLeft, 72), Width = 120, Font = new Font("Segoe UI Variable", 18F), TextAlign = HorizontalAlignment.Center, MaxLength = 5 };
             txtPid.GotFocus += TrackTextFocus; // Fokus-Tracking
-            Controls.Add(txtPid);
-            var btnLoad = new ModernGradientButton { Text = "Laden", Location = new Point(260, y + 30), Size = new Size(120, 44), Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold), GradientStart = UiTheme.PrimaryStart, GradientEnd = UiTheme.PrimaryEnd };
+            searchPanel.Controls.Add(txtPid);
+            var btnLoad = new ModernGradientButton { Text = "⟳", Location = new Point(148, 72), Size = new Size(44, 44), Font = new Font("Segoe UI Variable", 14F, FontStyle.Bold), GradientStart = UiTheme.PrimaryStart, GradientEnd = UiTheme.PrimaryEnd };
             btnLoad.Click += async (s, e) => await LoadPersonalAsync();
-            Controls.Add(btnLoad);
+            searchPanel.Controls.Add(btnLoad);
 
-            y += 90;
-            lblName = new Label { Text = "Name:", Location = new Point(24, y), Size = new Size(560, 30), Font = new Font("Segoe UI Variable", 12F) };
-            lblVorname = new Label { Text = "Vorname:", Location = new Point(24, y + 34), Size = new Size(560, 30), Font = new Font("Segoe UI Variable", 12F) };
-            Controls.Add(lblName);
-            Controls.Add(lblVorname);
+            var lblPersonalAuswahl = CreateFieldLabel("Mitarbeiter auswählen", new Point(218, 48));
+            searchPanel.Controls.Add(lblPersonalAuswahl);
+            cboPersonal = new ComboBox
+            {
+                Location = new Point(218, 74),
+                Width = 396,
+                Font = new Font("Segoe UI Variable", 13F),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cboPersonal.SelectedIndexChanged += async (s, e) =>
+            {
+                if (cboPersonal.SelectedItem is PersonalDropdownItem item && item.PID > 0 && item.PID != _currentPid)
+                {
+                    txtPid.Text = item.PID.ToString();
+                    await LoadPersonalAsync();
+                }
+            };
+            searchPanel.Controls.Add(cboPersonal);
+            _contentPanel.Controls.Add(searchPanel);
 
-            lblStatus = new Label { Text = "Status:", Location = new Point(24, y + 68), Size = new Size(560, 24), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
-            lblEintritt = new Label { Text = "Eintritt: -", Location = new Point(24, y + 92), Size = new Size(270, 22), Font = new Font("Segoe UI Variable", 10.5F) };
-            lblAustritt = new Label { Text = "Austritt: -", Location = new Point(300, y + 92), Size = new Size(284, 22), Font = new Font("Segoe UI Variable", 10.5F) };
-            Controls.Add(lblStatus); Controls.Add(lblEintritt); Controls.Add(lblAustritt);
-            y += 110; // verschieben nach unten wegen neuer Labels
+            y = searchPanel.Bottom + sectionGap;
+            var infoPanel = CreateSectionPanel(new Point(24, y), new Size(sectionWidth, 168));
+            infoPanel.Controls.Add(CreateSectionTitle("Personaldaten", new Point(innerLeft, 12)));
+            lblName = new Label { Text = "Name:", Location = new Point(innerLeft, 48), Size = new Size(600, 28), Font = new Font("Segoe UI Variable", 12F) };
+            lblVorname = new Label { Text = "Vorname:", Location = new Point(innerLeft, 76), Size = new Size(600, 28), Font = new Font("Segoe UI Variable", 12F) };
+            infoPanel.Controls.Add(lblName);
+            infoPanel.Controls.Add(lblVorname);
 
-            // NFC Label
-            var lblNfc = new Label { Text = "NFC:", Location = new Point(24, y), AutoSize = true, Font = new Font("Segoe UI Variable", 12F) };
-            Controls.Add(lblNfc);
-            txtNfc = new TextBox { Location = new Point(24, y + 30), Width = 360, Font = new Font("Segoe UI Variable", 14F) };
+            lblStatus = new Label { Text = "Status:", Location = new Point(innerLeft, 108), Size = new Size(600, 24), Font = new Font("Segoe UI Variable", 11F, FontStyle.Bold) };
+            lblEintritt = new Label { Text = "Eintritt: -", Location = new Point(innerLeft, 132), Size = new Size(260, 22), Font = new Font("Segoe UI Variable", 10.5F) };
+            lblAustritt = new Label { Text = "Austritt: -", Location = new Point(320, 132), Size = new Size(280, 22), Font = new Font("Segoe UI Variable", 10.5F) };
+            infoPanel.Controls.Add(lblStatus);
+            infoPanel.Controls.Add(lblEintritt);
+            infoPanel.Controls.Add(lblAustritt);
+            _contentPanel.Controls.Add(infoPanel);
+
+            y = infoPanel.Bottom + sectionGap;
+            var accessPanel = CreateSectionPanel(new Point(24, y), new Size(sectionWidth, 206));
+            accessPanel.Controls.Add(CreateSectionTitle("Zugangsdaten", new Point(innerLeft, 12)));
+
+            var lblNfc = CreateFieldLabel("NFC", new Point(innerLeft, 48));
+            accessPanel.Controls.Add(lblNfc);
+            txtNfc = new TextBox { Location = new Point(innerLeft, 72), Width = 382, Font = new Font("Segoe UI Variable", 14F) };
             txtNfc.GotFocus += TrackTextFocus;
-            Controls.Add(txtNfc);
-            btnClearNfc = new Button { Text = "X", Location = new Point(392, y + 28), Size = new Size(44, 36), BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold) };
+            accessPanel.Controls.Add(txtNfc);
+            btnClearNfc = new Button { Text = "X", Location = new Point(408, 72), Size = new Size(44, 36), BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold) };
             btnClearNfc.FlatAppearance.BorderSize = 0;
             btnClearNfc.Click += (s, e) => txtNfc.Text = string.Empty;
-            Controls.Add(btnClearNfc);
+            accessPanel.Controls.Add(btnClearNfc);
 
             var mgbClearNfc = new ModernGradientButton { Text = "X", Location = btnClearNfc.Location, Size = btnClearNfc.Size, Font = btnClearNfc.Font, GradientStart = UiTheme.DangerStart, GradientEnd = UiTheme.DangerEnd };
             mgbClearNfc.Click += (s, e) => txtNfc.Text = string.Empty;
-            Controls.Remove(btnClearNfc);
+            accessPanel.Controls.Remove(btnClearNfc);
             try { btnClearNfc.Dispose(); } catch { }
             btnClearNfc = mgbClearNfc;
-            Controls.Add(btnClearNfc);
+            accessPanel.Controls.Add(btnClearNfc);
 
-            btnNfcUebernehmen = new ModernGradientButton { Text = "NFC übernehmen", Location = new Point(444, y + 28), Size = new Size(140, 36), Font = new Font("Segoe UI Variable", 10F, FontStyle.Bold), GradientStart = UiTheme.PrimaryStart, GradientEnd = UiTheme.PrimaryEnd };
+            btnNfcUebernehmen = new ModernGradientButton { Text = "NFC übernehmen", Location = new Point(468, 72), Size = new Size(146, 36), Font = new Font("Segoe UI Variable", 10F, FontStyle.Bold), GradientStart = UiTheme.PrimaryStart, GradientEnd = UiTheme.PrimaryEnd };
             btnNfcUebernehmen.Click += (s, e) => TryTakeLastNfc();
-            Controls.Add(btnNfcUebernehmen);
+            accessPanel.Controls.Add(btnNfcUebernehmen);
 
-            y += 80;
-            var lblFcode = new Label { Text = "Fahrercode:", Location = new Point(24, y), AutoSize = true, Font = new Font("Segoe UI Variable", 12F) };
-            Controls.Add(lblFcode);
-            txtFahrercode = new TextBox { Location = new Point(24, y + 30), Width = 220, Font = new Font("Segoe UI Variable", 18F), TextAlign = HorizontalAlignment.Center, UseSystemPasswordChar = true, MaxLength = 8 };
+            var lblFcode = CreateFieldLabel("Fahrercode", new Point(innerLeft, 116));
+            accessPanel.Controls.Add(lblFcode);
+            txtFahrercode = new TextBox { Location = new Point(innerLeft, 140), Width = 220, Font = new Font("Segoe UI Variable", 18F), TextAlign = HorizontalAlignment.Center, UseSystemPasswordChar = true, MaxLength = 8 };
             txtFahrercode.GotFocus += TrackTextFocus;
-            Controls.Add(txtFahrercode);
-            btnShowHideCode = new Button { Text = "👁", Location = new Point(250, y + 30), Size = new Size(44, 44), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(245, 247, 250) };
+            accessPanel.Controls.Add(txtFahrercode);
+            btnShowHideCode = new Button { Text = "👁", Location = new Point(244, 140), Size = new Size(44, 44), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(245, 247, 250) };
             btnShowHideCode.FlatAppearance.BorderSize = 0;
             btnShowHideCode.Click += (s, e) => { txtFahrercode.UseSystemPasswordChar = !txtFahrercode.UseSystemPasswordChar; };
-            Controls.Add(btnShowHideCode);
-            btnClearCode = new Button { Text = "Löschen", Location = new Point(300, y + 30), Size = new Size(120, 44), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold) };
+            accessPanel.Controls.Add(btnShowHideCode);
+            btnClearCode = new Button { Text = "Löschen", Location = new Point(298, 140), Size = new Size(130, 44), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(229, 57, 53), ForeColor = Color.White, Font = new Font("Segoe UI Variable", 12F, FontStyle.Bold) };
             btnClearCode.FlatAppearance.BorderSize = 0;
             btnClearCode.Click += (s, e) => txtFahrercode.Text = string.Empty;
-            Controls.Add(btnClearCode);
+            accessPanel.Controls.Add(btnClearCode);
             try
             {
                 var mg = new ModernGradientButton { Text = btnClearCode.Text, Location = btnClearCode.Location, Size = btnClearCode.Size, Font = btnClearCode.Font, GradientStart = UiTheme.DangerStart, GradientEnd = UiTheme.DangerEnd };
                 mg.Click += (s, e) => txtFahrercode.Text = string.Empty;
-                Controls.Remove(btnClearCode);
+                accessPanel.Controls.Remove(btnClearCode);
                 try { btnClearCode.Dispose(); } catch { }
                 btnClearCode = mg;
-                Controls.Add(btnClearCode);
+                accessPanel.Controls.Add(btnClearCode);
             }
             catch { }
+            _contentPanel.Controls.Add(accessPanel);
 
-            y += 90;
-            btnSave = new ModernGradientButton { Text = "Speichern", Location = new Point(24, y), Size = new Size(180, 48), Font = new Font("Segoe UI Variable", 14F, FontStyle.Bold), GradientStart = UiTheme.PrimaryStart, GradientEnd = UiTheme.PrimaryEnd };
+            y = accessPanel.Bottom + sectionGap;
+            var actionPanel = CreateSectionPanel(new Point(24, y), new Size(sectionWidth, 356));
+            actionPanel.Controls.Add(CreateSectionTitle("Aktionen", new Point(innerLeft, 12)));
+            btnSave = new ModernGradientButton { Text = "Speichern", Location = new Point((sectionWidth - 220) / 2, 46), Size = new Size(220, 48), Font = new Font("Segoe UI Variable", 14F, FontStyle.Bold), GradientStart = UiTheme.PrimaryStart, GradientEnd = UiTheme.PrimaryEnd };
             btnSave.Click += async (s, e) => await SaveAsync();
-            Controls.Add(btnSave);
+            actionPanel.Controls.Add(btnSave);
 
             int keypadBtnH = 50; int keypadPad = 8; int keypadRows = 4; int keypadHeight = keypadRows * (keypadBtnH + keypadPad) - keypadPad;
-            numPadPanel = new Panel { Location = new Point(24, y + 70), Size = new Size(560, keypadHeight + 4), AutoScroll = false, Anchor = AnchorStyles.Left | AnchorStyles.Bottom | AnchorStyles.Right };
-            Controls.Add(numPadPanel);
+            numPadPanel = new Panel { Location = new Point((sectionWidth - 376) / 2, 112), Size = new Size(376, keypadHeight + 4), AutoScroll = false, Anchor = AnchorStyles.Top, BackColor = Color.Transparent };
+            actionPanel.Controls.Add(numPadPanel);
+            _contentPanel.Controls.Add(actionPanel);
             BuildNumPad();
+
+            _ = LoadPersonalDropdownAsync();
 
             try { BeginInvoke((Action)(() => { try { txtPid.Focus(); _lastFocusedTextBox = txtPid; txtPid.SelectionStart = txtPid.TextLength; } catch { } })); } catch { }
 
@@ -135,6 +231,43 @@ namespace TaMi_Einzahlautomat
         }
 
         // Header wird zentral über `ModernHeaderPanel` gezeichnet.
+
+
+        private async System.Threading.Tasks.Task LoadPersonalDropdownAsync()
+        {
+            if (cboPersonal == null) return;
+
+            try
+            {
+                using (var db = new DatabaseHelper())
+                {
+                    // Nutzt die zentrale Abfrage aus DatabaseHelper: TPersonal, nur nicht gesperrte Mitarbeiter.
+                    var mitarbeiterList = await db.GetAktiveMitarbeiterAsync();
+                    if (mitarbeiterList == null) return;
+
+                    var items = new List<PersonalDropdownItem>();
+                    foreach (var mitarbeiter in mitarbeiterList)
+                    {
+                        if (mitarbeiter.PID <= 0) continue;
+                        items.Add(new PersonalDropdownItem
+                        {
+                            PID = mitarbeiter.PID,
+                            Name = mitarbeiter.Name ?? string.Empty,
+                            Vorname = string.Empty
+                        });
+                    }
+
+                    cboPersonal.BeginUpdate();
+                    cboPersonal.Items.Clear();
+                    foreach (var item in items) cboPersonal.Items.Add(item);
+                    cboPersonal.EndUpdate();
+                }
+            }
+            catch
+            {
+                // Dropdown ist Komfortfunktion; manuelles Laden per Personalnummer bleibt weiterhin möglich.
+            }
+        }
 
         private void BuildNumPad()
         {
@@ -239,8 +372,26 @@ namespace TaMi_Einzahlautomat
             {
                 var p = await db.GetPersonalInfoAsync(pid); if (p == null) { MessageBox.Show(this, "Personalnummer nicht gefunden.", "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
                 if (p.Austrittsdatum.HasValue && p.Austrittsdatum.Value.Date == PlaceholderExitDate.Date) p.Austrittsdatum = null; // Platzhalter entfernen
-                _currentPid = p.PID; _loadedPersonal = p; lblName.Text = $"Name: {p.Name}"; lblVorname.Text = $"Vorname: {p.Vorname}"; txtNfc.Text = p.NFC ?? string.Empty; txtFahrercode.Text = p.Fahrercode ?? string.Empty; UpdateStatusIndicators();
+                _currentPid = p.PID; _loadedPersonal = p; lblName.Text = $"Name: {p.Name}"; lblVorname.Text = $"Vorname: {p.Vorname}"; txtNfc.Text = p.NFC ?? string.Empty; txtFahrercode.Text = p.Fahrercode ?? string.Empty; SelectPersonalInDropdown(p.PID); UpdateStatusIndicators();
             }
+        }
+
+
+        private void SelectPersonalInDropdown(int pid)
+        {
+            if (cboPersonal == null || pid <= 0) return;
+            try
+            {
+                for (int i = 0; i < cboPersonal.Items.Count; i++)
+                {
+                    if (cboPersonal.Items[i] is PersonalDropdownItem item && item.PID == pid)
+                    {
+                        if (cboPersonal.SelectedIndex != i) cboPersonal.SelectedIndex = i;
+                        return;
+                    }
+                }
+            }
+            catch { }
         }
 
         private async System.Threading.Tasks.Task SaveAsync()

@@ -1233,6 +1233,25 @@ namespace TaMi_Einzahlautomat {
             }
         }
 
+        public async Task<List<(int PID, string Name) > > GetAktiveMitarbeiterAsync() {
+            var list = new List<(int, string)>();
+            await EnsureOpenAsync().ConfigureAwait(false);
+
+            using (var cmd = _connection.CreateCommand()) {
+                cmd .CommandText = @" SELECT PID, Name, Vorname FROM TPersonal WITH (NOLOCK) WHERE ISNULL(Gesperrt,0)=0 AND (AustrittAm IS NULL OR CONVERT(date, AustrittAm) = @PlaceholderExitDate OR AustrittAm >= CONVERT(date, GETDATE())) ORDER BY Name, Vorname";
+                cmd .Parameters.AddWithValue("@PlaceholderExitDate", new DateTime(1899, 12, 30));
+                using (var rdr = await cmd.ExecuteReaderAsync()) {
+                    while (await rdr.ReadAsync()) {
+                        int pid = rdr.GetInt32(0);
+                        string name = string.Format("{0} {1}", Convert.ToString(rdr["Name"]), Convert.ToString(rdr["Vorname"])).Trim();
+                        list .Add((pid, name));
+                    }
+                }
+            }
+
+            return list;
+        }
+
         public async System.Threading.Tasks.Task<List<DienstkontoInfo > > GetDienstkontenAsync() {
             var list = new List<DienstkontoInfo>();
             await EnsureOpenAsync().ConfigureAwait(false);
@@ -1275,8 +1294,31 @@ namespace TaMi_Einzahlautomat {
             using (var tx = _connection.BeginTransaction(IsolationLevel.Serializable))
             using (var cmd = _connection.CreateCommand()) {
                 cmd .Transaction = tx;
-                cmd .CommandText = @" DECLARE @NextEventIdNum bigint; SELECT @NextEventIdNum = ISNULL(MAX(TRY_CONVERT(bigint, EventID)), 0) + 1 FROM THistoryEvents WITH (UPDLOCK, HOLDLOCK); INSERT INTO THistoryEvents ( EventID, EventZeit, EventTyp, EventJobID, EventPersID, EventFhzID, EventFhrID, EventText ) VALUES ( RIGHT(REPLICATE('0', 11) + CONVERT(varchar(11), @NextEventIdNum), 11), SYSDATETIME(), @EventTyp, '', @EventPersID, 0, 0, @EventText );
-                "; cmd.Parameters.Add("@EventTyp", SqlDbType.TinyInt).Value = eventTyp; cmd .Parameters.Add("@EventPersID", SqlDbType.Int).Value = persId; cmd .Parameters.Add("@EventText", SqlDbType.VarChar, 1000).Value = eventText; await cmd.ExecuteNonQueryAsync().ConfigureAwait(false); tx .Commit();
+                cmd .CommandText = @" DECLARE @NextEventIdNum bigint; SELECT @NextEventIdNum = ISNULL(MAX( CASE WHEN EventID IS NOT NULL AND LEN(EventID) > 0 AND EventID NOT LIKE '%[^0-9]%' THEN CAST(EventID AS bigint) ELSE NULL END ), 0) + 1 FROM THistoryEvents WITH (UPDLOCK, HOLDLOCK);
+                INSERT INTO THistoryEvents (
+    EventID,
+    EventZeit,
+    EventTyp,
+    EventJobID,
+    EventPersID,
+    EventFhzID,
+    EventFhrID,
+    EventText
+) VALUES (
+    RIGHT(REPLICATE('0', 11) + CONVERT(varchar(11), @NextEventIdNum), 11),
+    GETDATE(),
+    @EventTyp,
+    '',
+    @EventPersID,
+    0,
+    0,
+    @EventText
+);
+                "; cmd.Parameters.Add("@EventTyp", SqlDbType.TinyInt).Value = eventTyp;
+                cmd .Parameters.Add("@EventPersID", SqlDbType.Int).Value = persId;
+                cmd .Parameters.Add("@EventText", SqlDbType.VarChar, 1000).Value = eventText;
+                await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                tx .Commit();
             }
         }
     }
