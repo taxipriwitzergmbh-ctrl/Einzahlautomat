@@ -929,7 +929,14 @@ namespace TaMi_Einzahlautomat
             if (!_onlyNfc && !licenseInvalid)
             {
                 if (_picNfc != null) { Controls.Remove(_picNfc); try { _picNfc.Dispose(); } catch { } _picNfc = null; }
-                lblPrompt.Visible = true; txtPersId.Visible = true; btnCancelPwd.Visible = false; lblError.Visible = true; btnLogin.Visible = true; numPadPanel.Visible = true; PositionExitMaintenanceButton(); return;
+                lblPrompt.Visible = true;
+                txtPersId.Visible = true;
+                btnCancelPwd.Visible = _stage != LoginStage.EnterPid;
+                lblError.Visible = true;
+                btnLogin.Visible = true;
+                numPadPanel.Visible = true;
+                PositionExitMaintenanceButton();
+                return;
             }
             // Bild anzeigen: NFC-Only-Modus oder Lizenz ungültig
             lblPrompt.Visible = false; txtPersId.Visible = false; btnCancelPwd.Visible = false; lblError.Visible = false; btnLogin.Visible = false; numPadPanel.Visible = false;

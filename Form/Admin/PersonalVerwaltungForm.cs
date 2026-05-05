@@ -111,7 +111,7 @@ namespace TaMi_Einzahlautomat
             txtPid = new TextBox { Location = new Point(innerLeft, 72), Width = 120, Font = new Font("Segoe UI Variable", 18F), TextAlign = HorizontalAlignment.Center, MaxLength = 5 };
             txtPid.GotFocus += TrackTextFocus; // Fokus-Tracking
             searchPanel.Controls.Add(txtPid);
-            var btnLoad = new ModernGradientButton { Text = "⟳", Location = new Point(148, 72), Size = new Size(44, 44), Font = new Font("Segoe UI Variable", 14F, FontStyle.Bold), GradientStart = UiTheme.PrimaryStart, GradientEnd = UiTheme.PrimaryEnd };
+            var btnLoad = new ModernGradientButton { Text = "⟳", Location = new Point(148, 72), Size = new Size(40, 40), Font = new Font("Segoe UI Variable", 14F, FontStyle.Bold), GradientStart = UiTheme.PrimaryStart, GradientEnd = UiTheme.PrimaryEnd };
             btnLoad.Click += async (s, e) => await LoadPersonalAsync();
             searchPanel.Controls.Add(btnLoad);
 

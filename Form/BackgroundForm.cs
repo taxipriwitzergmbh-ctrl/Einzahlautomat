@@ -11,8 +11,11 @@ namespace TaMi_Einzahlautomat
         private readonly bool _kioskMode;
         private PictureBox _picture;
         private Image _backgroundImage; // geladenes Hintergrundbild
-        // Neuer Offset: negative Werte schieben das Bild nach oben (zeigen mehr vom unteren Bereich)
-        private const int VerticalImageOffsetPx = -80; // bei Bedarf anpassen
+        // Negativer Offset schiebt das Bild nach oben.
+        private const int VerticalImageOffsetPx = -80;
+        private const int LargeScreenVerticalImageOffsetPx = 0;
+        private const int LargeScreenMinWidth = 1600;
+        private const int LargeScreenMinHeight = 900;
 
         public BackgroundForm(bool kioskMode)
         {
@@ -45,6 +48,7 @@ namespace TaMi_Einzahlautomat
             Shown += (s, e) =>
             {
                 try { Bounds = Screen.PrimaryScreen.Bounds; } catch { }
+                try { LoadBackgroundImage(); } catch { }
                 if (_kioskMode) HideTaskbar();
                 SendToBack();
                 // sicherstellen dass sofort neu gerendert wird
@@ -77,17 +81,73 @@ namespace TaMi_Einzahlautomat
                 float drawW = imgW * scale;
                 float drawH = imgH * scale;
                 float x = (formW - drawW) / 2f;
-                float y = (formH - drawH) / 2f + VerticalImageOffsetPx; // Offset anwenden
+                float y = (formH - drawH) / 2f + GetVerticalImageOffsetPx(); // Offset anwenden
                 g.DrawImage(_backgroundImage, x, y, drawW, drawH);
             }
             catch { }
+        }
+
+        private int GetVerticalImageOffsetPx()
+        {
+            try
+            {
+                return IsLargeScreenLayout() ? LargeScreenVerticalImageOffsetPx : VerticalImageOffsetPx;
+            }
+            catch { return VerticalImageOffsetPx; }
+        }
+
+        private bool IsLargeScreenLayout()
+        {
+            try
+            {
+                int w = 0;
+                int h = 0;
+                try
+                {
+                    if (_picture != null)
+                    {
+                        w = _picture.Width;
+                        h = _picture.Height;
+                    }
+                }
+                catch { w = 0; h = 0; }
+
+                if (w <= 0 || h <= 0)
+                {
+                    try
+                    {
+                        var bounds = Screen.PrimaryScreen != null ? Screen.PrimaryScreen.Bounds : Rectangle.Empty;
+                        w = bounds.Width;
+                        h = bounds.Height;
+                    }
+                    catch { w = 0; h = 0; }
+                }
+
+                return w >= LargeScreenMinWidth && h >= LargeScreenMinHeight;
+            }
+            catch { return false; }
         }
 
         private void LoadBackgroundImage()
         {
             try
             {
-                var img = TaMi_Einzahlautomat.Properties.Resources.Hintergrund;
+                Image img = null;
+
+                if (IsLargeScreenLayout())
+                {
+                    try { img = GetResourceImage("Hintergrund_16_9"); } catch { img = null; }
+                    if (img == null)
+                    {
+                        try { img = GetResourceImage("Hintergrund 16_9"); } catch { img = null; }
+                    }
+                }
+
+                if (img == null)
+                {
+                    img = TaMi_Einzahlautomat.Properties.Resources.Hintergrund;
+                }
+
                 if (img != null)
                 {
                     _backgroundImage?.Dispose();
@@ -95,6 +155,33 @@ namespace TaMi_Einzahlautomat
                 }
             }
             catch { }
+        }
+
+        private Image GetResourceImage(string resourceName)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(resourceName)) return null;
+
+                object obj = null;
+                try { obj = TaMi_Einzahlautomat.Properties.Resources.ResourceManager.GetObject(resourceName); } catch { obj = null; }
+                if (obj == null) return null;
+
+                var img = obj as Image;
+                if (img != null) return img;
+
+                var bytes = obj as byte[];
+                if (bytes != null && bytes.Length > 0)
+                {
+                    using (var ms = new MemoryStream(bytes))
+                    using (var tmp = Image.FromStream(ms))
+                    {
+                        return new Bitmap(tmp);
+                    }
+                }
+            }
+            catch { }
+            return null;
         }
 
         protected override CreateParams CreateParams

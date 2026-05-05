@@ -558,6 +558,10 @@ namespace TaMi_Einzahlautomat
 
         private Image _bgImage;
         private const float BackgroundImageOpacity = 1.0f;
+        private const int DefaultClientWidth = 1280;
+        private const int DefaultClientHeight = 1024;
+        private const int FullScreenLayoutMinWidth = 1600;
+        private const int FullScreenLayoutMinHeight = 900;
         private bool _lastAbmeldenEnabled = true;
 
         private int _autoLogoffTimeoutSec = 0;
@@ -913,11 +917,12 @@ namespace TaMi_Einzahlautomat
                 }
 
                 // Reflow visible rows so there are no gaps.
-                // The coin rows are created in BuildWechselnTab with startY=106 and rowH=62.
                 try
                 {
-                    int startY = 106;
-                    int rowH = 62;
+                    bool expandedLayout = IsExpandedLayoutActive();
+                    int startY = GetCoinRowStartY();
+                    int rowH = GetCoinRowHeight();
+                    int picSize = GetCoinPictureSize();
                     int visibleIdx = 0;
                     for (int i = 0; i < 8; i++)
                     {
@@ -925,69 +930,22 @@ namespace TaMi_Einzahlautomat
                         int rowY = startY + visibleIdx * rowH;
                         visibleIdx++;
 
-                        try { if (picMuenzen != null && picMuenzen[i] != null) picMuenzen[i].Top = rowY + 6; } catch { }
-                        try { if (lblAnnahmeMuenzen != null && lblAnnahmeMuenzen[i] != null) lblAnnahmeMuenzen[i].Top = rowY + 10; } catch { }
-                        try { if (btnMinusMuenzen != null && btnMinusMuenzen[i] != null) btnMinusMuenzen[i].Top = rowY + 9; } catch { }
-                        try { if (lblAnzahlMuenzen != null && lblAnzahlMuenzen[i] != null) lblAnzahlMuenzen[i].Top = rowY + 9; } catch { }
-                        try { if (btnPlusMuenzen != null && btnPlusMuenzen[i] != null) btnPlusMuenzen[i].Top = rowY + 9; } catch { }
-                        try { if (lblVerfuegbarMuenzen != null && lblVerfuegbarMuenzen[i] != null) lblVerfuegbarMuenzen[i].Top = rowY + 14; } catch { }
-                    }
-
-                    // Reflow the subtle separators inside the Münzen card (1px panels)
-                    try
-                    {
-                        var host = (Control)(_wechselnSurface ?? tabWechseln);
-                        Panel cardCoins = null;
-                        foreach (Control c in host.Controls)
+                        try
                         {
-                            var p = c as Panel;
-                            if (p == null) continue;
-                            // Coins card: contains the coin picture boxes (50x50)
-                            if (p.Controls.OfType<PictureBox>().Any(pb => pb != null && pb.Width == 50 && pb.Height == 50))
+                            if (picMuenzen != null && picMuenzen[i] != null)
                             {
-                                cardCoins = p;
-                                break;
+                                picMuenzen[i].Top = rowY + (expandedLayout ? 8 : 6);
+                                picMuenzen[i].Size = new Size(picSize, picSize);
                             }
                         }
-                        if (cardCoins != null)
-                        {
-                            // Identify separator panels by 1px height and the light color used in BuildWechselnTab
-                            var seps = new List<Panel>();
-                            foreach (Control cc in cardCoins.Controls)
-                            {
-                                var pp = cc as Panel;
-                                if (pp == null) continue;
-                                if (pp.Height == 1 && pp.Width >= cardCoins.Width - 50) seps.Add(pp);
-                            }
-
-                            int sepIdx = 1; // after first visible row
-                            foreach (var sep in seps)
-                            {
-                                // Hide all first; then re-enable as needed
-                                try { sep.Visible = false; } catch { }
-                            }
-
-                            int visibleCount = 0;
-                            for (int i = 0; i < 8; i++) if (visRow[i]) visibleCount++;
-                            int needSeps = Math.Max(0, visibleCount - 1);
-                            int use = Math.Min(needSeps, seps.Count);
-                            for (int s = 0; s < use; s++)
-                            {
-                                int rowY = startY + s * rowH;
-                                var sep = seps[s];
-                                try
-                                {
-                                    sep.Top = rowY + rowH - 2;
-                                    sep.Left = 18;
-                                    sep.Width = cardCoins.Width - 36;
-                                    sep.Visible = true;
-                                }
-                                catch { }
-                                sepIdx++;
-                            }
-                        }
+                        catch { }
+                        try { if (lblAnnahmeMuenzen != null && lblAnnahmeMuenzen[i] != null) lblAnnahmeMuenzen[i].Top = rowY + (expandedLayout ? 17 : 10); } catch { }
+                        try { if (btnMinusMuenzen != null && btnMinusMuenzen[i] != null) btnMinusMuenzen[i].Top = rowY + (expandedLayout ? 16 : 9); } catch { }
+                        try { if (lblAnzahlMuenzen != null && lblAnzahlMuenzen[i] != null) lblAnzahlMuenzen[i].Top = rowY + (expandedLayout ? 16 : 9); } catch { }
+                        try { if (btnPlusMuenzen != null && btnPlusMuenzen[i] != null) btnPlusMuenzen[i].Top = rowY + (expandedLayout ? 16 : 9); } catch { }
+                        try { if (lblVerfuegbarMuenzen != null && lblVerfuegbarMuenzen[i] != null) lblVerfuegbarMuenzen[i].Top = rowY + (expandedLayout ? 26 : 14); } catch { }
                     }
-                    catch { }
+
                 }
                 catch { }
 
@@ -1112,6 +1070,104 @@ namespace TaMi_Einzahlautomat
             }
         }
 
+        private Rectangle GetAvailableFormBounds()
+        {
+            try
+            {
+                Rectangle bounds = Rectangle.Empty;
+
+                try
+                {
+                    if (Program.KioskModeEnabled && Program.BackgroundFormInstance != null)
+                        bounds = Program.BackgroundFormInstance.Bounds;
+                }
+                catch { bounds = Rectangle.Empty; }
+
+                if (bounds.Width <= 0 || bounds.Height <= 0)
+                {
+                    try
+                    {
+                        Screen screen = null;
+                        if (Program.BackgroundFormInstance != null)
+                            screen = Screen.FromControl(Program.BackgroundFormInstance);
+                        else
+                            screen = Screen.FromPoint(Cursor.Position);
+
+                        if (screen != null)
+                            bounds = Program.KioskModeEnabled ? screen.Bounds : screen.WorkingArea;
+                    }
+                    catch { bounds = Rectangle.Empty; }
+                }
+
+                if (bounds.Width <= 0 || bounds.Height <= 0)
+                    bounds = new Rectangle(0, 0, DefaultClientWidth, DefaultClientHeight);
+
+                return bounds;
+            }
+            catch { return new Rectangle(0, 0, DefaultClientWidth, DefaultClientHeight); }
+        }
+
+        private void ApplyInitialWindowBounds()
+        {
+            try
+            {
+                var bounds = GetAvailableFormBounds();
+                bool useFullScreenLayout = bounds.Width >= FullScreenLayoutMinWidth && bounds.Height >= FullScreenLayoutMinHeight;
+
+                if (useFullScreenLayout)
+                {
+                    StartPosition = FormStartPosition.Manual;
+                    Bounds = bounds;
+                }
+                else
+                {
+                    StartPosition = FormStartPosition.CenterScreen;
+                    ClientSize = new Size(DefaultClientWidth, DefaultClientHeight);
+                }
+            }
+            catch
+            {
+                StartPosition = FormStartPosition.CenterScreen;
+                ClientSize = new Size(DefaultClientWidth, DefaultClientHeight);
+            }
+        }
+
+        private bool IsExpandedLayoutActive()
+        {
+            try { return ClientSize.Width >= FullScreenLayoutMinWidth && ClientSize.Height >= FullScreenLayoutMinHeight; }
+            catch { return false; }
+        }
+
+        private int GetCoinRowStartY()
+        {
+            try { return IsExpandedLayoutActive() ? 126 : 106; } catch { return 106; }
+        }
+
+        private int GetCoinRowHeight()
+        {
+            try { return IsExpandedLayoutActive() ? 80: 62; } catch { return 62; }
+        }
+
+        private int GetCoinPictureSize()
+        {
+            try { return IsExpandedLayoutActive() ? 68 : 50; } catch { return 50; }
+        }
+
+        private void ApplyRoundedWindowRegion()
+        {
+            try
+            {
+                var oldRegion = Region;
+                Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24));
+                try
+                {
+                    if (oldRegion != null && !ReferenceEquals(oldRegion, Region)) oldRegion.Dispose();
+                }
+                catch { }
+            }
+            catch { }
+        }
+
         protected override void OnPaintBackground(PaintEventArgs e)
         {
             base.OnPaintBackground(e);
@@ -1217,10 +1273,10 @@ namespace TaMi_Einzahlautomat
         private void BuildModernLayout()
         {
             FormBorderStyle = FormBorderStyle.None;
-            StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(1280, 1024);
+            ApplyInitialWindowBounds();
             BackColor = Color.White;
             DoubleBuffered = true;
+            bool expandedLayout = IsExpandedLayoutActive();
             try { SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true); } catch { }
             try { UpdateStyles(); } catch { }
 
@@ -1690,16 +1746,25 @@ namespace TaMi_Einzahlautomat
             }
             catch { }
 
-            try { Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 24, 24)); } catch { }
+            ApplyRoundedWindowRegion();
+            try
+            {
+                SizeChanged += (s, e) =>
+                {
+                    try { ApplyRoundedWindowRegion(); } catch { }
+                };
+            }
+            catch { }
 
             tabControl = new BackgroundInheritingTabControl
             {
                 Location = new Point(40, 80),
-                Size = new Size(1200, 900),
-                Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
-                ItemSize = new Size(300, 60),
+                Size = new Size(Math.Max(1, ClientSize.Width - 80), Math.Max(1, ClientSize.Height - 80)),
+                Font = new Font("Segoe UI Variable", expandedLayout ? 20F : 18F, FontStyle.Bold),
+                ItemSize = new Size(expandedLayout ? 340 : 300, expandedLayout ? 68 : 60),
                 Alignment = TabAlignment.Top,
-                Appearance = TabAppearance.Normal
+                Appearance = TabAppearance.Normal,
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
             try { tabControl.BackColor = Color.Transparent; } catch { }
             Controls.Add(tabControl);
@@ -2045,13 +2110,15 @@ namespace TaMi_Einzahlautomat
             Color primary = Color.FromArgb(0, 122, 204);
             Color danger = Color.FromArgb(211, 47, 47);
             Color success = Color.FromArgb(46, 125, 50);
+            bool expandedLayout = IsExpandedLayoutActive();
+            float uiScale = expandedLayout ? 1.15f : 1.0f;
 
-            var fontCardTitle = new Font("Segoe UI Variable", 28F, FontStyle.Bold);
-            var fontBody = new Font("Segoe UI Variable", 16F, FontStyle.Regular);
+            var fontCardTitle = new Font("Segoe UI Variable", expandedLayout ? 34F : 30F, FontStyle.Bold);
+            var fontBody = new Font("Segoe UI Variable", expandedLayout ? 20F : 17F, FontStyle.Regular);
             // Mitarbeiter-Zeile: nur leicht größer als Personal-Guthaben
-            var fontTitle = new Font("Segoe UI Variable", 18F, FontStyle.Bold);
-            var fontStrong = new Font("Segoe UI Variable", 18F, FontStyle.Bold);
-            var fontAmounts = new Font("Segoe UI Variable", 18F, FontStyle.Bold);
+            var fontTitle = new Font("Segoe UI Variable", expandedLayout ? 22F : 19F, FontStyle.Bold);
+            var fontStrong = new Font("Segoe UI Variable", expandedLayout ? 22F : 19F, FontStyle.Bold);
+            var fontAmounts = new Font("Segoe UI Variable", expandedLayout ? 24F : 20F, FontStyle.Bold);
 
             if (_cardAbrechnen != null)
             {
@@ -2080,7 +2147,7 @@ namespace TaMi_Einzahlautomat
             }
             catch { }
 
-            int pad = 26;
+            int pad = expandedLayout ? 34 : 26;
 
             // Schatten unter der Card (separates Panel, damit Card selbst clicking etc. nicht beeinflusst)
             Panel shadowPanel = null;
@@ -2213,7 +2280,7 @@ namespace TaMi_Einzahlautomat
                 catch { }
             };
             // Inneres Glas-Panel (wie Screenshot)
-            int innerPanelTop = 190;
+            int innerPanelTop = expandedLayout ? 220 : 190;
             _abrechnenInnerPanel = new Panel
             {
                 Location = new Point(pad, innerPanelTop),
@@ -2435,7 +2502,7 @@ namespace TaMi_Einzahlautomat
                     Text = "Hinweisfeld wird geladen...",
                     Font = notesFont,
                     // oben rechts im Card-Header (neben Titel/Mitarbeiter/Guthaben)
-                    Size = new Size(computeNotesWidth(), 130),
+                    Size = new Size(computeNotesWidth(), expandedLayout ? 150 : 130),
                     Location = new Point(computeNotesLeft(), 24),
                     Anchor = AnchorStyles.Top | AnchorStyles.Right,
                     BackColor = Color.FromArgb(0, 255, 255, 255),
@@ -2605,7 +2672,7 @@ namespace TaMi_Einzahlautomat
                     {
                         if (lblNotizenInfo == null) return;
                         int w = computeNotesWidth();
-                        int h = 130;
+                        int h = expandedLayout ? 150 : 130;
                         int left = computeNotesLeft();
                         int maxW = Math.Max(260, (_cardAbrechnen.Width - pad) - left);
                         lblNotizenInfo.Size = new Size(Math.Min(w, maxW), h);
@@ -2620,7 +2687,7 @@ namespace TaMi_Einzahlautomat
             catch { }
 
             // Mehr Abstand zwischen Banner(n) und MwSt-Zeile
-            y += 86;
+            y += expandedLayout ? 126 : 98;
 
             var b19Init = _details != null ? _details.Betrag19 : 0m;
             var b7Init = _details != null ? _details.Betrag7 : 0m;
@@ -2628,9 +2695,9 @@ namespace TaMi_Einzahlautomat
 
             // MwSt-Zeile: 7%-€ an der gleichen X-Position wie die Summenwerte ausrichten.
             int mwstGap = 6;
-            int amountW = 170;
-            int gap2 = 6;
-            int labelW = 240;
+            int amountW = expandedLayout ? 220 : 190;
+            int gap2 = expandedLayout ? 12 : 8;
+            int labelW = expandedLayout ? 280 : 250;
             try
             {
                 int w1 = TextRenderer.MeasureText("Noch zu zahlen:", fontStrong).Width;
@@ -2676,13 +2743,13 @@ namespace TaMi_Einzahlautomat
             var sepMwst = new Panel
             {
                 BackColor = Color.FromArgb(229, 231, 235),
-                Location = new Point(pad, y + 34),
+                Location = new Point(pad, y + (expandedLayout ? 42 : 36)),
                 Size = new Size(_abrechnenInnerPanel.Width - pad * 2, 1),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             _abrechnenInnerPanel.Controls.Add(sepMwst);
 
-            y += 52;
+            y += expandedLayout ? 76 : 58;
             var sumInit = (_details != null ? _details.SummeZuZahlen : 0m);
 
             // zweispaltiges Layout, damit Eurozeichen fluchten
@@ -2695,7 +2762,7 @@ namespace TaMi_Einzahlautomat
             pnlSummeRow = new Panel
             {
                 Location = new Point(pad, y),
-                Size = new Size(rowW, 40),
+                Size = new Size(rowW, expandedLayout ? 48 : 44),
                 BackColor = Color.Transparent,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
@@ -2705,7 +2772,7 @@ namespace TaMi_Einzahlautomat
                 Font = fontStrong,
                 ForeColor = text,
                 Location = new Point(0, 0),
-                Size = new Size(labelW, 40),
+                Size = new Size(labelW, expandedLayout ? 48 : 44),
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleLeft
             };
@@ -2715,7 +2782,7 @@ namespace TaMi_Einzahlautomat
                 Font = fontAmounts,
                 ForeColor = (sumInit < 0m) ? danger : text,
                 Location = new Point(labelW + gap2, 0),
-                Size = new Size(amountW, 40),
+                Size = new Size(amountW, expandedLayout ? 48 : 44),
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleRight
             };
@@ -2724,11 +2791,11 @@ namespace TaMi_Einzahlautomat
             _abrechnenInnerPanel.Controls.Add(pnlSummeRow);
             lblSumme = lblSummeValue;
 
-            y += 46;
+            y += expandedLayout ? 66 : 54;
             pnlEingezahltRow = new Panel
             {
                 Location = new Point(pad, y),
-                Size = new Size(rowW, 40),
+                Size = new Size(rowW, expandedLayout ? 48 : 44),
                 BackColor = Color.Transparent,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
@@ -2738,7 +2805,7 @@ namespace TaMi_Einzahlautomat
                 Font = fontStrong,
                 ForeColor = text,
                 Location = new Point(0, 0),
-                Size = new Size(labelW, 40),
+                Size = new Size(labelW, expandedLayout ? 48 : 44),
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleLeft
             };
@@ -2748,7 +2815,7 @@ namespace TaMi_Einzahlautomat
                 Font = fontAmounts,
                 ForeColor = text,
                 Location = new Point(labelW + gap2, 0),
-                Size = new Size(amountW, 40),
+                Size = new Size(amountW, expandedLayout ? 48 : 44),
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleRight
             };
@@ -2758,13 +2825,13 @@ namespace TaMi_Einzahlautomat
             lblEingezahlt = lblEingezahltValue;
 
             // gleicher Abstand wie nach "Summe"
-            y += 62;
+            y += expandedLayout ? 92 : 72;
             var nochInit = Math.Max(0m, sumInit - _eingezahltSession);
             nochInit = Math.Max(0m, nochInit - _personalGuthaben);
             pnlNochRow = new Panel
             {
                 Location = new Point(pad, y),
-                Size = new Size(rowW, 40),
+                Size = new Size(rowW, expandedLayout ? 48 : 44),
                 BackColor = Color.Transparent,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
@@ -2774,7 +2841,7 @@ namespace TaMi_Einzahlautomat
                 Font = fontStrong,
                 ForeColor = text,
                 Location = new Point(0, 0),
-                Size = new Size(labelW, 40),
+                Size = new Size(labelW, expandedLayout ? 48 : 44),
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleLeft
             };
@@ -2784,7 +2851,7 @@ namespace TaMi_Einzahlautomat
                 Font = fontAmounts,
                 ForeColor = (nochInit > 0m) ? danger : success,
                 Location = new Point(labelW + gap2, 0),
-                Size = new Size(amountW, 40),
+                Size = new Size(amountW, expandedLayout ? 48 : 44),
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleRight
             };
@@ -2914,13 +2981,13 @@ namespace TaMi_Einzahlautomat
             catch { }
 
             // Buttons
-            y += 92;
+            y += expandedLayout ? 164 : 126;
             btnAbrechnen = new Button
             {
                 Text = "Buchen",
                 Location = new Point(pad, y),
-                Size = new Size(200, 56),
-                Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
+                Size = new Size(expandedLayout ? 260 : 220, expandedLayout ? 72 : 60),
+                Font = new Font("Segoe UI Variable", expandedLayout ? 22F : 21F, FontStyle.Bold),
                 BackColor = Color.FromArgb(160, 160, 160),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -2934,9 +3001,9 @@ namespace TaMi_Einzahlautomat
             {
                 Text = "Zahlung",
                 // Neben "Buchen" mit identischer Höhe (wie im Screenshot)
-                Location = new Point(pad + 240, y),
-                Size = new Size(200, 56),
-                Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
+                Location = new Point(pad + (expandedLayout ? 300 : 260), y),
+                Size = new Size(expandedLayout ? 260 : 220, expandedLayout ? 72 : 60),
+                Font = new Font("Segoe UI Variable", expandedLayout ? 22F : 21F, FontStyle.Bold),
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -2957,9 +3024,9 @@ namespace TaMi_Einzahlautomat
             _abrechnenInnerPanel.Controls.Add(btnCreatePayment);
 
             // Manuell UI nach oben rechts neben Zahlung (standardmäßig ausgeblendet; per Strg+M)
-            int manW = 180;
-            int manH = 46;
-            int manGap = 12;
+            int manW = expandedLayout ? 220 : 180;
+            int manH = expandedLayout ? 58 : 48;
+            int manGap = expandedLayout ? 16 : 12;
             int yMan = y + (btnCreatePayment.Height - manH) / 2;
             nudManuell = new NumericUpDown
             {
@@ -2969,7 +3036,7 @@ namespace TaMi_Einzahlautomat
                 Minimum = -10000,
                 Maximum = 10000,
                 Increment = 5,
-                Font = new Font("Segoe UI Variable", 16F),
+                Font = new Font("Segoe UI Variable", expandedLayout ? 18F : 16F),
                 Visible = false,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
@@ -2979,8 +3046,8 @@ namespace TaMi_Einzahlautomat
             {
                 Text = "Manuell hinzufügen",
                 Location = new Point(nudManuell.Right + manGap, yMan),
-                Size = new Size(260, manH),
-                Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
+                Size = new Size(expandedLayout ? 300 : 260, manH),
+                Font = new Font("Segoe UI Variable", expandedLayout ? 18F : 16F, FontStyle.Bold),
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -3376,11 +3443,12 @@ namespace TaMi_Einzahlautomat
             Color innerSurface = Color.FromArgb(175, 255, 255, 255);
             Color border = Color.FromArgb(90, 180, 200, 230);
             Color subText = Color.FromArgb(55, 65, 81);
+            bool expandedLayout = IsExpandedLayoutActive();
 
-            var fontTitle = new Font("Segoe UI Variable", 18F, FontStyle.Bold);
-            var fontRow = new Font("Segoe UI Variable", 18F, FontStyle.Regular);
-            var fontCount = new Font("Segoe UI Variable", 20F, FontStyle.Bold);
-            var fontBtn = new Font("Segoe UI Variable", 16F, FontStyle.Bold);
+            var fontTitle = new Font("Segoe UI Variable", expandedLayout ? 22F : 18F, FontStyle.Bold);
+            var fontRow = new Font("Segoe UI Variable", expandedLayout ? 20F : 18F, FontStyle.Regular);
+            var fontCount = new Font("Segoe UI Variable", expandedLayout ? 22F : 20F, FontStyle.Bold);
+            var fontBtn = new Font("Segoe UI Variable", expandedLayout ? 18F : 16F, FontStyle.Bold);
 
             Func<Control, int, int, int, int, int, int, Region> rr = (ctrl, x, y, w, h, r1, r2) =>
             {
@@ -3389,10 +3457,10 @@ namespace TaMi_Einzahlautomat
 
             // --- Layout: zwei Cards (Münzen / Scheine) + Footer ---
             int cardY = 18;
-            int cardH = 650;
-            int gap = 14;
+            int cardH = expandedLayout ? 780 : 650;
+            int gap = expandedLayout ? 18 : 14;
             int cardW = (host.ClientSize.Width - host.Padding.Left - host.Padding.Right - gap) / 2;
-            if (cardW < 520) cardW = 520;
+            if (cardW < (expandedLayout ? 620 : 520)) cardW = expandedLayout ? 700 : 520;
             int leftX = host.Padding.Left;
             int rightX = leftX + cardW + gap;
 
@@ -3463,11 +3531,11 @@ namespace TaMi_Einzahlautomat
                 var b = new Button
                 {
                     Text = text,
-                    Size = new Size(44, 44),
+                    Size = new Size(expandedLayout ? 52 : 44, expandedLayout ? 52 : 44),
                     FlatStyle = FlatStyle.Flat,
                     BackColor = back,
                     ForeColor = fore,
-                    Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
+                    Font = new Font("Segoe UI Variable", expandedLayout ? 20F : 18F, FontStyle.Bold),
                     TabStop = false
                 };
                 b.FlatAppearance.BorderSize = 0;
@@ -3483,7 +3551,7 @@ namespace TaMi_Einzahlautomat
                 {
                     Text = "0",
                     TextAlign = ContentAlignment.MiddleCenter,
-                    Size = new Size(70, 44),
+                    Size = new Size(expandedLayout ? 84 : 70, expandedLayout ? 52 : 44),
                     BorderStyle = BorderStyle.FixedSingle,
                     BackColor = Color.FromArgb(248, 250, 252),
                     ForeColor = Color.FromArgb(17, 24, 39),
@@ -3500,13 +3568,13 @@ namespace TaMi_Einzahlautomat
             // Tabellenkopf in Cards
             void AddHeaderRow(Panel card)
             {
-                var y = 68;
-                var h1 = new Label { Text = "Wert", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(18, y), Size = new Size(110, 32), BackColor = Color.Transparent };
+                var y = expandedLayout ? 78 : 68;
+                var h1 = new Label { Text = "Wert", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(18, y), Size = new Size(expandedLayout ? 130 : 110, 32), BackColor = Color.Transparent };
                 // keep Annahme compact and further left so the word is not clipped
-                var hAcc = new Label { Text = "Annahme", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(122, y), Size = new Size(125, 32), BackColor = Color.Transparent };
+                var hAcc = new Label { Text = "Annahme", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(expandedLayout ? 148 : 122, y), Size = new Size(expandedLayout ? 145 : 125, 32), BackColor = Color.Transparent };
                 // center "Anzahl" over the - / count / + block (250..419)
-                var h2 = new Label { Text = "Anzahl", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(250, y), Size = new Size(170, 32), TextAlign = ContentAlignment.MiddleCenter, BackColor = Color.Transparent };
-                var h3 = new Label { Text = "Vorrätig", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(card.Width - 150, y), Size = new Size(150, 32), TextAlign = ContentAlignment.MiddleRight, BackColor = Color.Transparent };
+                var h2 = new Label { Text = "Anzahl", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(expandedLayout ? 320 : 250, y), Size = new Size(expandedLayout ? 220 : 170, 32), TextAlign = ContentAlignment.MiddleCenter, BackColor = Color.Transparent };
+                var h3 = new Label { Text = "Vorrätig", Font = new Font(fontRow, FontStyle.Bold), ForeColor = subText, AutoSize = false, Location = new Point(card.Width - (expandedLayout ? 180 : 150), y), Size = new Size(expandedLayout ? 170 : 150, 32), TextAlign = ContentAlignment.MiddleRight, BackColor = Color.Transparent };
                 card.Controls.Add(h1);
                 card.Controls.Add(hAcc);
                 card.Controls.Add(h2);
@@ -3516,18 +3584,21 @@ namespace TaMi_Einzahlautomat
             AddHeaderRow(cardNotes);
 
             // Rows
-            int startY = 106;
-            int rowH = 62;
+            int coinStartY = GetCoinRowStartY();
+            int coinRowH = GetCoinRowHeight();
+            int noteStartY = expandedLayout ? 126 : 106;
+            int noteRowH = expandedLayout ? 74 : 62;
 
             // Coins
             for (int i = 0; i < muenzWerte.Length; i++)
             {
-                int rowY = startY + i * rowH;
+                int rowY = coinStartY + i * coinRowH;
 
+                var coinPictureSize = GetCoinPictureSize();
                 var pb = new PictureBox
                 {
-                    Location = new Point(18, rowY + 6),
-                    Size = new Size(50, 50),
+                    Location = new Point(18, rowY + (expandedLayout ? 8 : 6)),
+                    Size = new Size(coinPictureSize, coinPictureSize),
                     SizeMode = PictureBoxSizeMode.Zoom,
                     BorderStyle = BorderStyle.None,
                     BackColor = Color.Transparent
@@ -3541,11 +3612,11 @@ namespace TaMi_Einzahlautomat
                     Text = "-",
                     AutoSize = false,
                     // move the indicator further left to align with header and free space
-                    Location = new Point(132, rowY + 10),
-                    Size = new Size(80, 44),
+                    Location = new Point(expandedLayout ? 162 : 132, rowY + (expandedLayout ? 17 : 10)),
+                    Size = new Size(expandedLayout ? 92 : 80, expandedLayout ? 50 : 44),
                     TextAlign = ContentAlignment.MiddleCenter,
                     ForeColor = Color.FromArgb(0, 128, 0),
-                    Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
+                    Font = new Font("Segoe UI Variable", expandedLayout ? 22F : 20F, FontStyle.Bold),
                     BackColor = Color.Transparent
                 };
                 cardCoins.Controls.Add(lAcc);
@@ -3553,19 +3624,19 @@ namespace TaMi_Einzahlautomat
 
                 var bMinus = MakeIconButton("–", danger, Color.White);
                 bMinus.Tag = i;
-                bMinus.Location = new Point(250, rowY + 9);
+                bMinus.Location = new Point(expandedLayout ? 320 : 250, rowY + (expandedLayout ? 16 : 9));
                 bMinus.Click += BtnMinusMuenzen_Click;
                 cardCoins.Controls.Add(bMinus);
                 btnMinusMuenzen[i] = bMinus;
 
                 var lbl = MakeCountLabel();
-                lbl.Location = new Point(300, rowY + 9);
+                lbl.Location = new Point(expandedLayout ? 378 : 300, rowY + (expandedLayout ? 16 : 9));
                 cardCoins.Controls.Add(lbl);
                 lblAnzahlMuenzen[i] = lbl;
 
                 var bPlus = MakeIconButton("+", primary, Color.White);
                 bPlus.Tag = i;
-                bPlus.Location = new Point(376, rowY + 9);
+                bPlus.Location = new Point(expandedLayout ? 470 : 376, rowY + (expandedLayout ? 16 : 9));
                 bPlus.Click += BtnPlusMuenzen_Click;
                 cardCoins.Controls.Add(bPlus);
                 btnPlusMuenzen[i] = bPlus;
@@ -3574,8 +3645,8 @@ namespace TaMi_Einzahlautomat
                 {
                     Text = "0",
                     AutoSize = false,
-                    Location = new Point(cardCoins.Width - 200, rowY + 14),
-                    Size = new Size(180, 30),
+                    Location = new Point(cardCoins.Width - (expandedLayout ? 220 : 200), rowY + (expandedLayout ? 26 : 14)),
+                    Size = new Size(expandedLayout ? 200 : 180, 30),
                     TextAlign = ContentAlignment.MiddleRight,
                     ForeColor = subText,
                     Font = fontRow,
@@ -3584,27 +3655,17 @@ namespace TaMi_Einzahlautomat
                 cardCoins.Controls.Add(lAvail);
                 lblVerfuegbarMuenzen[i] = lAvail;
 
-                // subtle row separator
-                try
-                {
-                    if (i < muenzWerte.Length - 1)
-                    {
-                        var sep = new Panel { BackColor = Color.FromArgb(242, 244, 247), Location = new Point(18, rowY + rowH - 2), Size = new Size(cardCoins.Width - 36, 1) };
-                        cardCoins.Controls.Add(sep);
-                    }
-                }
-                catch { }
             }
 
             // Notes
             for (int i = 0; i < scheinWerte.Length; i++)
             {
-                int rowY = startY + i * rowH;
+                int rowY = noteStartY + i * noteRowH;
 
                 var pb = new PictureBox
                 {
-                    Location = new Point(18, rowY + 10),
-                    Size = new Size(110, 42),
+                    Location = new Point(18, rowY + (expandedLayout ? 14 : 10)),
+                    Size = new Size(expandedLayout ? 128 : 110, expandedLayout ? 60 : 48),
                     SizeMode = PictureBoxSizeMode.Zoom,
                     BorderStyle = BorderStyle.None,
                     BackColor = Color.Transparent
@@ -3618,11 +3679,11 @@ namespace TaMi_Einzahlautomat
                 {
                     Text = "-",
                     AutoSize = false,
-                    Location = new Point(132, rowY + 10),
-                    Size = new Size(80, 44),
+                    Location = new Point(expandedLayout ? 162 : 132, rowY + (expandedLayout ? 12 : 10)),
+                    Size = new Size(expandedLayout ? 92 : 80, expandedLayout ? 50 : 44),
                     TextAlign = ContentAlignment.MiddleCenter,
                     ForeColor = Color.FromArgb(0, 128, 0),
-                    Font = new Font("Segoe UI Variable", 20F, FontStyle.Bold),
+                    Font = new Font("Segoe UI Variable", expandedLayout ? 22F : 20F, FontStyle.Bold),
                     BackColor = Color.Transparent
                 };
                 cardNotes.Controls.Add(lAcc);
@@ -3632,19 +3693,19 @@ namespace TaMi_Einzahlautomat
                 var bMinus = MakeIconButton("–", danger, Color.White);
                 bMinus.Tag = i;
                 // Align under header "Anzahl" (same x as coins)
-                bMinus.Location = new Point(250, rowY + 9);
+                bMinus.Location = new Point(expandedLayout ? 320 : 250, rowY + (expandedLayout ? 10 : 9));
                 bMinus.Click += BtnMinus_Click;
                 cardNotes.Controls.Add(bMinus);
                 btnMinus[i] = bMinus;
 
                 var lbl = MakeCountLabel();
-                lbl.Location = new Point(300, rowY + 9);
+                lbl.Location = new Point(expandedLayout ? 378 : 300, rowY + (expandedLayout ? 10 : 9));
                 cardNotes.Controls.Add(lbl);
                 lblAnzahl[i] = lbl;
 
                 var bPlus = MakeIconButton("+", primary, Color.White);
                 bPlus.Tag = i;
-                bPlus.Location = new Point(376, rowY + 9);
+                bPlus.Location = new Point(expandedLayout ? 470 : 376, rowY + (expandedLayout ? 10 : 9));
                 bPlus.Click += BtnPlus_Click;
                 cardNotes.Controls.Add(bPlus);
                 btnPlus[i] = bPlus;
@@ -3653,8 +3714,8 @@ namespace TaMi_Einzahlautomat
                 {
                     Text = "0",
                     AutoSize = false,
-                    Location = new Point(cardNotes.Width - 200, rowY + 14),
-                    Size = new Size(180, 30),
+                    Location = new Point(cardNotes.Width - (expandedLayout ? 220 : 200), rowY + (expandedLayout ? 18 : 14)),
+                    Size = new Size(expandedLayout ? 200 : 180, 30),
                     TextAlign = ContentAlignment.MiddleRight,
                     ForeColor = subText,
                     Font = fontRow,
@@ -3678,7 +3739,7 @@ namespace TaMi_Einzahlautomat
                     {
                         if (i < scheinWerte.Length - 1)
                         {
-                            var sep = new Panel { BackColor = Color.FromArgb(242, 244, 247), Location = new Point(18, rowY + rowH - 2), Size = new Size(cardNotes.Width - 36, 1) };
+                            var sep = new Panel { BackColor = Color.FromArgb(242, 244, 247), Location = new Point(18, rowY + noteRowH - 2), Size = new Size(cardNotes.Width - 36, 1) };
                             cardNotes.Controls.Add(sep);
                         }
                     }
@@ -3688,20 +3749,23 @@ namespace TaMi_Einzahlautomat
 
             // Footer actions area
             int footerY = cardY + cardH + 14;
-            int footerH = 120;
+            int footerH = expandedLayout ? 140 : 120;
+            int footerRightEdge = 0;
+            try { footerRightEdge = host.ClientSize.Width - host.Padding.Right; } catch { footerRightEdge = 0; }
+            if (footerRightEdge <= 0) footerRightEdge = cardNotes.Right;
             var footer = new Panel
             {
                 Location = new Point(cardCoins.Left, footerY),
                 // Span under both cards but DO NOT include the gap twice.
                 // Use the visible card edges as reference.
-                Size = new Size(cardNotes.Right - cardCoins.Right, footerH),
+                Size = new Size(Math.Max(1, footerRightEdge - cardCoins.Left), footerH),
                 BackColor = Color.Transparent
             };
             try
             {
-                // Ensure pixel-perfect right alignment with the Scheine-card
+                // Ensure pixel-perfect right alignment to the available host area
                 footer.Left = cardCoins.Left;
-                footer.Width = cardNotes.Right - cardCoins.Right;
+                footer.Width = Math.Max(1, footerRightEdge - footer.Left);
             }
             catch { }
             try { footer.Region = rr(footer, 0, 0, footer.Width, footer.Height, 18, 18); } catch { }
@@ -3727,6 +3791,57 @@ namespace TaMi_Einzahlautomat
             host.Controls.Add(footer);
             try { footer.BringToFront(); } catch { }
 
+            Action applyWechselnCardsLayout = () =>
+            {
+                try
+                {
+                    int rightEdge = 0;
+                    try { rightEdge = host.ClientSize.Width - host.Padding.Right; } catch { rightEdge = 0; }
+                    if (rightEdge <= 0) return;
+
+                    int availW = Math.Max(1, rightEdge - host.Padding.Left);
+                    int newCardW = (availW - gap) / 2;
+                    if (newCardW < 520) newCardW = 520;
+
+                    cardCoins.Left = host.Padding.Left;
+                    cardCoins.Width = newCardW;
+
+                    cardNotes.Width = newCardW;
+                    cardNotes.Left = rightEdge - newCardW;
+
+                    try
+                    {
+                        // Update rounded regions after size changes; otherwise the old region clips the new size.
+                        try { cardCoins.Region?.Dispose(); } catch { }
+                        try { cardCoins.Region = rr(cardCoins, 0, 0, cardCoins.Width, cardCoins.Height, 18, 18); } catch { }
+                        try { cardNotes.Region?.Dispose(); } catch { }
+                        try { cardNotes.Region = rr(cardNotes, 0, 0, cardNotes.Width, cardNotes.Height, 18, 18); } catch { }
+                    }
+                    catch { }
+
+                    footer.Left = cardCoins.Left;
+                    footer.Width = Math.Max(1, rightEdge - footer.Left);
+
+                    // keep separators aligned with card widths
+                    foreach (Control c in cardCoins.Controls)
+                    {
+                        if (c is Panel p && p.Height == 1) p.Width = cardCoins.Width - 36;
+                    }
+                    foreach (Control c in cardNotes.Controls)
+                    {
+                        if (c is Panel p && p.Height == 1) p.Width = cardNotes.Width - 36;
+                    }
+
+                    try { footer.Region?.Dispose(); } catch { }
+                    try { footer.Region = rr(footer, 0, 0, footer.Width, footer.Height, 18, 18); } catch { }
+                }
+                catch { }
+            };
+
+            // Apply once now (best effort) and again after layout is complete.
+            try { applyWechselnCardsLayout(); } catch { }
+            try { BeginInvoke((Action)(() => { try { applyWechselnCardsLayout(); } catch { } })); } catch { }
+
             // Reposition on resize (surface can resize independently of TabPage)
             try
             {
@@ -3734,23 +3849,7 @@ namespace TaMi_Einzahlautomat
                 {
                     try
                     {
-                        int newCardW = (host.ClientSize.Width - host.Padding.Left - host.Padding.Right - gap) / 2;
-                        if (newCardW < 520) newCardW = 520;
-                        cardCoins.Width = newCardW;
-                        cardNotes.Width = newCardW;
-                        cardNotes.Left = host.Padding.Left + newCardW + gap;
-                        footer.Left = cardCoins.Left;
-                        footer.Width = cardNotes.Right - footer.Left - 60;
-
-                        // keep separators aligned with card widths
-                        foreach (Control c in cardCoins.Controls)
-                        {
-                            if (c is Panel p && p.Height == 1) p.Width = cardCoins.Width - 36;
-                        }
-                        foreach (Control c in cardNotes.Controls)
-                        {
-                            if (c is Panel p && p.Height == 1) p.Width = cardNotes.Width - 36;
-                        }
+                        applyWechselnCardsLayout();
                     }
                     catch { }
                 };
@@ -3758,9 +3857,9 @@ namespace TaMi_Einzahlautomat
             catch { }
 
             // Footer: Rechts Button, links daneben groß die Summe, darüber kleiner Maximal verfügbar
-            int innerPad = 18;
-            int buttonW = 180;
-            int buttonH = 52;
+            int innerPad = expandedLayout ? 26 : 18;
+            int buttonW = expandedLayout ? 220 : 180;
+            int buttonH = expandedLayout ? 60 : 52;
             int buttonX = footer.Width - innerPad - buttonW;
 
             int infoRight = buttonX - 16; // Abstand zum Button
@@ -3770,7 +3869,7 @@ namespace TaMi_Einzahlautomat
             var lblMaxText = new Label
             {
                 Text = "Maximal verfügbar",
-                Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
+                Font = new Font("Segoe UI Variable", expandedLayout ? 18F : 16F, FontStyle.Bold),
                 ForeColor = primary,
                 Location = new Point(infoX, 16),
                 Size = new Size(Math.Max(160, infoW - 220), 28),
@@ -3782,7 +3881,7 @@ namespace TaMi_Einzahlautomat
             lblMaxVerfuegbar = new Label
             {
                 Text = $"{(_personalGuthaben + _eingezahltSession):C2}",
-                Font = new Font("Segoe UI Variable", 16F, FontStyle.Bold),
+                Font = new Font("Segoe UI Variable", expandedLayout ? 18F : 16F, FontStyle.Bold),
                 ForeColor = primary,
                 Location = new Point(infoX + Math.Max(160, infoW - 220), 16),
                 Size = new Size(220, 28),
@@ -3794,10 +3893,10 @@ namespace TaMi_Einzahlautomat
             var lblSumText = new Label
             {
                 Text = "Summe",
-                Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold),
+                Font = new Font("Segoe UI Variable", expandedLayout ? 26F : 22F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(17, 24, 39),
-                Location = new Point(infoX, 56),
-                Size = new Size(Math.Max(160, infoW - 220), 44),
+                Location = new Point(infoX, expandedLayout ? 64 : 56),
+                Size = new Size(Math.Max(160, infoW - 220), expandedLayout ? 48 : 44),
                 TextAlign = ContentAlignment.MiddleRight,
                 BackColor = Color.Transparent
             };
@@ -3806,12 +3905,12 @@ namespace TaMi_Einzahlautomat
             lblSummeAuszahlung = new Label
             {
                 AutoSize = false,
-                Font = new Font("Segoe UI Variable", 22F, FontStyle.Bold),
+                Font = new Font("Segoe UI Variable", expandedLayout ? 26F : 22F, FontStyle.Bold),
                 Text = "0,00 €",
                 ForeColor = Color.FromArgb(17, 24, 39),
                 TextAlign = ContentAlignment.MiddleRight,
-                Location = new Point(infoX + Math.Max(160, infoW - 220), 56),
-                Size = new Size(220, 44),
+                Location = new Point(infoX + Math.Max(160, infoW - 220), expandedLayout ? 64 : 56),
+                Size = new Size(220, expandedLayout ? 48 : 44),
                 BackColor = Color.Transparent
             };
             footer.Controls.Add(lblSummeAuszahlung);
@@ -3819,12 +3918,12 @@ namespace TaMi_Einzahlautomat
             btnAuszahlen = new Button
             {
                 Text = "Auszahlen",
-                Location = new Point(buttonX, 50),
+                Location = new Point(buttonX, expandedLayout ? 38 : 50),
                 Size = new Size(buttonW, buttonH),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = success,
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI Variable", 18F, FontStyle.Bold),
+                Font = new Font("Segoe UI Variable", expandedLayout ? 20F : 18F, FontStyle.Bold),
                 TabStop = false
             };
             btnAuszahlen.FlatAppearance.BorderSize = 0;

@@ -343,6 +343,7 @@
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
+      <LastGenOutput>Resources2.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <None Include=".github\copilot-instructions.md" />
     <None Include="Beispiel-Fix für AppConfigItem %28analog zu ConfigItem%29" />
