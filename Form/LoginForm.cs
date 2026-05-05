@@ -1386,7 +1386,7 @@ namespace TaMi_Einzahlautomat
         private void HeaderPanel_MouseMove(object sender, MouseEventArgs e)
         { try { if (e.Button == MouseButtons.Left) { Left += e.X - _mouseDownLocation.X; Top += e.Y - _mouseDownLocation.Y; } } catch { } }
 
-        private void CancelPasswordFlow()
+        private void CancelPasswordFlow(bool focusInput = true)
         {
             try
             {
@@ -1401,7 +1401,7 @@ namespace TaMi_Einzahlautomat
                     txtPersId.Clear();
                     txtPersId.UseSystemPasswordChar = false;
                     txtPersId.MaxLength = 8;
-                    txtPersId.Focus();
+                    if (focusInput) txtPersId.Focus();
                 }
                 if (btnCancelPwd != null) btnCancelPwd.Visible = false;
                 if (lblError != null) lblError.Text = string.Empty;
@@ -1469,7 +1469,7 @@ namespace TaMi_Einzahlautomat
                     {
                         using (var db = new DatabaseHelper()) { await ProceedOpenAsync(db, LoginHistoryType.PersIdPinPassword); }
                         // Nach erfolgreichem Login Felder zurücksetzen
-                        CancelPasswordFlow();
+                        CancelPasswordFlow(false);
                         return;
                     }
                     lblError.Text = "Passwort falsch."; try { txtPersId.SelectAll(); } catch { }
@@ -1498,7 +1498,7 @@ namespace TaMi_Einzahlautomat
                         // Nach setzen direkt prüfen/öffnen
                         await ProceedOpenAsync(db, LoginHistoryType.PersIdPinPassword);
                         // Felder zurücksetzen
-                        CancelPasswordFlow();
+                        CancelPasswordFlow(false);
                         return;
                     }
                 }
@@ -1601,7 +1601,7 @@ namespace TaMi_Einzahlautomat
                             _pendingPersonalInfo = p;
                             await ProceedOpenAsync(db, LoginHistoryType.NfcTag);
                             // Nach erfolgreichem Wartungsmodus-Login zurücksetzen
-                            CancelPasswordFlow();
+                            CancelPasswordFlow(false);
                             return;
                         }
                     }
