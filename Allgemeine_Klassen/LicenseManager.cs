@@ -114,6 +114,11 @@ namespace TaMi_Einzahlautomat
             get { lock (_lock) return _lastSystemId; }
         }
 
+        public static string CurrentCustomerId
+        {
+            get { lock (_lock) return _customerId; }
+        }
+
         public static bool IsSmartCoinSerialLicensed(string serialNumber)
         {
             lock (_lock)

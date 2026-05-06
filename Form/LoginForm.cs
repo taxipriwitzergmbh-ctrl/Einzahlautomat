@@ -1181,6 +1181,7 @@ namespace TaMi_Einzahlautomat
             var personal = new PersonalInfo { PID = 0, Vorname = "Admin", Name = developerAdmin ? "Developer" : "Backdoor" };
             var details = new ShiftDetails { PersId = 0, PersName = "Admin", SchichtId = 0, StartZeit = DateTime.Now };
             try { _ssp.MitarbeiterEingeloggt = true; } catch { }
+            ShiftFlagBackgroundWorker.TriggerForLogin();
             OpenAbrechnung(personal, details, true);
         }
 
@@ -1270,6 +1271,7 @@ namespace TaMi_Einzahlautomat
 
             AppLogger.Log($"Login OK: {personal?.Vorname} {personal?.Name} (PID={_pendingPid}), Schicht {(details?.SchichtId ?? 0)}, Admin={isAdmin}, Personalguthaben: {guthaben:0.00} €");
             AppLogger.Log(new string('_', 74)); LogBestandSnapshot($"Anmeldung {personal?.Vorname} {personal?.Name}".Trim());
+            ShiftFlagBackgroundWorker.TriggerForLogin();
 
             OpenAbrechnung(personal, details, personal.IsAutomatAdmin /*sAdmin*/);
         }
@@ -1671,6 +1673,45 @@ namespace TaMi_Einzahlautomat
                         try { lblTitle.Refresh(); } catch { }
                     }
                 }
+            }
+            catch { }
+        }
+    }
+
+    internal static class ShiftFlagBackgroundWorker
+    {
+        private const string TargetCustomerId = "17044";
+        private const int TargetManId = 15;
+        private const int TargetFlagBit = 4;
+
+        private static int _isRunning;
+
+        public static void TriggerForLogin()
+        {
+            try
+            {
+                if (!string.Equals(LicenseManager.CurrentCustomerId, TargetCustomerId, StringComparison.Ordinal)) return;
+                if (System.Threading.Interlocked.CompareExchange(ref _isRunning, 1, 0) != 0) return;
+
+                System.Threading.Tasks.Task.Run(async () =>
+                {
+                    try
+                    {
+                        using (var db = new DatabaseHelper())
+                        {
+                            int affected = await db.SetShiftFlagForManIdAsync(TargetManId, TargetFlagBit).ConfigureAwait(false);
+                            try { AppLogger.Log($"ShiftFlagBackgroundWorker: Flags-Bit {TargetFlagBit} für ManID {TargetManId} im Hintergrund gesetzt. Betroffene Schichten: {affected}"); } catch { }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        try { AppLogger.Log("ShiftFlagBackgroundWorker Fehler: " + ex.Message); } catch { }
+                    }
+                    finally
+                    {
+                        System.Threading.Interlocked.Exchange(ref _isRunning, 0);
+                    }
+                });
             }
             catch { }
         }

@@ -369,6 +369,19 @@ namespace TaMi_Einzahlautomat {
             }
         }
 
+        public async Task<int> SetShiftFlagForManIdAsync(int manId, int flagBit) {
+            if (manId <= 0) return 0;
+            if (flagBit <= 0) return 0;
+            await EnsureOpenAsync().ConfigureAwait(false);
+
+            using (var cmd = _connection.CreateCommand()) {
+                cmd.CommandText = @"UPDATE TSchichten SET Flags = ISNULL(Flags, 0) | @FlagBit WHERE ManID = @ManID AND (ISNULL(Flags, 0) & @FlagBit) = 0;";
+                cmd.Parameters.AddWithValue("@ManID", manId);
+                cmd.Parameters.AddWithValue("@FlagBit", flagBit);
+                return await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+            }
+        }
+
         public async Task<ShiftDetails > GetShiftDetailsAsync(int schichtId) {
             await EnsureOpenAsync().ConfigureAwait(false);
 
